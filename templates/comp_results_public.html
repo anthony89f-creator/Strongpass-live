@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Results — Strongman Competition</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#060608; --surface:#0e0e12; --surface2:#14141a; --surface3:#1c1c24;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
+  --text:#F0F0F0; --dim:#555; --dim2:#888;
+  --gold:#F5C842; --gold-dim:rgba(245,200,66,0.12); --gold-border:rgba(245,200,66,0.25);
+  --green:#00DD55; --green-dim:rgba(0,221,85,0.1); --green-border:rgba(0,221,85,0.25);
+  --blue:#4488FF; --blue-dim:rgba(68,136,255,0.1);
+  --red:#FF4422; --red-dim:rgba(255,68,34,0.1);
+}
+html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+
+/* TOPBAR */
+.topbar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:0 20px; display:flex; align-items:center; gap:12px; height:52px;
+  position:sticky; top:0; z-index:100;
+}
+.topbar-logo { height:44px; width:auto; object-fit:contain; mix-blend-mode:lighten; }
+.topbar-title {
+  font-size:12px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;
+  color:var(--gold); background:var(--gold-dim); border:1px solid var(--gold-border);
+  padding:4px 10px; border-radius:4px;
+}
+.live-pill {
+  display:flex; align-items:center; gap:6px;
+  font-size:10px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase; color:var(--green);
+  background:var(--green-dim); border:1px solid var(--green-border); padding:4px 10px; border-radius:4px;
+  margin-left:auto;
+}
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* CAT TABS */
+.cat-nav {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:0 20px; display:flex; gap:0; overflow-x:auto;
+}
+.cat-tab {
+  padding:14px 18px; font-size:12px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase;
+  color:var(--dim2); text-decoration:none; white-space:nowrap; border-bottom:2px solid transparent;
+  transition:all 0.15s; flex-shrink:0;
+}
+.cat-tab:hover { color:var(--text); }
+.cat-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+
+/* MAIN */
+.main { max-width:1100px; margin:0 auto; padding:20px; }
+
+/* EVENT HEADER ROW */
+.events-header {
+  display:grid;
+  gap:2px;
+  padding:0 0 8px;
+}
+.events-header-inner {
+  display:flex; align-items:stretch;
+  background:var(--surface2); border:1px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.ev-head-name { width:220px; flex-shrink:0; padding:10px 14px; font-size:9px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); border-right:1px solid var(--border); display:flex; align-items:center; }
+.ev-head-total { width:80px; flex-shrink:0; padding:10px 10px; font-size:9px; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); border-right:1px solid var(--border); text-align:center; display:flex; align-items:center; justify-content:center; }
+.ev-head-events { flex:1; display:flex; overflow:hidden; }
+.ev-head-event {
+  flex:1; min-width:70px; padding:8px 6px; text-align:center;
+  font-size:9px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim2);
+  border-right:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+  line-height:1.2;
+}
+.ev-head-event:last-child { border-right:none; }
+
+/* ATHLETE ROWS */
+.athlete-row {
+  display:flex; align-items:stretch;
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  margin-bottom:4px; overflow:hidden; transition:background 0.1s;
+}
+.athlete-row:hover { background:var(--surface2); }
+.athlete-row.rank-1 { border-color:rgba(255,215,0,0.3); background:rgba(255,215,0,0.03); }
+.athlete-row.rank-2 { border-color:rgba(192,192,192,0.2); }
+.athlete-row.rank-3 { border-color:rgba(205,127,50,0.2); }
+
+.ath-rank {
+  width:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:900; color:var(--dim); border-right:1px solid var(--border);
+}
+.ath-rank.r1 { color:#FFD700; font-size:20px; }
+.ath-rank.r2 { color:#C0C0C0; font-size:19px; }
+.ath-rank.r3 { color:#CD7F32; font-size:19px; }
+
+.ath-name-col {
+  width:176px; flex-shrink:0; padding:10px 12px; border-right:1px solid var(--border);
+  display:flex; align-items:center;
+  font-size:16px; font-weight:800; text-transform:uppercase; line-height:1.1;
+}
+
+.ath-total {
+  width:80px; flex-shrink:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
+  border-right:1px solid var(--border); padding:6px;
+}
+.ath-total-pts { font-size:22px; font-weight:900; color:var(--gold); line-height:1; }
+.ath-total-lbl { font-size:8px; color:var(--dim); letter-spacing:0.15em; text-transform:uppercase; margin-top:2px; }
+
+.ath-events { flex:1; display:flex; overflow:hidden; }
+.ath-event-cell {
+  flex:1; min-width:70px; padding:6px 4px; text-align:center;
+  border-right:1px solid var(--border); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:2px;
+}
+.ath-event-cell:last-child { border-right:none; }
+.cell-pts { font-size:14px; font-weight:900; color:var(--text); line-height:1; }
+.cell-pts.top { color:var(--gold); }
+.cell-raw { font-size:10px; color:var(--dim2); font-family:'Barlow',sans-serif; }
+.cell-rank { font-size:9px; color:var(--dim); }
+.cell-dns { font-size:10px; font-weight:800; letter-spacing:0.1em; color:var(--blue); background:var(--blue-dim); padding:2px 5px; border-radius:3px; }
+.cell-dnf { font-size:10px; font-weight:800; letter-spacing:0.1em; color:var(--red); background:var(--red-dim); padding:2px 5px; border-radius:3px; }
+.cell-empty { font-size:11px; color:var(--dim); }
+
+/* SECTION HEADER */
+.section-hdr {
+  padding:14px 0 10px;
+  font-size:10px; font-weight:800; letter-spacing:0.25em; text-transform:uppercase; color:var(--dim);
+  display:flex; align-items:center; gap:10px;
+}
+.section-hdr::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* EMPTY STATE */
+.empty-state { padding:60px 20px; text-align:center; color:var(--dim); font-size:16px; }
+
+/* MOBILE */
+@media(max-width:700px) {
+  .ath-events, .ev-head-events { display:none; }
+  .ath-name-col { width:auto; flex:1; }
+  .ev-head-name { flex:1; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="/logo.png" alt="" class="topbar-logo" onerror="this.style.display='none'">
+  <div class="topbar-title">Live Results</div>
+  <div class="live-pill"><div class="live-dot"></div>Auto-updating</div>
+</div>
+
+<!-- Category tabs -->
+<nav class="cat-nav">
+  {% for cat in category_order %}
+  <a href="/results/{{ cat }}"
+     class="cat-tab {% if cat == selected_category %}active{% endif %}"
+     style="{% if cat == selected_category %}color:{{ cat_colors.get(cat, '#F5C842') }};border-bottom-color:{{ cat_colors.get(cat, '#F5C842') }}{% endif %}">
+    {{ cat }}
+  </a>
+  {% endfor %}
+</nav>
+
+<div class="main">
+
+{% if rows %}
+
+  <!-- Event column headers -->
+  <div class="section-hdr">{{ selected_category }}</div>
+  <div class="events-header-inner">
+    <div class="ev-head-name">Athlete</div>
+    <div class="ev-head-total">Total</div>
+    <div class="ev-head-events">
+      {% for ev in events %}
+      <div class="ev-head-event">{{ ev.name }}</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Athlete rows -->
+  {% for r in rows %}
+  {% set rnk = r.overall_rank %}
+  <div class="athlete-row {% if rnk==1 %}rank-1{% elif rnk==2 %}rank-2{% elif rnk==3 %}rank-3{% endif %}">
+    <div class="ath-rank {% if rnk==1 %}r1{% elif rnk==2 %}r2{% elif rnk==3 %}r3{% endif %}">{{ rnk }}</div>
+    <div class="ath-name-col">{{ r.name }}</div>
+    <div class="ath-total">
+      <div class="ath-total-pts">{{ r.total_points | int if r.total_points == (r.total_points | int) else r.total_points }}</div>
+      <div class="ath-total-lbl">pts</div>
+    </div>
+    <div class="ath-events">
+      {% for ed in r.event_data %}
+      <div class="ath-event-cell">
+        {% if ed.result_type == 'dns' %}
+          <span class="cell-dns">DNS</span>
+        {% elif ed.result_type == 'dnf' %}
+          <span class="cell-dnf">DNF</span>
+          {% if ed.raw_value is not none %}
+          <span class="cell-raw">{{ ed.raw_value }}</span>
+          {% endif %}
+        {% elif ed.raw_value is not none %}
+          <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}</span>
+          <span class="cell-raw">{{ ed.raw_value | round(2) if ed.raw_value is not none else '' }}</span>
+          {% if ed.rank %}<span class="cell-rank">#{{ ed.rank }}</span>{% endif %}
+        {% else %}
+          <span class="cell-empty">—</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+{% elif category_order %}
+  <div class="empty-state">No results yet for {{ selected_category }}.</div>
+{% else %}
+  <div class="empty-state">Competition not yet started.</div>
+{% endif %}
+
+</div>
+
+<script>
+// Auto-reload via SSE: reconnect and reload page content on state change
+(function() {
+  let lastReload = 0;
+  function connect() {
+    const es = new EventSource('/stream');
+    es.onmessage = function() {
+      const now = Date.now();
+      if (now - lastReload > 3000) {
+        lastReload = now;
+        location.reload();
+      }
+    };
+    es.onerror = function() {
+      es.close();
+      setTimeout(connect, 5000);
+    };
+  }
+  connect();
+})();
+</script>
+
+</body>
+</html>

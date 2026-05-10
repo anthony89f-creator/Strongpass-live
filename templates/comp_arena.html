@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arena</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#060606; --surface:#0E0E0E; --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#555; --gold:#F5C842; }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; display:flex; flex-direction:column; }
+  .arena-head { padding:20px 40px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .event-name { font-size:48px; font-weight:900; text-transform:uppercase; letter-spacing:0.04em; color:var(--gold); line-height:1; }
+  .heat-info { text-align:right; }
+  .heat-cat { font-size:20px; font-weight:800; text-transform:uppercase; color:rgba(255,255,255,0.6); }
+  .heat-num { font-size:14px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); margin-top:4px; }
+  .lanes-grid { flex:1; display:grid; grid-template-columns:repeat({{ lanes|length or 1 }},1fr); }
+  .lane-panel { display:flex; flex-direction:column; align-items:center; justify-content:center; border-right:1px solid var(--border); padding:40px 24px; text-align:center; gap:12px; }
+  .lane-panel:last-child { border-right:none; }
+  .lane-num-big { font-size:14px; font-weight:700; letter-spacing:0.28em; text-transform:uppercase; color:var(--dim); }
+  .lane-athlete { font-size:52px; font-weight:900; text-transform:uppercase; letter-spacing:0.02em; line-height:0.95; }
+  .controls { padding:16px 40px; border-top:1px solid var(--border); display:flex; gap:10px; flex-shrink:0; }
+  .btn { border:none; border-radius:7px; padding:10px 20px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; text-decoration:none; display:inline-block; }
+  .btn-gold { background:rgba(245,200,66,0.12); color:var(--gold); border:1px solid rgba(245,200,66,0.3); }
+  .btn-outline { background:rgba(255,255,255,0.04); color:var(--dim); border:1px solid var(--border); }
+  .auto-refresh { margin-left:auto; font-size:11px; color:var(--dim); font-family:'Barlow',sans-serif; display:flex; align-items:center; gap:6px; }
+  .live-dot { width:6px; height:6px; border-radius:50%; background:#00DD55; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+<div class="arena-head">
+  <div class="event-name">{{ event_name }}</div>
+  <div class="heat-info">
+    <div class="heat-cat">{{ state.category }}</div>
+    <div class="heat-num">Heat {{ state.heat }}</div>
+  </div>
+</div>
+<div class="lanes-grid">
+  {% for lane in lanes %}
+  <div class="lane-panel">
+    <div class="lane-num-big">Lane {{ lane.lane }}</div>
+    <div class="lane-athlete">{{ lane.athlete_name }}</div>
+  </div>
+  {% else %}
+  <div class="lane-panel"><div style="color:var(--dim);font-size:24px">No athletes loaded</div></div>
+  {% endfor %}
+</div>
+<div class="controls">
+  <form action="/comp/action/prev_heat" method="post" style="display:contents">
+    <button type="submit" class="btn btn-outline">← Prev</button>
+  </form>
+  <form action="/comp/action/next_heat" method="post" style="display:contents">
+    <button type="submit" class="btn btn-gold">Next Heat →</button>
+  </form>
+  <a href="/comp/events" class="btn btn-outline">Setup</a>
+  <div class="auto-refresh"><div class="live-dot"></div>Auto-refreshes every 5s</div>
+</div>
+<script>setTimeout(()=>location.reload(), 5000);</script>
+</body>
+</html>

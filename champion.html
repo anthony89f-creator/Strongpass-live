@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Event Winner</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
+  :root { --gold:#F5C842; --gold-dim:#D4A017; --gold-pale:#FFF2B0; --dim:rgba(255,255,255,0.35); }
+
+  #winner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+
+  .w-bg {
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse 80% 65% at 50% 50%, rgba(20,14,0,0.85) 0%, rgba(0,0,0,0.92) 100%);
+    opacity:0; transition:opacity 0.5s ease;
+  }
+  #winner.visible .w-bg { opacity:1; }
+
+  .w-scanlines {
+    position:absolute; inset:0; pointer-events:none; opacity:0;
+    background:repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(255,255,255,0.01) 3px, rgba(255,255,255,0.01) 4px);
+    transition:opacity 0.5s ease 0.3s;
+  }
+  #winner.visible .w-scanlines { opacity:1; }
+
+  /* Gold streaks */
+  .streak {
+    position:absolute; height:1px;
+    background:linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    opacity:0;
+  }
+  #winner.visible .streak { animation:streak 2s ease-out forwards; }
+  .streak:nth-child(1){top:25%;width:460px;left:0;animation-delay:0.1s!important}
+  .streak:nth-child(2){top:40%;width:320px;right:0;transform:scaleX(-1);animation-delay:0.25s!important}
+  .streak:nth-child(3){top:60%;width:400px;left:0;animation-delay:0.4s!important}
+  .streak:nth-child(4){top:75%;width:280px;right:0;transform:scaleX(-1);animation-delay:0.2s!important}
+  @keyframes streak { 0%{opacity:0;clip-path:inset(0 100% 0 0)} 30%{opacity:0.6} 100%{opacity:0;clip-path:inset(0 0% 0 0)} }
+
+  /* Rings */
+  .ring {
+    position:absolute; border-radius:50%;
+    border:1px solid rgba(212,160,23,0.1);
+    top:50%; left:50%; transform:translate(-50%,-50%) scale(0); opacity:0;
+  }
+  #winner.visible .ring { animation:ring 2s ease-out forwards; }
+  .ring:nth-child(1){width:500px;height:500px;animation-delay:0.05s!important}
+  .ring:nth-child(2){width:800px;height:800px;animation-delay:0.25s!important}
+  .ring:nth-child(3){width:1100px;height:1100px;animation-delay:0.45s!important}
+  @keyframes ring { 0%{transform:translate(-50%,-50%) scale(0);opacity:0.6} 100%{transform:translate(-50%,-50%) scale(1);opacity:0} }
+
+  /* Card */
+  .w-card {
+    position:relative; z-index:10; text-align:center;
+    transform:scale(0.9) translateY(24px); opacity:0;
+    transition:transform 0.65s cubic-bezier(0.16,1,0.3,1), opacity 0.5s ease;
+    transition-delay:0.22s;
+  }
+  #winner.visible .w-card { transform:scale(1) translateY(0); opacity:1; }
+
+  .w-eyebrow { font-size:12px; font-weight:700; letter-spacing:0.38em; text-transform:uppercase; color:var(--dim); margin-bottom:18px; }
+
+  .w-title-row { display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:6px; }
+  .w-line   { height:1px; flex:1; max-width:100px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.2)); }
+  .w-line.r { background:linear-gradient(270deg, transparent, rgba(255,255,255,0.2)); }
+  .w-label  { font-size:12px; font-weight:800; letter-spacing:0.45em; text-transform:uppercase; color:var(--dim); margin-bottom:2px; }
+
+  .w-event {
+    font-size:68px; font-weight:900; letter-spacing:0.04em; text-transform:uppercase; line-height:0.95;
+    background:linear-gradient(180deg, var(--gold-pale) 0%, var(--gold) 45%, var(--gold-dim) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    filter:drop-shadow(0 4px 24px rgba(212,160,23,0.35));
+  }
+
+  .w-divider { width:400px; height:1px; margin:20px auto; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); }
+
+  .w-name   { font-size:72px; font-weight:900; letter-spacing:0.05em; text-transform:uppercase; color:#fff; line-height:1; text-shadow:0 2px 24px rgba(0,0,0,0.9); }
+  .w-detail { font-size:15px; font-weight:500; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); margin-top:8px; font-family:'Barlow',sans-serif; }
+
+  .w-scores {
+    display:flex; align-items:stretch; justify-content:center; gap:1px;
+    margin-top:24px; border:1px solid rgba(255,255,255,0.07);
+    width:fit-content; margin-left:auto; margin-right:auto; overflow:hidden;
+  }
+  .w-score-box { background:rgba(5,5,5,0.9); padding:12px 34px; border-right:1px solid rgba(255,255,255,0.06); }
+  .w-score-box:last-child { border-right:none; }
+  .w-score-val   { font-size:44px; font-weight:900; color:var(--gold); line-height:1; }
+  .w-score-label { font-size:9px;  font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); margin-top:3px; }
+
+  .w-comp { font-size:11px; font-weight:700; letter-spacing:0.28em; text-transform:uppercase; color:var(--dim); margin-top:20px; }
+
+  #particles { position:absolute; inset:0; pointer-events:none; z-index:5; }
+</style>
+</head>
+<body>
+<div id="winner">
+  <div class="w-bg"></div>
+  <div class="w-scanlines"></div>
+  <div class="streak"></div><div class="streak"></div><div class="streak"></div><div class="streak"></div>
+  <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+  <div class="w-card">
+    <div class="w-eyebrow"  id="w-eyebrow">IRON CHALLENGE 2025</div>
+    <div class="w-title-row">
+      <div class="w-line"></div>
+      <div>
+        <div class="w-label">EVENT WINNER</div>
+        <div class="w-event" id="w-event">ATLAS STONES</div>
+      </div>
+      <div class="w-line r"></div>
+    </div>
+    <div class="w-divider"></div>
+    <div class="w-name"   id="w-name">THOR BJORNSSON</div>
+    <div class="w-detail" id="w-detail">Iceland · Professional Division</div>
+    <div class="w-scores">
+      <div class="w-score-box">
+        <div class="w-score-val"   id="w-score">48.5</div>
+        <div class="w-score-label" id="w-score-label">EVENT SCORE</div>
+      </div>
+      <div class="w-score-box">
+        <div class="w-score-val"   id="w-events">6/6</div>
+        <div class="w-score-label">EVENTS</div>
+      </div>
+    </div>
+    <div class="w-comp" id="w-comp">STRONGMAN CHAMPIONSHIP</div>
+  </div>
+  <div id="particles"></div>
+</div>
+
+<script src="ws-client.js"></script>
+<script>
+let state = {
+  champion:false, champName:"THOR BJORNSSON", champDetail:"Iceland · Professional Division",
+  champScore:"48.5", champScoreLabel:"EVENT SCORE", champEvents:"6/6",
+  champEyebrow:"IRON CHALLENGE 2025", champComp:"STRONGMAN CHAMPIONSHIP", eventName:"ATLAS STONES"
+};
+
+function spawnParticles() {
+  const c = document.getElementById('particles'); c.innerHTML='';
+  for (let i=0;i<40;i++) {
+    const p = document.createElement('div');
+    const x=Math.random()*1920, dur=2.5+Math.random()*3, delay=Math.random()*4, sz=2+Math.random()*4;
+    const col = Math.random()>0.6 ? '#F5C842' : 'rgba(255,255,255,0.6)';
+    p.style.cssText=`position:absolute;left:${x}px;top:-10px;width:${sz}px;height:${sz}px;background:${col};border-radius:50%;`;
+    p.animate([{top:'-10px',opacity:.9},{top:'1090px',opacity:.1,transform:`translateX(${(Math.random()-.5)*120}px)`}],
+      {duration:dur*1000,delay:delay*1000,iterations:Infinity,easing:'linear'});
+    c.appendChild(p);
+  }
+}
+
+function render() {
+  document.getElementById('w-eyebrow').textContent    = state.champEyebrow||'';
+  document.getElementById('w-event').textContent      = state.eventName||'EVENT';
+  document.getElementById('w-name').textContent       = state.champName||'';
+  document.getElementById('w-detail').textContent     = state.champDetail||'';
+  document.getElementById('w-score').textContent      = state.champScore||'';
+  document.getElementById('w-score-label').textContent= state.champScoreLabel||'EVENT SCORE';
+  document.getElementById('w-events').textContent     = state.champEvents||'';
+  document.getElementById('w-comp').textContent       = state.champComp||'';
+  const el = document.getElementById('winner');
+  if (state.champion) { el.classList.add('visible'); spawnParticles(); }
+  else { el.classList.remove('visible'); document.getElementById('particles').innerHTML=''; }
+}
+
+window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
+
+fetch('/state.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(data => { Object.assign(state, data); render(); })
+  .catch(() => render());
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Debug</title>
+<style>
+  body { background:#111; color:#eee; font-family:monospace; padding:20px; font-size:14px; }
+  h2 { color:#F5C842; }
+  .ok  { color:#00DD55; }
+  .err { color:#FF4444; }
+  pre  { background:#1a1a1a; padding:12px; border-radius:6px; overflow:auto; white-space:pre-wrap; }
+  button { background:#333; color:#fff; border:1px solid #555; padding:8px 16px; cursor:pointer; border-radius:4px; margin:4px; font-family:monospace; }
+</style>
+</head>
+<body>
+<h2>Strongman Broadcast — Debug</h2>
+
+<p><strong>Server:</strong> <span id="srv">checking...</span></p>
+<p><strong>state.json:</strong> <span id="state-status">checking...</span></p>
+<p><strong>scorebug flag:</strong> <span id="flag-scorebug">?</span></p>
+<p><strong>leaderboard flag:</strong> <span id="flag-lb">?</span></p>
+<p><strong>lowerThirdVisible flag:</strong> <span id="flag-lt">?</span></p>
+
+<br>
+<button onclick="setFlag('scorebug',true)">Force scorebug ON</button>
+<button onclick="setFlag('leaderboard',true)">Force leaderboard ON</button>
+<button onclick="setFlag('lowerThirdVisible',true)">Force nameplates ON</button>
+<button onclick="forceAll()">Force ALL ON</button>
+<br><br>
+<button onclick="loadState()">Refresh</button>
+
+<h2 style="margin-top:20px">Raw state.json</h2>
+<pre id="raw">loading...</pre>
+
+<script>
+async function loadState() {
+  try {
+    const r = await fetch('/state.json?t=' + Date.now());
+    document.getElementById('srv').innerHTML = '<span class="ok">✅ Reachable (HTTP ' + r.status + ')</span>';
+    if (!r.ok) { document.getElementById('state-status').innerHTML = '<span class="err">HTTP ' + r.status + '</span>'; return; }
+    const text = await r.text();
+    document.getElementById('state-status').innerHTML = '<span class="ok">✅ OK (' + text.length + ' bytes)</span>';
+    const data = JSON.parse(text);
+    document.getElementById('raw').textContent = JSON.stringify(data, null, 2);
+    document.getElementById('flag-scorebug').innerHTML = fmtFlag(data.scorebug);
+    document.getElementById('flag-lb').innerHTML       = fmtFlag(data.leaderboard);
+    document.getElementById('flag-lt').innerHTML       = fmtFlag(data.lowerThirdVisible);
+  } catch(e) {
+    document.getElementById('srv').innerHTML = '<span class="err">❌ ' + e.message + '</span>';
+    document.getElementById('raw').textContent = e.toString();
+  }
+}
+
+function fmtFlag(v) {
+  return v ? '<span class="ok">✅ true</span>' : '<span class="err">❌ false / missing</span>';
+}
+
+async function setFlag(key, val) {
+  const body = {}; body[key] = val;
+  await fetch('/update', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  await loadState();
+}
+
+async function forceAll() {
+  await fetch('/update', {method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({scorebug:true, leaderboard:true, lowerThirdVisible:true, eventBarVisible:true})});
+  await loadState();
+}
+
+loadState();
+setInterval(loadState, 2000);
+</script>
+</body>
+</html>

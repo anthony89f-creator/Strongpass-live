@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Head to Head</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
+  :root {
+    --bg:     rgba(6,6,6,0.97);
+    --gold:   #F5C842;
+    --gold2:  #D4A017;
+    --dim:    #666;
+    --text:   #F0F0F0;
+    --border: rgba(255,255,255,0.07);
+  }
+
+  #h2h {
+    position:absolute; inset:0;
+    display:flex; align-items:stretch;
+    opacity:0; transition:opacity 0.3s ease;
+  }
+  #h2h.visible { opacity:1; }
+
+  /* ── ATHLETE PANELS ── */
+  .ath-panel {
+    flex:1; position:relative; overflow:hidden;
+    display:flex; align-items:flex-end;
+  }
+
+  /* Photo fills panel */
+  .ath-photo {
+    position:absolute; inset:0;
+    background-size:cover; background-position:center top;
+    background-color:#111;
+    transform:scale(1.04);
+    transition:transform 6s ease;
+  }
+  #h2h.visible .ath-photo { transform:scale(1); }
+
+  /* Dark gradient over photo */
+  .ath-overlay {
+    position:absolute; inset:0;
+    background:linear-gradient(
+      to top,
+      rgba(0,0,0,0.92) 0%,
+      rgba(0,0,0,0.5)  35%,
+      rgba(0,0,0,0.1)  65%,
+      transparent      100%
+    );
+  }
+
+  /* Slide-in from sides */
+  .ath-panel.left  { clip-path:inset(0 100% 0 0); transition:clip-path 0.7s cubic-bezier(0.77,0,0.18,1); }
+  .ath-panel.right { clip-path:inset(0 0 0 100%); transition:clip-path 0.7s cubic-bezier(0.77,0,0.18,1); }
+  #h2h.visible .ath-panel.left  { clip-path:inset(0 0 0 0); }
+  #h2h.visible .ath-panel.right { clip-path:inset(0 0 0 0); transition-delay:0.08s; }
+
+  /* Info at bottom */
+  .ath-info {
+    position:relative; z-index:2; padding:0 40px 48px;
+    width:100%;
+    opacity:0; transform:translateY(20px);
+    transition:opacity 0.5s ease 0.6s, transform 0.5s ease 0.6s;
+  }
+  .ath-panel.right .ath-info { text-align:right; padding:0 40px 48px; }
+  #h2h.visible .ath-info { opacity:1; transform:translateY(0); }
+
+  .ath-category {
+    font-size:12px; font-weight:700; letter-spacing:0.3em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:8px;
+    font-family:'Barlow',sans-serif;
+  }
+  .ath-name {
+    font-size:72px; font-weight:900; letter-spacing:0.02em;
+    text-transform:uppercase; color:#fff; line-height:0.92;
+    text-shadow:0 4px 30px rgba(0,0,0,0.8);
+  }
+  .ath-origin {
+    font-size:18px; font-weight:600; letter-spacing:0.18em;
+    text-transform:uppercase; color:rgba(255,255,255,0.55);
+    margin-top:10px; font-family:'Barlow',sans-serif;
+  }
+  .ath-no-photo {
+    font-size:100px; display:flex; align-items:center; justify-content:center;
+    position:absolute; inset:0; color:rgba(255,255,255,0.05);
+    font-weight:900; letter-spacing:0.1em; text-transform:uppercase;
+  }
+
+  /* ── CENTRE DIVIDER ── */
+  .centre {
+    position:absolute; left:50%; top:0; bottom:0;
+    transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:10; gap:0;
+    opacity:0; transition:opacity 0.4s ease 0.9s;
+  }
+  #h2h.visible .centre { opacity:1; }
+
+  .centre-line-top {
+    width:1px; flex:1;
+    background:linear-gradient(to bottom, transparent, rgba(255,255,255,0.15));
+  }
+  .centre-line-bot {
+    width:1px; flex:1;
+    background:linear-gradient(to top, transparent, rgba(255,255,255,0.15));
+  }
+  .centre-badge {
+    width:90px; height:90px; border-radius:50%;
+    background:var(--bg); border:1px solid rgba(255,255,255,0.12);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    flex-shrink:0;
+  }
+  .centre-vs    { font-size:32px; font-weight:900; color:var(--gold); letter-spacing:0.05em; line-height:1; }
+  .centre-label { font-size:8px; font-weight:700; letter-spacing:0.25em; color:var(--dim); text-transform:uppercase; font-family:'Barlow',sans-serif; }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    position:absolute; top:0; left:0; right:0; height:56px; z-index:10;
+    background:rgba(6,6,6,0.85);
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transform:translateY(-100%);
+    transition:opacity 0.4s ease 0.7s, transform 0.4s ease 0.7s;
+  }
+  #h2h.visible .top-bar { opacity:1; transform:translateY(0); }
+  .top-bar-event { font-size:14px; font-weight:800; letter-spacing:0.28em; text-transform:uppercase; color:rgba(255,255,255,0.7); }
+  .top-bar-sep   { width:1px; height:18px; background:var(--border); margin:0 20px; }
+  .top-bar-comp  { font-size:11px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; }
+</style>
+</head>
+<body>
+
+<div id="h2h">
+  <!-- Top bar -->
+  <div class="top-bar">
+    <span class="top-bar-event" id="h2h-event">ATLAS STONES</span>
+    <div class="top-bar-sep"></div>
+    <span class="top-bar-comp" id="h2h-comp">IRON CHALLENGE 2025</span>
+  </div>
+
+  <!-- Left athlete -->
+  <div class="ath-panel left" id="panel-left">
+    <div class="ath-photo" id="photo-left"></div>
+    <div class="ath-overlay"></div>
+    <div class="ath-no-photo" id="nophoto-left"></div>
+    <div class="ath-info">
+      <div class="ath-category" id="cat-left"></div>
+      <div class="ath-name"    id="name-left">ATHLETE ONE</div>
+      <div class="ath-origin"  id="origin-left">Country</div>
+    </div>
+  </div>
+
+  <!-- Centre -->
+  <div class="centre">
+    <div class="centre-line-top"></div>
+    <div class="centre-badge">
+      <div class="centre-vs">VS</div>
+      <div class="centre-label">Head to Head</div>
+    </div>
+    <div class="centre-line-bot"></div>
+  </div>
+
+  <!-- Right athlete -->
+  <div class="ath-panel right" id="panel-right">
+    <div class="ath-photo" id="photo-right"></div>
+    <div class="ath-overlay"></div>
+    <div class="ath-no-photo" id="nophoto-right"></div>
+    <div class="ath-info" style="text-align:right">
+      <div class="ath-category" id="cat-right"></div>
+      <div class="ath-name"    id="name-right">ATHLETE TWO</div>
+      <div class="ath-origin"  id="origin-right">Country</div>
+    </div>
+  </div>
+</div>
+
+<script src="ws-client.js"></script>
+<script>
+let state = {
+  h2h: false,
+  h2hLeft:  { name:'ATHLETE ONE', origin:'', category:'', photoUrl:'' },
+  h2hRight: { name:'ATHLETE TWO', origin:'', category:'', photoUrl:'' },
+  eventName:'ATLAS STONES', compName:'IRON CHALLENGE 2025'
+};
+
+function setPhoto(id, noPhotoId, url, name) {
+  const el = document.getElementById(id);
+  const np = document.getElementById(noPhotoId);
+  if (url) {
+    el.style.backgroundImage = 'url(' + url + ')';
+    np.style.display = 'none';
+  } else {
+    el.style.backgroundImage = 'none';
+    np.textContent = (name||'').split(' ').map(w=>w[0]||'').join('').slice(0,2);
+    np.style.display = 'flex';
+  }
+}
+
+function render() {
+  const L = state.h2hLeft  || {};
+  const R = state.h2hRight || {};
+
+  setPhoto('photo-left',  'nophoto-left',  L.photoUrl, L.name);
+  setPhoto('photo-right', 'nophoto-right', R.photoUrl, R.name);
+
+  document.getElementById('name-left').textContent   = (L.name||'').toUpperCase();
+  document.getElementById('origin-left').textContent = L.origin||'';
+  document.getElementById('cat-left').textContent    = L.category||'';
+
+  document.getElementById('name-right').textContent   = (R.name||'').toUpperCase();
+  document.getElementById('origin-right').textContent = R.origin||'';
+  document.getElementById('cat-right').textContent    = R.category||'';
+
+  document.getElementById('h2h-event').textContent = state.eventName||'';
+  document.getElementById('h2h-comp').textContent  = state.compName||'';
+
+  const el = document.getElementById('h2h');
+  state.h2h ? el.classList.add('visible') : el.classList.remove('visible');
+}
+
+window.onStateUpdate = function(d) { Object.assign(state, d); render(); };
+
+fetch('/state.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(d => { Object.assign(state, d); render(); })
+  .catch(() => render());
+</script>
+</body>
+</html>

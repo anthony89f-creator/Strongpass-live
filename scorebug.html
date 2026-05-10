@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scorebug</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
+  :root {
+    --bg: rgba(10,10,10,0.97);
+    --border: rgba(255,255,255,0.07);
+    --gold: #F5C842;
+    --silver: #C8C8C8;
+    --bronze: #CD7F32;
+    --dim: #888;
+    --text: #F0F0F0;
+  }
+
+  #scorebug {
+    position:absolute; bottom:0; left:0; right:0;
+    transform:translateY(100%); opacity:0;
+    transition:transform 0.6s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease;
+  }
+  #scorebug.visible { transform:translateY(0); opacity:1; }
+
+  .bug-bar {
+    display:flex; align-items:stretch; height:56px;
+    background:var(--bg);
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+
+  /* LEFT — competition name */
+  .bug-brand {
+    display:flex; flex-direction:column; justify-content:center;
+    padding:0 22px; min-width:220px; flex-shrink:0;
+    border-right:1px solid var(--border);
+    background: rgba(20,20,20,0.98);
+  }
+  .bug-brand-title { font-size:15px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); line-height:1; }
+  .bug-brand-sub   { font-size:9px;  font-weight:600; letter-spacing:0.2em;  text-transform:uppercase; color:var(--dim); margin-top:2px; font-family:'Barlow',sans-serif; }
+
+  /* CENTER — scrolling athletes */
+  .bug-scroll-wrap {
+    flex:1; overflow:hidden; position:relative;
+  }
+  .bug-scroll-wrap::before,
+  .bug-scroll-wrap::after {
+    content:''; position:absolute; top:0; bottom:0; width:50px; z-index:2; pointer-events:none;
+  }
+  .bug-scroll-wrap::before { left:0;  background:linear-gradient(90deg,  var(--bg), transparent); }
+  .bug-scroll-wrap::after  { right:0; background:linear-gradient(270deg, var(--bg), transparent); }
+
+  .bug-scroll {
+    display:flex; align-items:center; height:56px; white-space:nowrap;
+    /* speed: pixels per second. With 10 athletes ~1400px wide, 80s = ~17px/s — very readable */
+    animation: scroll 80s linear infinite;
+  }
+  /* Pause on hover for testing */
+  .bug-scroll:hover { animation-play-state:paused; }
+
+  @keyframes scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .bug-item {
+    display:inline-flex; align-items:center; gap:10px;
+    padding:0 30px 0 0; margin-right:30px;
+    border-right:1px solid var(--border);
+    flex-shrink:0;
+  }
+
+  .bug-rank      { font-size:18px; font-weight:900; color:var(--dim); min-width:20px; text-align:center; flex-shrink:0; }
+  .bug-rank.r1   { color:var(--gold); }
+  .bug-rank.r2   { color:var(--silver); }
+  .bug-rank.r3   { color:var(--bronze); }
+
+  .bug-name  { font-size:17px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; color:var(--text); }
+  .bug-origin{ font-size:10px; font-weight:500; letter-spacing:0.1em;  text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; margin-top:1px; }
+
+  .bug-score     { font-size:20px; font-weight:900; color:var(--gold); flex-shrink:0; }
+  .bug-score.r2  { color:var(--silver); }
+  .bug-score.r3  { color:var(--bronze); }
+
+  .bug-unit  { font-size:9px; font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--dim); }
+
+  /* RIGHT — event info */
+  .bug-right {
+    display:flex; align-items:stretch; flex-shrink:0;
+  }
+  .bug-event {
+    padding:0 20px; border-left:1px solid var(--border);
+    display:flex; flex-direction:column; justify-content:center; text-align:right;
+  }
+  .bug-event-name { font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); }
+  .bug-event-num  { font-size:9px;  font-weight:600; letter-spacing:0.15em; text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; }
+
+  .bug-live {
+    padding:0 20px; border-left:1px solid var(--border);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  }
+  .bug-live-dot  { width:6px; height:6px; background:rgba(255,255,255,0.4); border-radius:50%; animation:pulse 1.4s infinite; }
+  .bug-live-text { font-size:9px; font-weight:900; letter-spacing:0.2em; color:rgba(255,255,255,0.5); text-transform:uppercase; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+<div id="scorebug">
+  <div class="bug-bar">
+    <div class="bug-brand">
+      <div class="bug-brand-title" id="bug-comp">IRON CHALLENGE</div>
+      <div class="bug-brand-sub"  id="bug-comp-sub">2025 STRONGMAN</div>
+    </div>
+
+    <div class="bug-scroll-wrap">
+      <div class="bug-scroll" id="bug-scroll"></div>
+    </div>
+
+    <div class="bug-right">
+      <div class="bug-event">
+        <div class="bug-event-name" id="bug-event">ATLAS STONES</div>
+        <div class="bug-event-num"  id="bug-event-num">EVENT 4 OF 6</div>
+      </div>
+      <div class="bug-live">
+        <div class="bug-live-dot"></div>
+        <div class="bug-live-text">LIVE</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="ws-client.js"></script>
+<script>
+let state = {
+  scorebug:false,
+  athletes:[
+    {name:"THOR BJORNSSON",origin:"Iceland",score:"48.5"},
+    {name:"BRIAN SHAW",origin:"USA",score:"44.0"},
+    {name:"EDDIE HALL",origin:"England",score:"41.5"},
+    {name:"MARTINS LICIS",origin:"USA",score:"38.0"},
+    {name:"MATEUSZ KIELISZKOWSKI",origin:"Poland",score:"35.5"},
+    {name:"ADAM BISHOP",origin:"Wales",score:"33.0"},
+    {name:"JERRY PRITCHETT",origin:"USA",score:"30.5"},
+    {name:"KONSTANTINE JANASHIA",origin:"Georgia",score:"28.0"},
+  ],
+  scoreUnit:"PTS", eventName:"ATLAS STONES", eventNum:"EVENT 4 OF 6",
+  compName:"IRON CHALLENGE", compSub:"2025 STRONGMAN"
+};
+
+function buildItems(athletes) {
+  return athletes.map((a,i) => {
+    const rc = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    return `<div class="bug-item">
+      <span class="bug-rank ${rc}">${i+1}</span>
+      <div>
+        <div class="bug-name">${a.name}</div>
+        <div class="bug-origin">${a.origin||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="bug-score ${rc}">${a.score}</div>
+        <div class="bug-unit">${state.scoreUnit||'PTS'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function render() {
+  const athletes = state.athletes || [];
+  // Duplicate content so scroll loops seamlessly
+  const html = buildItems(athletes);
+  document.getElementById('bug-scroll').innerHTML = html + html;
+
+  // Adjust speed based on number of athletes — always readable
+  // Aim for ~18px/s. Each item ~220px wide.
+  const totalW = athletes.length * 220;
+  const duration = Math.max(40, Math.round(totalW / 18)) + 's';
+  document.getElementById('bug-scroll').style.animationDuration = duration;
+
+  document.getElementById('bug-comp').textContent     = state.compName||'STRONGMAN';
+  document.getElementById('bug-comp-sub').textContent = state.compSub||'';
+  document.getElementById('bug-event').textContent    = state.eventName||'';
+  document.getElementById('bug-event-num').textContent= state.eventNum||'';
+
+  const bug = document.getElementById('scorebug');
+  state.scorebug ? bug.classList.add('visible') : bug.classList.remove('visible');
+}
+
+window.onStateUpdate = function(data) { Object.assign(state, data); render(); };
+
+// Also fetch state immediately on load so we don't wait for ws-client
+fetch('/state.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(data => { Object.assign(state, data); render(); })
+  .catch(() => render());
+</script>
+</body>
+</html>

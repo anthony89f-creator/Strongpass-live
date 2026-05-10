@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Competition Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#202020; --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666; --gold:#F5C842; --green:#00DD55; --blue:#0088FF; }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .topbar a { color:var(--dim); text-decoration:none; font-size:12px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+  .topbar a:hover { color:var(--text); }
+  .topbar a.active { color:var(--blue); }
+  .topbar-nav-group { display:flex; align-items:center; gap:16px; }
+  .topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
+  .topbar-title { font-size:16px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:var(--blue); margin-right:auto; }
+  .topbar-logo { height:48px; width:auto; object-fit:contain; mix-blend-mode:lighten; display:block; }
+  .main { padding:20px; max-width:1000px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+  .progress-bar { display:flex; align-items:center; gap:0; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px 8px; flex-wrap:wrap; }
+  .progress-step { font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; padding:6px 10px; border-radius:6px; color:var(--dim); }
+  .progress-step.active { background:rgba(0,136,255,0.2); color:var(--blue); }
+  .progress-step.done { color:var(--green); }
+  .progress-arrow { color:var(--dim); font-size:10px; padding:0 4px; }
+  .panels { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .panel-head { padding:12px 16px; background:var(--surface2); border-bottom:1px solid var(--border); }
+  .panel-title { font-size:10px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); margin-bottom:4px; }
+  .panel-value { font-size:22px; font-weight:900; color:var(--text); }
+  .panel-body { padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+  .btn { border:none; border-radius:7px; padding:10px 14px; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; text-decoration:none; display:inline-block; text-align:center; transition:filter 0.15s; }
+  .btn:hover { filter:brightness(1.15); }
+  .btn-primary { background:rgba(0,120,255,0.15); color:var(--blue); border:1px solid rgba(0,120,255,0.3); }
+  .btn-gold { background:rgba(245,200,66,0.12); color:var(--gold); border:1px solid rgba(245,200,66,0.3); }
+  .btn-green { background:rgba(0,180,60,0.12); color:var(--green); border:1px solid rgba(0,180,60,0.3); }
+  .backup-ok { background:rgba(0,180,60,0.1); border:1px solid rgba(0,180,60,0.3); color:var(--green); padding:10px 14px; border-radius:8px; font-size:13px; }
+  .backup-err { background:rgba(255,60,0,0.1); border:1px solid rgba(255,60,0,0.3); color:#FF4422; padding:10px 14px; border-radius:8px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="/logo.png" alt="Logo" class="topbar-logo">
+  <span class="topbar-title">Competition Dashboard</span>
+  <a href="/">← Home</a>
+  <a href="/comp/dashboard" class="active">Dashboard</a>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run">Run</a></span>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
+  <a href="/control.html" style="color:var(--gold)">📡 Broadcast →</a>
+</div>
+<div class="main">
+
+  {% if backup_status == 'ok' %}
+  <div class="backup-ok">✓ Backup saved successfully.</div>
+  {% elif backup_status == 'error' %}
+  <div class="backup-err">Backup failed. Check server logs.</div>
+  {% endif %}
+
+  <div class="progress-bar">
+    <span class="progress-step {% if comp_status == 'setup' %}active{% elif comp_status in ['athletes','heats','live','finished'] %}done{% endif %}">Setup</span>
+    <span class="progress-arrow">→</span>
+    <span class="progress-step {% if comp_status == 'athletes' %}active{% elif comp_status in ['heats','live','finished'] %}done{% endif %}">Athletes</span>
+    <span class="progress-arrow">→</span>
+    <span class="progress-step {% if comp_status == 'heats' %}active{% elif comp_status in ['live','finished'] %}done{% endif %}">Heats</span>
+    <span class="progress-arrow">→</span>
+    <span class="progress-step {% if comp_status == 'live' %}active{% elif comp_status == 'finished' %}done{% endif %}">Live</span>
+    <span class="progress-arrow">→</span>
+    <span class="progress-step {% if comp_status == 'finished' %}active{% endif %}">Finished</span>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Events</div>
+        <div class="panel-value">{{ event_count }} event{{ 's' if event_count != 1 else '' }} configured</div>
+      </div>
+      <div class="panel-body">
+        <a href="/comp/events" class="btn btn-primary">Events</a>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Athletes</div>
+        <div class="panel-value">{{ athlete_count }} athlete{{ 's' if athlete_count != 1 else '' }} registered</div>
+      </div>
+      <div class="panel-body">
+        <a href="/comp/athletes" class="btn btn-primary">Athletes</a>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Heats</div>
+        <div class="panel-value">{% if heat_count %}{{ heat_count }} heat{{ 's' if heat_count != 1 else '' }} generated{% else %}Not generated{% endif %}</div>
+      </div>
+      <div class="panel-body">
+        {% if heat_count %}
+        <a href="/comp/heats" class="btn btn-primary">View Heats</a>
+        {% else %}
+        <form action="/comp/action/generate_heats" method="post" style="display:contents">
+          <button type="submit" class="btn btn-gold" onclick="return confirm('Generate heats from current athletes and events?')">Generate Heats</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Run Competition</div>
+        <div class="panel-value">{% if heat_count %}Ready to start{% else %}Generate heats first{% endif %}</div>
+      </div>
+      <div class="panel-body">
+        {% if heat_count %}
+        <a href="/comp/run" class="btn btn-gold">Start Competition</a>
+        {% else %}
+        <a href="/comp/run" class="btn btn-primary">Run (auto-generate heats)</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

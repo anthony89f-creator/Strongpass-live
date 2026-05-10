@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Athletes</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#202020; --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666; --gold:#F5C842; --blue:#0088FF; --green:#00DD55; --red:#FF4422; --orange:#FF8C00; }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .topbar a { color:var(--dim); text-decoration:none; font-size:12px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+  .topbar-nav-group { display:flex; align-items:center; gap:16px; }
+  .topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
+  .topbar-title { font-size:16px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; }
+  .main { padding:20px; max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+  .filter-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .filter-btn { padding:6px 14px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; text-decoration:none; }
+  .filter-btn.active { background:rgba(245,200,66,0.1); border-color:rgba(245,200,66,0.3); color:var(--gold); }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .section-head { padding:10px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .section-title { font-size:11px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); }
+  .ath-row { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); transition:background 0.15s; }
+  .ath-row:last-child { border-bottom:none; }
+  .ath-row.withdrawn { opacity:0.5; background:rgba(255,60,0,0.04); }
+  .ath-row.injury    { opacity:0.5; background:rgba(255,140,0,0.04); }
+  .ath-info { flex:1; min-width:0; }
+  .ath-name { font-size:17px; font-weight:800; text-transform:uppercase; }
+  .ath-name.struck { text-decoration:line-through; color:var(--dim); }
+  .ath-cat  { font-size:11px; color:var(--dim); font-family:'Barlow',sans-serif; }
+  .status-badge { font-size:9px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase; padding:3px 7px; border-radius:4px; flex-shrink:0; }
+  .status-badge.active    { background:rgba(0,200,60,0.12);  color:var(--green);  border:1px solid rgba(0,200,60,0.2); }
+  .status-badge.withdrawn { background:rgba(255,60,0,0.12);  color:var(--red);    border:1px solid rgba(255,60,0,0.2); }
+  .status-badge.injury    { background:rgba(255,140,0,0.12); color:var(--orange); border:1px solid rgba(255,140,0,0.2); }
+  .btn-actions { display:flex; gap:5px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
+  .btn-sm { border-radius:5px; padding:5px 10px; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; cursor:pointer; border:1px solid; letter-spacing:0.06em; text-transform:uppercase; white-space:nowrap; }
+  .btn-withdraw { background:rgba(255,140,0,0.1); border-color:rgba(255,140,0,0.3); color:var(--orange); }
+  .btn-injury   { background:rgba(255,60,0,0.1);  border-color:rgba(255,60,0,0.3);  color:var(--red); }
+  .btn-reinstate{ background:rgba(0,200,60,0.1);  border-color:rgba(0,200,60,0.3);  color:var(--green); }
+  .btn-delete   { background:rgba(100,100,100,0.1); border-color:rgba(255,255,255,0.1); color:var(--dim); }
+  .add-form { padding:14px 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+  input[type=text] { background:var(--surface3); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; }
+  input[type=text]:focus { outline:none; border-color:rgba(245,200,66,0.3); }
+  select { background:var(--surface3); border:1px solid var(--border); color:var(--text); padding:8px 12px; border-radius:6px; font-family:'Barlow Condensed',sans-serif; font-size:14px; }
+  .btn-add { background:rgba(245,200,66,0.12); color:var(--gold); border:1px solid rgba(245,200,66,0.3); border-radius:6px; padding:8px 16px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+  .legend { display:flex; gap:10px; flex-wrap:wrap; padding:10px 16px; border-top:1px solid var(--border); background:var(--surface2); }
+  .legend-item { font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:5px; }
+  .legend-dot { width:6px; height:6px; border-radius:50%; }
+  .counts { display:flex; gap:16px; flex-wrap:wrap; padding:10px 16px; background:var(--surface2); border-bottom:1px solid var(--border); }
+  .count-item { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim); }
+  .count-item span { font-size:18px; font-weight:900; margin-right:4px; }
+  .count-item.active-count span { color:var(--green); }
+  .count-item.withdrawn-count span { color:var(--orange); }
+  .count-item.injury-count span { color:var(--red); }
+  .regen-notice { background:rgba(245,200,66,0.08); border:1px solid rgba(245,200,66,0.2); border-radius:8px; padding:10px 14px; font-size:12px; color:var(--gold); font-family:'Barlow',sans-serif; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-title">👥 Athletes</span>
+  <a href="/">← Home</a>
+  <a href="/comp/events">Setup</a>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/events">Events</a><a href="/comp/athletes" style="color:var(--blue)">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run">Run</a></span>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
+  <a href="/control.html" style="color:var(--gold)">📡 Broadcast →</a>
+</div>
+<div class="main">
+
+  <div class="regen-notice">
+    ⚡ Withdrawing or reinstating an athlete automatically regenerates the running order and syncs to OBS.
+  </div>
+
+  <div class="filter-row">
+    <a href="/comp/athletes" class="filter-btn {% if not selected_cat %}active{% endif %}">All</a>
+    {% for cat in category_order %}
+    <a href="/comp/athletes?category={{ cat }}" class="filter-btn {% if selected_cat==cat %}active{% endif %}">{{ cat }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- Add athlete -->
+  <div class="section">
+    <div class="section-head"><span class="section-title">Add Athlete</span></div>
+    <form action="/comp/action/add_athlete" method="post" class="add-form">
+      <input type="text" id="add-athlete-name" name="name" placeholder="ATHLETE NAME" required style="flex:1;min-width:180px">
+      <select name="category" required>
+        {% for cat in category_order %}<option value="{{ cat }}" {% if cat==selected_cat %}selected{% endif %}>{{ cat }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="btn-add">+ Add</button>
+    </form>
+  </div>
+
+  <!-- Athlete list -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">{{ athletes|length }} Athletes{% if selected_cat %} — {{ selected_cat }}{% endif %}</span>
+    </div>
+
+    {% set active_count = athletes|selectattr('status','equalto','active')|list|length %}
+    {% set withdrawn_count = athletes|selectattr('status','equalto','withdrawn')|list|length %}
+    {% set injury_count = athletes|selectattr('status','equalto','injury')|list|length %}
+
+    {% if athletes %}
+    <div class="counts">
+      <div class="count-item active-count"><span>{{ active_count }}</span>Active</div>
+      {% if withdrawn_count > 0 %}<div class="count-item withdrawn-count"><span>{{ withdrawn_count }}</span>Withdrawn</div>{% endif %}
+      {% if injury_count > 0 %}<div class="count-item injury-count"><span>{{ injury_count }}</span>Injury</div>{% endif %}
+    </div>
+    {% endif %}
+
+    {% for a in athletes %}
+    <div class="ath-row {{ a['status'] if a['status'] != 'active' else '' }}">
+      <div class="ath-info">
+        <div class="ath-name {% if a['status'] != 'active' %}struck{% endif %}">{{ a['name'] }}</div>
+        <div class="ath-cat">{{ a['category'] }}</div>
+      </div>
+      <div class="status-badge {{ a['status'] }}">{{ a['status'] }}</div>
+      <div class="btn-actions">
+        {% if a['status'] == 'active' %}
+          <!-- Withdraw options -->
+          <form action="/comp/action/withdraw_athlete" method="post" style="display:contents">
+            <input type="hidden" name="id" value="{{ a['id'] }}">
+            <input type="hidden" name="category" value="{{ a['category'] }}">
+            <input type="hidden" name="reason" value="injury">
+            <button type="submit" class="btn-sm btn-injury" onclick="return confirm('Mark {{ a['name'] }} as injured? Heats will be regenerated.')">🤕 Injury</button>
+          </form>
+          <form action="/comp/action/withdraw_athlete" method="post" style="display:contents">
+            <input type="hidden" name="id" value="{{ a['id'] }}">
+            <input type="hidden" name="category" value="{{ a['category'] }}">
+            <input type="hidden" name="reason" value="withdrawn">
+            <button type="submit" class="btn-sm btn-withdraw" onclick="return confirm('Withdraw {{ a['name'] }}? Heats will be regenerated.')">Withdraw</button>
+          </form>
+        {% else %}
+          <!-- Reinstate -->
+          <form action="/comp/action/reinstate_athlete" method="post" style="display:contents">
+            <input type="hidden" name="id" value="{{ a['id'] }}">
+            <input type="hidden" name="category" value="{{ a['category'] }}">
+            <button type="submit" class="btn-sm btn-reinstate" onclick="return confirm('Reinstate {{ a['name'] }}? Heats will be regenerated.')">✓ Reinstate</button>
+          </form>
+        {% endif %}
+        <form action="/comp/action/delete_athlete" method="post" style="display:contents">
+          <input type="hidden" name="id" value="{{ a['id'] }}">
+          <input type="hidden" name="category" value="{{ a['category'] }}">
+          <button type="submit" class="btn-sm btn-delete" onclick="return confirm('Permanently delete {{ a['name'] }}?')">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div style="padding:20px;text-align:center;color:var(--dim);font-family:'Barlow',sans-serif">No athletes yet.</div>
+    {% endfor %}
+
+    {% if athletes %}
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Active — competing</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Withdrawn — removed from heats</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Injury — removed from heats</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="section-title">Next Step</span></div>
+    <div class="section-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <span style="font-size:13px;color:var(--dim);font-family:'Barlow',sans-serif">Athletes added.</span>
+      <a href="/comp/heats" style="background:rgba(245,200,66,0.12);color:var(--gold);border:1px solid rgba(245,200,66,0.3);border-radius:6px;padding:8px 16px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.06em;text-transform:uppercase">Next: Generate Heats →</a>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  if (new URLSearchParams(window.location.search).get('focus') === 'add_athlete') {
+    var el = document.getElementById('add-athlete-name');
+    if (el) { el.focus(); }
+  }
+})();
+</script>
+</body>
+</html>

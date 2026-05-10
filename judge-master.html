@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Judge Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --bg:#0A0A0A; --surface:#161616; --surface2:#1E1E1E; --border:rgba(255,255,255,0.08);
+    --text:#F0F0F0; --dim:#666;
+    --green:#00CC44; --green-bright:#00FF55;
+    --red:#CC2200; --red-bright:#FF3322;
+    --gold:#F5C842;
+  }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; overscroll-behavior:none; user-select:none; }
+
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; }
+  .header-title { font-size:18px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; }
+  .header-sub { font-size:10px; font-weight:600; letter-spacing:0.2em; color:var(--dim); text-transform:uppercase; }
+  .conn-dot { width:8px; height:8px; border-radius:50%; background:#333; }
+  .conn-dot.ok { background:var(--green-bright); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .main { padding:10px; display:flex; flex-direction:column; gap:10px; }
+
+  /* Timer bar - global */
+  .global-timer {
+    background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .global-timer-label { font-size:10px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); flex-shrink:0; }
+  .global-timer-display { font-size:42px; font-weight:900; color:var(--text); font-variant-numeric:tabular-nums; line-height:1; min-width:80px; }
+  .global-timer-display.warning { color:#FF8C00; }
+  .global-timer-display.danger  { color:var(--red-bright); animation:blink 0.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .timer-presets { display:flex; gap:5px; flex-wrap:wrap; }
+  .tp { padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; cursor:pointer; touch-action:manipulation; }
+  .tp.active { background:rgba(245,200,66,0.1); border-color:rgba(245,200,66,0.3); color:var(--gold); }
+  .tp:active { transform:scale(0.96); }
+  .timer-ctrl { display:flex; gap:6px; margin-left:auto; }
+  .tc-btn { padding:8px 14px; border-radius:8px; border:none; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; touch-action:manipulation; }
+  .tc-btn:active { transform:scale(0.95); }
+  .tc-start { background:rgba(0,180,60,0.15); color:var(--green-bright); border:1px solid rgba(0,180,60,0.3); }
+  .tc-pause  { background:var(--surface2); color:var(--dim); border:1px solid var(--border); }
+  .tc-reset  { background:var(--surface2); color:var(--dim); border:1px solid var(--border); }
+
+  /* Lane grid */
+  .lanes-grid { display:grid; gap:8px; grid-template-columns:1fr; }
+  @media(min-width:600px) { .lanes-grid { grid-template-columns:1fr 1fr; } }
+  @media(min-width:900px) { .lanes-grid { grid-template-columns:1fr 1fr 1fr 1fr; } }
+
+  .lane-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .lane-card.light-good { border-color:rgba(0,200,60,0.5); }
+  .lane-card.light-no   { border-color:rgba(200,30,0,0.5); }
+
+  .lane-head { padding:8px 12px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .lane-num-badge { font-size:22px; font-weight:900; color:var(--gold); line-height:1; }
+  .lane-athlete { flex:1; min-width:0; }
+  .lane-ath-name { font-size:15px; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lane-ath-detail { font-size:10px; color:var(--dim); font-family:'Barlow',sans-serif; }
+  .lane-light-indicator {
+    width:12px; height:12px; border-radius:50%; background:#222; flex-shrink:0;
+    transition:background 0.2s, box-shadow 0.2s;
+  }
+  .lane-light-indicator.good { background:var(--green-bright); box-shadow:0 0 8px var(--green-bright); }
+  .lane-light-indicator.no   { background:var(--red-bright);   box-shadow:0 0 8px var(--red-bright); }
+
+  .lane-body { padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+
+  /* Rep row */
+  .rep-row { display:flex; align-items:center; gap:8px; }
+  .rep-big { font-size:48px; font-weight:900; color:var(--gold); line-height:1; min-width:55px; text-align:center; }
+  .rep-label { font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); text-align:center; }
+  .rep-ctrl { display:flex; flex-direction:column; gap:4px; flex:1; }
+  .rep-btn { border:none; border-radius:7px; padding:8px; font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800; cursor:pointer; touch-action:manipulation; }
+  .rep-btn:active { transform:scale(0.94); }
+  .rep-plus  { background:rgba(245,200,66,0.1); color:var(--gold); border:1px solid rgba(245,200,66,0.2); }
+  .rep-minus { background:var(--surface2); color:var(--dim); border:1px solid var(--border); }
+
+  /* Light buttons */
+  .light-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; }
+  .lb { border:none; border-radius:7px; padding:10px 4px; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; touch-action:manipulation; transition:transform 0.1s; }
+  .lb:active { transform:scale(0.94); }
+  .lb-good  { background:rgba(0,180,60,0.12); color:var(--green-bright); border:1px solid rgba(0,180,60,0.25); }
+  .lb-no    { background:rgba(200,30,0,0.12); color:var(--red-bright);   border:1px solid rgba(200,30,0,0.25); }
+  .lb-clear { background:var(--surface2); color:var(--dim); border:1px solid var(--border); }
+  .lb.active-good { background:rgba(0,180,60,0.35); border-color:var(--green-bright); }
+  .lb.active-no   { background:rgba(200,30,0,0.35);  border-color:var(--red-bright); }
+
+  /* Judge URL section */
+  .judge-urls { background:var(--surface); border:1px solid var(--border); border-radius:10px; }
+  .judge-urls-head { padding:8px 14px; background:var(--surface2); border-bottom:1px solid var(--border); border-radius:10px 10px 0 0; }
+  .judge-urls-body { padding:10px 14px; display:flex; flex-direction:column; gap:6px; }
+  .url-row { display:flex; align-items:center; gap:8px; }
+  .url-lane-lbl { font-size:13px; font-weight:800; color:var(--gold); min-width:55px; }
+  .url-input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:5px; color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:11px; padding:6px 8px; }
+  .url-copy { padding:6px 10px; border-radius:5px; border:1px solid var(--border); background:var(--surface2); color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; cursor:pointer; }
+  .url-copy:active { transform:scale(0.95); }
+
+  .scoreboard-sync { background:rgba(0,180,60,0.1); border:1px solid rgba(0,180,60,0.3); border-radius:10px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  .scoreboard-sync-text { font-size:12px; font-weight:700; letter-spacing:0.08em; color:var(--green-bright); }
+  .scoreboard-sync-btn { padding:10px 20px; border-radius:8px; border:none; background:rgba(0,180,60,0.25); color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; }
+  .scoreboard-sync-btn:active { transform:scale(0.97); }
+  .scoreboard-sync-btn.sent { background:var(--green-bright); color:#000; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="/" style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);text-decoration:none;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:5px">← Home</a>
+    <img src="/logo.png" alt="Logo" style="height:48px;width:auto;object-fit:contain;mix-blend-mode:lighten">
+    <div>
+      <div class="header-sub" style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim)">Judge Master · All Lanes</div>
+    </div>
+  </div>
+  <div class="conn-dot" id="conn-dot"></div>
+</div>
+
+<div class="main">
+
+  <!-- Global Timer -->
+  <div class="global-timer">
+    <div>
+      <div class="global-timer-label">Global Timer</div>
+      <div class="global-timer-display" id="g-timer">1:00</div>
+    </div>
+    <div class="timer-presets">
+      <div class="tp" onclick="setGTimer(30)">0:30</div>
+      <div class="tp active" onclick="setGTimer(60)">1:00</div>
+      <div class="tp" onclick="setGTimer(75)">1:15</div>
+      <div class="tp" onclick="setGTimer(90)">1:30</div>
+      <div class="tp" onclick="setGTimer(120)">2:00</div>
+    </div>
+    <div class="timer-ctrl">
+      <button class="tc-btn tc-start" id="g-start-btn" onclick="startGTimer()">Start All</button>
+      <button class="tc-btn tc-pause" onclick="pauseGTimer()">Pause</button>
+      <button class="tc-btn tc-reset" onclick="resetGTimer()">Reset</button>
+    </div>
+  </div>
+
+  <!-- Scoreboard sync -->
+  <div class="scoreboard-sync">
+    <span class="scoreboard-sync-text">Each lane judge’s score goes straight to Run Competition. Use this button to re-send all lanes at once (optional).</span>
+    <button type="button" class="scoreboard-sync-btn" id="submit-scoreboard-btn" onclick="submitToScoreboard()">Submit all lanes to scoreboard</button>
+  </div>
+
+  <!-- Lane Cards -->
+  <div class="lanes-grid" id="lanes-grid"></div>
+
+  <!-- Judge URLs -->
+  <div class="judge-urls">
+    <div class="judge-urls-head"><span class="card-title" style="font-size:10px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;color:var(--dim)">Judge URLs — send to each lane judge</span></div>
+    <div class="judge-urls-body" id="judge-url-list"></div>
+  </div>
+
+</div>
+
+<script>
+let globalState = { lanes:[], laneCount:4 };
+let laneData = {}; // judgeL1, judgeL2, etc
+let gTimerSecs = 60, gTimerRemaining = 60, gTimerRunning = false, gTimerInterval = null;
+let scoringMode = 'reps'; // from eventMetric / eventSecondaryMetric
+let lastScoringMode = '';
+
+const METRIC_LABELS = { reps:'Reps', weight:'Weight (kg)', distance:'Distance (m)', time:'Time', objects:'Objects', time_secondary:'Time (s)' };
+
+function getScoringMode(metric, secondary) {
+  if (!metric) return 'reps';
+  const m = (metric || '').toLowerCase();
+  const s = (secondary || '').toLowerCase();
+  if (m === 'objects' && s === 'time') return 'objects_time';
+  if (m === 'reps') return 'reps';
+  if (m === 'weight') return 'weight';
+  if (m === 'distance') return 'distance';
+  if (m === 'time') return 'time';
+  if (m === 'objects') return 'weight';
+  return 'reps';
+}
+
+function fmtTime(s) { return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+
+// ─── STATE HELPERS ─────────────────────────────────────────────────────────────
+function getActiveLaneCount() {
+  const cc = globalState.competition_config;
+  const fromConfig = cc && parseInt(cc.lanes, 10);
+  if (!isNaN(fromConfig) && fromConfig >= 1 && fromConfig <= 8) return fromConfig;
+  const n = parseInt(globalState.laneCount, 10);
+  if (!isNaN(n) && n >= 1 && n <= 8) return n;
+  const b = globalState.broadcast;
+  const bn = b && parseInt(b.laneCount, 10);
+  if (!isNaN(bn) && bn >= 1 && bn <= 8) return bn;
+  return 4;
+}
+
+function applyData(data) {
+  Object.assign(globalState, data);
+  globalState.lanes = (data.broadcast && data.broadcast.lanes) || data.lanes || [];
+  const laneCountFromConfig = data.competition_config && parseInt(data.competition_config.lanes, 10);
+  globalState.laneCount = (!isNaN(laneCountFromConfig) && laneCountFromConfig >= 1 && laneCountFromConfig <= 8)
+    ? laneCountFromConfig
+    : (data.laneCount ?? (data.broadcast && data.broadcast.laneCount) ?? 4);
+  const count = getActiveLaneCount();
+  const state = data.broadcast || data;
+  scoringMode = getScoringMode(state.eventMetric, state.eventSecondaryMetric);
+  for (let i = 1; i <= count; i++) {
+    if (data['judgeL'+i]) laneData[i] = data['judgeL'+i];
+  }
+  document.getElementById('conn-dot').className = 'conn-dot ok';
+  renderLanes();
+  renderJudgeUrls();
+}
+
+// ─── SSE (Server-Sent Events) — primary update path ──────────────────────────
+let _sseActive = false;
+function startSSE() {
+  const es = new EventSource('/stream');
+  es.onopen = function() { _sseActive = true; document.getElementById('conn-dot').className = 'conn-dot ok'; };
+  es.onmessage = function(e) {
+    try { applyData(JSON.parse(e.data)); } catch(ex) {}
+  };
+  es.onerror = function() {
+    _sseActive = false;
+    document.getElementById('conn-dot').className = 'conn-dot';
+    es.close();
+    setTimeout(startSSE, 3000);
+  };
+}
+startSSE();
+
+// ─── FALLBACK POLL — fires only when SSE is not active ───────────────────────
+async function poll() {
+  if (_sseActive) return;
+  try {
+    const r = await fetch('/state.json?t=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) return;
+    applyData(await r.json());
+  } catch(e) { document.getElementById('conn-dot').className = 'conn-dot'; }
+}
+setInterval(poll, 2000);
+poll();
+renderJudgeUrls(); // Show URLs immediately (SSE may take a moment to connect)
+
+// ─── PUSH ─────────────────────────────────────────────────────────────────────
+async function push(payload) {
+  try {
+    await fetch('/update', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  } catch(e) {}
+}
+
+async function submitToScoreboard() {
+  const count = getActiveLaneCount();
+  const payload = {};
+  for (let i = 1; i <= count; i++) payload['judgeL' + i] = laneData[i] || {};
+  try {
+    await fetch('/update', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const btn = document.getElementById('submit-scoreboard-btn');
+    if (btn) { btn.textContent = 'Sent ✓'; btn.classList.add('sent'); setTimeout(function(){ btn.textContent = 'Submit results to scoreboard'; btn.classList.remove('sent'); }, 2000); }
+  } catch(e) {}
+}
+
+// ─── LANES RENDER ─────────────────────────────────────────────────────────────
+function renderLanes() {
+  const count = getActiveLaneCount();
+  const grid = document.getElementById('lanes-grid');
+  const modeChanged = lastScoringMode !== scoringMode;
+  if (grid.children.length !== count || modeChanged) {
+    lastScoringMode = scoringMode;
+    grid.innerHTML = '';
+    for (let i=1; i<=count; i++) {
+      const div = document.createElement('div');
+      div.className = 'lane-card';
+      div.id = 'lane-card-' + i;
+      div.innerHTML = laneCardHTML(i, scoringMode);
+      grid.appendChild(div);
+    }
+  }
+  for (let i=1; i<=count; i++) {
+    const ld = laneData[i] || { reps:0, light:'none', timerRemaining:gTimerSecs };
+    const lane = (globalState.lanes||[])[i-1] || {};
+    const card = document.getElementById('lane-card-'+i);
+    if (!card) continue;
+
+    card.className = 'lane-card' + (ld.light==='good'?' light-good': ld.light==='no'?' light-no':'');
+    const an = card.querySelector('.lane-ath-name');
+    const ad = card.querySelector('.lane-ath-detail');
+    if (an) an.textContent = lane.name || '—';
+    if (ad) ad.textContent = lane.detail || '';
+
+    const repBig = card.querySelector('.rep-big');
+    if (repBig) {
+      if (scoringMode === 'reps') repBig.textContent = ld.reps || 0;
+      else if (scoringMode === 'time') repBig.textContent = fmtTime(rem);
+      else repBig.textContent = (ld.primaryValue !== undefined && ld.primaryValue !== '') ? ld.primaryValue : '0';
+    }
+
+    const ind = card.querySelector('.lane-light-indicator');
+    if (ind) ind.className = 'lane-light-indicator' + (ld.light==='good'?' good': ld.light==='no'?' no':'');
+
+    const rem = ld.timerRemaining !== undefined ? ld.timerRemaining : gTimerRemaining;
+    const td = card.querySelector('.lane-timer');
+    if (td) td.textContent = fmtTime(rem);
+
+    const lbGood = card.querySelector('.lb-good');
+    const lbNo = card.querySelector('.lb-no');
+    if (lbGood) lbGood.className = 'lb lb-good' + (ld.light==='good'?' active-good':'');
+    if (lbNo) lbNo.className = 'lb lb-no' + (ld.light==='no'?' active-no':'');
+
+    const numInp = card.querySelector('.lane-number-input');
+    if (numInp) numInp.value = ld.primaryValue ?? '';
+    const objInp = card.querySelector('.lane-objects-input');
+    const timeInp = card.querySelector('.lane-time-input');
+    if (objInp) objInp.value = ld.primaryValue ?? '';
+    if (timeInp) timeInp.value = ld.secondaryValue ?? '';
+  }
+}
+
+function laneCardHTML(i, mode) {
+  const label = mode === 'weight' ? METRIC_LABELS.weight : mode === 'distance' ? METRIC_LABELS.distance : mode === 'objects_time' ? METRIC_LABELS.objects : METRIC_LABELS.reps;
+  let body = '';
+  if (mode === 'reps') {
+    body = `
+      <div class="rep-row">
+        <div><div class="rep-big">0</div><div class="rep-label">${METRIC_LABELS.reps}</div></div>
+        <div class="rep-ctrl">
+          <button class="rep-btn rep-plus"  onclick="masterRep(${i}, 1)">+ Rep</button>
+          <button class="rep-btn rep-minus" onclick="masterRep(${i}, -1)">− Undo</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--dim);text-align:center;font-variant-numeric:tabular-nums" class="lane-timer">—</div>
+      <div class="light-row">
+        <button class="lb lb-good"  onclick="masterLight(${i},'good')">✓ Good</button>
+        <button class="lb lb-no"    onclick="masterLight(${i},'no')">✗ No Rep</button>
+        <button class="lb lb-clear" onclick="masterLight(${i},'none')">Clear</button>
+      </div>`;
+  } else if (mode === 'time') {
+    body = `
+      <div class="rep-row"><div><div class="rep-big lane-timer">—</div><div class="rep-label">${METRIC_LABELS.time}</div></div></div>
+      <div class="light-row">
+        <button class="lb lb-good"  onclick="masterLight(${i},'good')">✓ Good</button>
+        <button class="lb lb-no"    onclick="masterLight(${i},'no')">✗ No Rep</button>
+        <button class="lb lb-clear" onclick="masterLight(${i},'none')">Clear</button>
+      </div>`;
+  } else if (mode === 'objects_time') {
+    body = `
+      <div class="rep-row" style="flex-direction:column;gap:6px;">
+        <div><label style="font-size:9px;letter-spacing:0.15em;color:var(--dim)">${METRIC_LABELS.objects}</label><input type="number" min="0" class="lane-objects-input" style="width:100%;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px" oninput="masterNumber(${i}, this.value, null)"></div>
+        <div><label style="font-size:9px;letter-spacing:0.15em;color:var(--dim)">${METRIC_LABELS.time_secondary}</label><input type="number" step="0.01" min="0" class="lane-time-input" style="width:100%;padding:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px" oninput="masterNumber(${i}, null, this.value)"></div>
+      </div>
+      <div class="light-row">
+        <button class="lb lb-good"  onclick="masterLight(${i},'good')">✓ Good</button>
+        <button class="lb lb-no"    onclick="masterLight(${i},'no')">✗ No Rep</button>
+        <button class="lb lb-clear" onclick="masterLight(${i},'none')">Clear</button>
+      </div>`;
+  } else {
+    body = `
+      <div class="rep-row">
+        <div><div class="rep-big">0</div><div class="rep-label">${label}</div></div>
+        <div class="rep-ctrl"><input type="number" step="0.01" min="0" class="lane-number-input" placeholder="0" style="width:80px;padding:8px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:18px" oninput="masterNumber(${i}, this.value, null)"></div>
+      </div>
+      <div style="font-size:10px;color:var(--dim);text-align:center" class="lane-timer">—</div>
+      <div class="light-row">
+        <button class="lb lb-good"  onclick="masterLight(${i},'good')">✓ Good</button>
+        <button class="lb lb-no"    onclick="masterLight(${i},'no')">✗ No Rep</button>
+        <button class="lb lb-clear" onclick="masterLight(${i},'none')">Clear</button>
+      </div>`;
+  }
+  return `
+    <div class="lane-head">
+      <div class="lane-num-badge">${i}</div>
+      <div class="lane-athlete">
+        <div class="lane-ath-name">—</div>
+        <div class="lane-ath-detail"></div>
+      </div>
+      <div class="lane-light-indicator"></div>
+    </div>
+    <div class="lane-body">${body}</div>`;
+}
+
+function masterRep(lane, delta) {
+  if (!laneData[lane]) laneData[lane] = { reps:0, light:'none', timerRemaining:gTimerSecs };
+  laneData[lane].reps = Math.max(0, (laneData[lane].reps||0) + delta);
+  const payload = {}; payload['judgeL'+lane] = laneData[lane];
+  push(payload); renderLanes();
+}
+
+function masterLight(lane, val) {
+  if (!laneData[lane]) laneData[lane] = { reps:0, light:'none', timerRemaining:gTimerSecs };
+  laneData[lane].light = val;
+  const payload = {}; payload['judgeL'+lane] = laneData[lane];
+  push(payload); renderLanes();
+}
+
+function masterNumber(lane, primary, secondary) {
+  if (!laneData[lane]) laneData[lane] = { reps:0, light:'none', timerRemaining:gTimerSecs };
+  if (primary !== null && primary !== undefined) laneData[lane].primaryValue = primary;
+  if (secondary !== null && secondary !== undefined) laneData[lane].secondaryValue = secondary;
+  const payload = {}; payload['judgeL'+lane] = laneData[lane];
+  push(payload); renderLanes();
+}
+
+// ─── GLOBAL TIMER ─────────────────────────────────────────────────────────────
+function setGTimer(secs) {
+  clearInterval(gTimerInterval); gTimerInterval = null;
+  gTimerSecs = secs; gTimerRemaining = secs; gTimerRunning = false;
+  document.getElementById('g-timer').textContent = fmtTime(secs);
+  document.getElementById('g-timer').className = 'global-timer-display';
+  document.getElementById('g-start-btn').textContent = 'Start All';
+  document.querySelectorAll('.tp').forEach(p => p.classList.remove('active'));
+  const labels = {30:'0:30',60:'1:00',75:'1:15',90:'1:30',120:'2:00'};
+  document.querySelectorAll('.tp').forEach(p => { if(p.textContent===labels[secs]) p.classList.add('active'); });
+  pushGTimerToLanes(); // Sync selected time to all lane judges so they show the same duration
+}
+
+async function startGTimer() {
+  if (gTimerInterval) return;
+  const count = getActiveLaneCount();
+  const payload = {};
+  for (let i = 1; i <= count; i++) {
+    const key = 'judgeL' + i;
+    payload[key] = {
+      ...(laneData[i] || {}),
+      timerRunning: true,
+      timerRemaining: gTimerSecs,
+      timerSecs: gTimerSecs
+    };
+  }
+  await push(payload);
+  gTimerRemaining = gTimerSecs;
+  gTimerRunning = true;
+  document.getElementById('g-start-btn').textContent = 'Running';
+  gTimerInterval = setInterval(gTick, 1000);
+}
+function pauseGTimer() {
+  clearInterval(gTimerInterval); gTimerInterval = null;
+  gTimerRunning = false;
+  document.getElementById('g-start-btn').textContent = 'Resume';
+  pushGTimerToLanes();
+}
+function resetGTimer() {
+  clearInterval(gTimerInterval); gTimerInterval = null;
+  gTimerRunning = false; gTimerRemaining = gTimerSecs;
+  document.getElementById('g-timer').textContent = fmtTime(gTimerSecs);
+  document.getElementById('g-timer').className = 'global-timer-display';
+  document.getElementById('g-start-btn').textContent = 'Start All';
+  pushGTimerToLanes(true); // resetAllTimers so server allows all lanes to be reset
+}
+function gTick() {
+  gTimerRemaining = Math.max(0, gTimerRemaining - 1);
+  const el = document.getElementById('g-timer');
+  el.textContent = fmtTime(gTimerRemaining);
+  el.className = 'global-timer-display' + (gTimerRemaining<=10?' danger': gTimerRemaining<=20?' warning':'');
+  if (gTimerRemaining <= 0) { clearInterval(gTimerInterval); gTimerInterval=null; gTimerRunning=false; document.getElementById('g-start-btn').textContent='Start All'; }
+  pushGTimerToLanes();
+}
+function pushGTimerToLanes(resetAll) {
+  const count = getActiveLaneCount();
+  const payload = {};
+  if (resetAll) payload.resetAllTimers = true;
+  for (let i = 1; i <= count; i++) {
+    if (!laneData[i]) laneData[i] = { reps:0, light:'none' };
+    // When global timer is running, don't overwrite a lane that has stopped its own timer (lane judge hit Pause)
+    const laneStoppedOwn = laneData[i].timerRunning === false;
+    if (!resetAll && gTimerRunning && laneStoppedOwn) {
+      // Leave this lane's timer as-is so their stopped time and result stay
+    } else {
+      laneData[i].timerRemaining = gTimerRemaining;
+      laneData[i].timerRunning   = gTimerRunning;
+      laneData[i].timerSecs      = gTimerSecs;
+    }
+    payload['judgeL'+i] = laneData[i];
+  }
+  push(payload);
+}
+
+// ─── JUDGE URLS ───────────────────────────────────────────────────────────────
+function renderJudgeUrls() {
+  const el = document.getElementById('judge-url-list');
+  if (!el) return;
+  const count = getActiveLaneCount();
+  const base = location.origin;
+  el.innerHTML = Array.from({length: count}, (_, i) => i + 1).map(i => {
+    const url = base + '/judge.html?lane=' + i;
+    return `<div class="url-row">
+      <span class="url-lane-lbl">Lane ${i}</span>
+      <input class="url-input" type="text" readonly value="${url}" id="jurl-${i}">
+      <button class="url-copy" onclick="copyJUrl(${i})">Copy</button>
+    </div>`;
+  }).join('');
+}
+function copyJUrl(i) {
+  const el = document.getElementById('jurl-'+i);
+  if (el) navigator.clipboard.writeText(el.value).then(()=>{});
+}
+</script>
+</body>
+</html>

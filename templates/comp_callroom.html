@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call Room</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#060608; --surface:#0e0e12; --surface2:#14141a;
+  --border:rgba(255,255,255,0.07);
+  --text:#F0F0F0; --dim:#444; --dim2:#777;
+  --gold:#F5C842; --green:#00DD55;
+}
+html, body {
+  background:var(--bg); color:var(--text);
+  font-family:'Barlow Condensed',sans-serif;
+  height:100vh; overflow:hidden;
+  display:flex; flex-direction:column;
+}
+.header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:12px 28px; display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0;
+}
+.header-logo { height:48px; width:auto; object-fit:contain; mix-blend-mode:lighten; }
+.header-state { display:flex; align-items:center; gap:28px; }
+.hs-item { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.hs-label { font-size:9px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim2); }
+.hs-val { font-size:22px; font-weight:900; color:var(--gold); line-height:1; }
+.live-badge {
+  display:flex; align-items:center; gap:7px;
+  background:rgba(0,221,85,0.1); border:1px solid rgba(0,221,85,0.25);
+  border-radius:20px; padding:6px 14px;
+}
+.live-dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
+.live-text { font-size:11px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase; color:var(--green); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.main {
+  flex:1; display:grid;
+  grid-template-columns: 1fr 1fr;
+  overflow:hidden;
+}
+.panel {
+  display:flex; flex-direction:column;
+  border-right:1px solid var(--border);
+  overflow:hidden;
+}
+.panel:last-child { border-right:none; }
+.panel-header {
+  padding:18px 28px 14px;
+  border-bottom:2px solid var(--border);
+  flex-shrink:0;
+}
+.panel-label { font-size:11px; font-weight:800; letter-spacing:0.25em; text-transform:uppercase; margin-bottom:4px; }
+.panel-label.now { color:var(--gold); }
+.panel-label.next { color:var(--green); }
+.panel-heat { font-size:42px; font-weight:900; line-height:1; color:var(--text); }
+.lane-list { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.lane-row {
+  flex:1; display:flex; align-items:center;
+  gap:20px; padding:0 28px;
+  border-bottom:1px solid var(--border); min-height:0;
+}
+.lane-row:last-child { border-bottom:none; }
+.lane-num { font-size:clamp(32px,5vw,56px); font-weight:900; line-height:1; flex-shrink:0; min-width:clamp(40px,5vw,64px); }
+.lane-num.gold { color:var(--gold); }
+.lane-num.green { color:var(--green); }
+.lane-info { flex:1; min-width:0; }
+.lane-name { font-size:clamp(28px,4vw,52px); font-weight:900; text-transform:uppercase; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lane-name.next-name { color:rgba(255,255,255,0.55); }
+.lane-category { font-size:clamp(13px,1.5vw,18px); color:var(--dim2); font-family:'Barlow',sans-serif; margin-top:3px; text-transform:uppercase; letter-spacing:0.08em; }
+.lane-empty { font-size:clamp(16px,2vw,24px); color:var(--dim); font-style:italic; font-family:'Barlow',sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="/logo.png" alt="Logo" class="header-logo">
+  <div class="header-state">
+    <div class="hs-item">
+      <div class="hs-label">Category</div>
+      <div class="hs-val">{{ state.category }}</div>
+    </div>
+    <div class="hs-item">
+      <div class="hs-label">Event</div>
+      <div class="hs-val">{{ event_name }}</div>
+    </div>
+    <div class="hs-item">
+      <div class="hs-label">Heat</div>
+      <div class="hs-val">{{ state.heat }} <span style="font-size:16px;color:var(--dim2)">/ {{ max_heat }}</span></div>
+    </div>
+  </div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    <div class="live-text">Live</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-label now">⚡ On Stage Now</div>
+      <div class="panel-heat">Heat {{ state.heat }} <span style="color:var(--dim2);font-size:28px">/ {{ max_heat }}</span></div>
+    </div>
+    <div class="lane-list">
+      {% if current %}
+        {% for lane in current %}
+        <div class="lane-row">
+          <div class="lane-num gold">{{ lane.lane }}</div>
+          <div class="lane-info">
+            <div class="lane-name">{{ lane.athlete_name }}</div>
+            <div class="lane-category">{{ state.category }} · {{ event_name }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% for i in range(lane_count - current|length) %}
+        <div class="lane-row">
+          <div class="lane-num gold" style="color:var(--dim)">{{ current|length + loop.index }}</div>
+          <div class="lane-empty">—</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        {% for i in range(lane_count) %}
+        <div class="lane-row">
+          <div class="lane-num gold" style="color:var(--dim)">{{ loop.index }}</div>
+          <div class="lane-empty">No athletes</div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-label next">↑ Up Next</div>
+      <div class="panel-heat" style="color:rgba(255,255,255,0.4)">
+        {% if next_heat %}Heat {{ state.heat + 1 }} <span style="font-size:24px">/ {{ max_heat }}</span>
+        {% else %}<span style="font-size:24px">Last heat</span>{% endif %}
+      </div>
+    </div>
+    <div class="lane-list">
+      {% if next_heat %}
+        {% for lane in next_heat %}
+        <div class="lane-row">
+          <div class="lane-num green" style="opacity:0.7">{{ loop.index }}</div>
+          <div class="lane-info">
+            <div class="lane-name next-name">{{ lane.athlete_name }}</div>
+            <div class="lane-category">{{ state.category }} · {{ event_name }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% for i in range(lane_count - next_heat|length) %}
+        <div class="lane-row">
+          <div class="lane-num" style="color:var(--dim)">{{ next_heat|length + loop.index }}</div>
+          <div class="lane-empty">—</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        {% for i in range(lane_count) %}
+        <div class="lane-row">
+          <div class="lane-num" style="color:var(--dim)">{{ loop.index }}</div>
+          <div class="lane-empty">Last heat of category</div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+setInterval(() => location.reload(), 5000);
+</script>
+</body>
+</html>

@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Strongman Broadcast Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --red:#CC0000; --green:#00AA44; --green-bright:#00DD55;
+    --gold:#D4A017; --gold-light:#F5C842;
+    --bg:#0C0C0C; --surface:#161616; --surface2:#1E1E1E; --surface3:#252525;
+    --border:rgba(255,255,255,0.08); --text:#F0F0F0; --dim:#777;
+  }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; overscroll-behavior:none; }
+
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .header-title { font-size:20px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; color:#fff; line-height:1; }
+  .header-sub   { font-size:10px; font-weight:600; letter-spacing:0.2em; color:var(--dim); text-transform:uppercase; }
+  .conn-dot { width:8px; height:8px; border-radius:50%; background:#555; display:inline-block; margin-right:6px; }
+  .conn-dot.ok { background:var(--green-bright); animation:pulse 2s infinite; }
+  .conn-text { font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--dim); text-transform:uppercase; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .main { padding:14px; max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+
+  .tabs { display:flex; gap:2px; background:var(--surface2); padding:4px; border-radius:8px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tab { flex:1; padding:9px 12px; border-radius:6px; background:transparent; border:none; color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; white-space:nowrap; touch-action:manipulation; }
+  .tab.active { background:var(--surface3); color:#fff; border:1px solid rgba(255,255,255,0.15); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:flex; flex-direction:column; gap:14px; }
+
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .section-header { padding:9px 14px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .section-title { font-size:11px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); }
+  .section-body { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+
+  .overlay-row { display:flex; align-items:center; justify-content:space-between; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:11px 14px; gap:12px; }
+  .overlay-row-left { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+  .overlay-label { font-size:17px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; line-height:1; }
+  .overlay-sub   { font-size:10px; font-weight:500; letter-spacing:0.1em; color:var(--dim); text-transform:uppercase; font-family:'Barlow',sans-serif; }
+
+  .toggle { position:relative; width:58px; height:30px; cursor:pointer; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-track { position:absolute; inset:0; background:var(--surface3); border-radius:30px; border:1px solid rgba(255,255,255,0.1); transition:background 0.25s,border 0.25s; }
+  .toggle-track::after { content:''; position:absolute; width:22px; height:22px; background:#555; border-radius:50%; top:3px; left:3px; transition:transform 0.25s,background 0.25s; }
+  .toggle input:checked + .toggle-track { background:rgba(0,170,68,0.25); border-color:var(--green); }
+  .toggle input:checked + .toggle-track::after { transform:translateX(28px); background:var(--green-bright); }
+  .toggle-label { font-size:11px; font-weight:700; letter-spacing:0.12em; text-align:center; margin-top:2px; text-transform:uppercase; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 18px; border-radius:6px; border:none; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; transition:all 0.15s; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+  .btn:active { transform:scale(0.96); }
+  .btn-red { background:var(--surface3); color:#fff; border:1px solid rgba(255,255,255,0.15); }
+  .btn-red:hover { background:#2a2a2a; }
+  .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
+  .btn-outline:hover { background:var(--surface2); }
+  .btn-gold    { background:var(--gold); color:#000; }
+  .btn-gold:hover { background:var(--gold-light); }
+  .btn-sm { padding:7px 12px; font-size:11px; }
+  .btn-row { display:flex; gap:8px; flex-wrap:wrap; }
+
+  label { display:block; font-size:10px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--dim); margin-bottom:4px; font-family:'Barlow',sans-serif; }
+  input[type="text"],input[type="number"],select,textarea { width:100%; background:var(--surface3); border:1px solid var(--border); border-radius:5px; color:var(--text); font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:600; padding:8px 10px; outline:none; transition:border 0.2s; -webkit-appearance:none; appearance:none; }
+  input:focus,select:focus,textarea:focus { border-color:var(--red); }
+  select option { background:var(--surface3); }
+  textarea { resize:vertical; min-height:70px; }
+
+  .field-row        { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field-row.single { grid-template-columns:1fr; }
+  .field-row.three  { grid-template-columns:1fr 1fr 1fr; }
+
+  /* Athlete table */
+  .ath-header { display:grid; grid-template-columns:28px 2fr 1.2fr 70px 28px; gap:5px; padding:0 0 4px; border-bottom:1px solid var(--border); }
+  .ath-header span { font-size:9px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; }
+  .ath-row { display:grid; grid-template-columns:28px 2fr 1.2fr 70px 28px; gap:5px; align-items:center; }
+  .rank-badge { width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:rgba(204,0,0,0.12); border-radius:4px; font-size:14px; font-weight:900; color:var(--red); flex-shrink:0; }
+  .rank-badge.r1 { background:rgba(212,160,23,0.18); color:var(--gold-light); }
+  .rank-badge.r2 { background:rgba(192,192,192,0.08); color:#C0C0C0; }
+  .rank-badge.r3 { background:rgba(176,96,32,0.08); color:#CD7F32; }
+  .del-btn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:rgba(204,0,0,0.08); border:1px solid rgba(204,0,0,0.2); border-radius:4px; color:var(--red); cursor:pointer; font-size:14px; flex-shrink:0; }
+  .del-btn:hover { background:rgba(204,0,0,0.25); }
+
+  /* Lane config */
+  .lane-row-config { display:grid; gap:8px; align-items:start; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:10px; }
+  .lane-badge { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+  .lane-badge-num   { font-size:18px; font-weight:900; color:var(--red); line-height:1; }
+  .lane-badge-label { font-size:8px;  font-weight:700; letter-spacing:0.15em; color:var(--dim); text-transform:uppercase; }
+  .lane-inputs { display:flex; flex-direction:column; gap:5px; }
+  .lane-name-wrap { position:relative; }
+
+  /* Category pills */
+  .cat-pill { display:inline-flex; align-items:center; gap:6px; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:4px 12px 4px 10px; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text); cursor:default; }
+  .cat-pill-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .cat-pill-del { margin-left:4px; color:var(--dim); cursor:pointer; font-size:14px; line-height:1; }
+  .cat-pill-del:hover { color:#fff; }
+
+  .url-row { display:grid; grid-template-columns:110px 1fr auto; gap:8px; align-items:center; }
+  .url-label { font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dim); }
+  .url-input { font-size:11px!important; color:var(--dim)!important; cursor:text; }
+
+  .status-bar { display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:9px 12px; font-size:12px; font-weight:600; letter-spacing:0.06em; color:var(--dim); font-family:'Barlow',sans-serif; }
+  .status-ok { color:var(--green-bright); }
+
+  .champ-section { background:linear-gradient(135deg, rgba(60,40,0,0.3), rgba(20,20,20,0.8)); border:1px solid rgba(212,160,23,0.2); }
+  .champ-section .section-header { background:linear-gradient(90deg, rgba(60,40,0,0.4), transparent); }
+
+  @media(max-width:600px){
+    .field-row{grid-template-columns:1fr;}
+    .field-row.three{grid-template-columns:1fr 1fr;}
+    .ath-row{grid-template-columns:24px 1fr 60px 24px;}
+    .ath-row .origin-field,.ath-header .origin-col{display:none;}
+    .ath-header{grid-template-columns:24px 1fr 60px 24px;}
+    .url-row{grid-template-columns:80px 1fr auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <a href="/" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);text-decoration:none;white-space:nowrap">← Home</a>
+    <img src="/logo.png" alt="Logo" style="height:44px;width:auto;object-fit:contain;mix-blend-mode:lighten">
+    <div>
+      <div class="header-sub">Broadcast Control</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span class="conn-dot" id="conn-dot"></span>
+    <span class="conn-text" id="conn-text">Connecting...</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('overlays')">Overlays</button>
+    <button class="tab" onclick="switchTab('athletes')">Athletes</button>
+    <button class="tab" onclick="switchTab('lanes')">Lanes</button>
+    <button class="tab" onclick="switchTab('winner')">Winner</button>
+    <button class="tab" onclick="switchTab('h2h')">H2H</button>
+    <button class="tab" onclick="switchTab('lineup')">Lineup</button>
+    <button class="tab" onclick="switchTab('api')">API</button>
+    <button class="tab" onclick="switchTab('settings')">Settings</button>
+    <button class="tab" onclick="switchTab('obs')">OBS</button>
+    <button class="tab" onclick="switchTab('manual')">Manual L3</button>
+  </div>
+
+  <!-- OVERLAYS TAB -->
+  <div id="tab-overlays" class="tab-panel active">
+
+    <!-- ── BROADCAST DATA SOURCE ──────────────────────────── -->
+    <div class="section">
+      <div class="section-header" style="justify-content:space-between;">
+        <span class="section-title">Broadcast Data Source</span>
+        <span id="bsp-badge" style="font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;padding:3px 10px;border-radius:4px;background:var(--surface3);color:var(--dim);">Loading…</span>
+      </div>
+      <div class="section-body">
+
+        <!-- Mode buttons -->
+        <div class="btn-row">
+          <button class="btn btn-outline bsp-mode-btn" data-mode="engine" onclick="bspSetMode('engine')" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;"><img src="/logo.png" alt="" style="height:28px;width:auto;object-fit:contain;mix-blend-mode:lighten;vertical-align:middle"> Engine</button>
+          <button class="btn btn-outline bsp-mode-btn" data-mode="api"    onclick="bspSetMode('api')"    style="flex:1;">🌐 External API</button>
+          <button class="btn btn-outline bsp-mode-btn" data-mode="manual" onclick="bspSetMode('manual')" style="flex:1;">✏️ Manual</button>
+        </div>
+
+        <!-- ENGINE panel -->
+        <div id="bsp-panel-engine" class="bsp-panel" style="display:none;">
+          <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.5;">
+            Overlay data is driven automatically by the competition engine. Results update as judges enter scores.
+          </p>
+          <div class="btn-row">
+            <button class="btn btn-outline" onclick="bspPushNow()">⟳ Force Push Now</button>
+            <span id="bsp-engine-status" style="font-size:11px;color:var(--dim);align-self:center;"></span>
+          </div>
+        </div>
+
+        <!-- API panel -->
+        <div id="bsp-panel-api" class="bsp-panel" style="display:none;flex-direction:column;gap:10px;">
+          <!-- Adapter tabs -->
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-outline btn-sm bsp-adapter-tab" data-adapter="strengthresults" onclick="bspSelectAdapter('strengthresults')">StrengthResults</button>
+            <button class="btn btn-outline btn-sm bsp-adapter-tab" data-adapter="ironpodium"      onclick="bspSelectAdapter('ironpodium')">IronPodium</button>
+            <button class="btn btn-outline btn-sm bsp-adapter-tab" data-adapter="custom"          onclick="bspSelectAdapter('custom')">Custom</button>
+          </div>
+          <!-- URL + event fields -->
+          <div class="field-row">
+            <div><label>API URL</label><input type="url" id="bsp-api-url" placeholder="https://…"></div>
+            <div><label>Event Name (overlay)</label><input type="text" id="bsp-api-event" placeholder="e.g. Atlas Stones"></div>
+          </div>
+          <div class="field-row">
+            <div><label>Category (optional)</label><input type="text" id="bsp-api-category" placeholder="e.g. Mens Open"></div>
+            <div id="bsp-datapath-wrap" style="display:none;"><label>Data Path (dot-notation)</label><input type="text" id="bsp-api-datapath" placeholder="e.g. data.results"></div>
+          </div>
+          <!-- Custom field mapping -->
+          <div id="bsp-custom-fields" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;">Field Mapping</div>
+            <div class="field-row">
+              <div><label>Name field</label><input type="text" id="bsp-field-name"     value="name"></div>
+              <div><label>Score field</label><input type="text" id="bsp-field-score"   value="score"></div>
+              <div><label>Category field</label><input type="text" id="bsp-field-category" value="category"></div>
+              <div><label>Rank field</label><input type="text" id="bsp-field-rank"     value="rank"></div>
+            </div>
+          </div>
+          <!-- Actions -->
+          <div class="btn-row">
+            <button class="btn btn-red" onclick="bspLoadApiData()">⬇ Load API Data</button>
+            <button class="btn btn-outline" id="bsp-autorefresh-btn" onclick="bspAutoRefreshToggle()">Auto-refresh: OFF</button>
+            <span id="bsp-api-status" style="font-size:11px;color:var(--dim);align-self:center;flex:1;text-align:right;"></span>
+          </div>
+          <!-- Preview -->
+          <div id="bsp-api-preview" style="display:none;border-top:1px solid var(--border);padding-top:10px;">
+            <div id="bsp-api-preview-title" style="font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;"></div>
+            <div id="bsp-api-preview-rows" style="font-family:monospace;font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:2px;max-height:160px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+        <!-- MANUAL panel -->
+        <div id="bsp-panel-manual" class="bsp-panel" style="display:none;flex-direction:column;gap:10px;">
+          <div class="field-row">
+            <div><label>Event Name</label><input type="text" id="bsp-manual-event" placeholder="e.g. Atlas Stones"></div>
+            <div><label>Category</label><input type="text" id="bsp-manual-category" placeholder="e.g. Mens Open"></div>
+          </div>
+          <div class="field-row">
+            <div><label>Sub-line</label><input type="text" id="bsp-manual-sub" placeholder="e.g. Heat 2 · U90"></div>
+            <div><label>Event Number Label</label><input type="text" id="bsp-manual-eventnum" placeholder="e.g. EVENT 3 OF 5"></div>
+          </div>
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Athletes / Leaderboard</div>
+          <div id="bsp-manual-athletes" style="display:flex;flex-direction:column;gap:6px;"></div>
+          <div class="btn-row">
+            <button class="btn btn-outline btn-sm" onclick="bspManualAddRow()">+ Add Row</button>
+            <button class="btn btn-outline btn-sm" onclick="bspManualClearRows()">Clear All</button>
+          </div>
+          <div class="btn-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:2px;">
+            <button class="btn btn-gold" onclick="bspManualPush()">📡 Push to Broadcast</button>
+            <span id="bsp-manual-status" style="font-size:11px;color:var(--dim);align-self:center;flex:1;text-align:right;"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- ── END BROADCAST DATA SOURCE ───────────────────────── -->
+
+    <div class="section">
+      <div class="section-header"><span class="section-title">Overlay Visibility</span></div>
+      <div class="section-body">
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Scorebug</div><div class="overlay-sub">Bottom ticker · Live standings</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-scorebug" onchange="toggleOverlay('scorebug',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-scorebug" style="color:var(--dim)">OFF</div></div>
+        </div>
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Leaderboard</div><div class="overlay-sub">Top 10 · Right panel</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-leaderboard" onchange="toggleOverlay('leaderboard',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-leaderboard" style="color:var(--dim)">OFF</div></div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-top:-4px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap">Leaderboard shows:</span>
+          <select id="lbCategorySelect" onchange="setLbCategory(this.value)" style="flex:1;font-size:13px">
+            <option value="all">All Athletes (Overall)</option>
+          </select>
+        </div>
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Nameplates</div><div class="overlay-sub">Lane athlete cards</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-lowerThirdVisible" onchange="toggleOverlay('lowerThirdVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-lowerThirdVisible" style="color:var(--dim)">OFF</div></div>
+        </div>
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Event Bar</div><div class="overlay-sub">Slim info strip above nameplates</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-eventBarVisible" onchange="toggleOverlay('eventBarVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-eventBarVisible" style="color:var(--dim)">OFF</div></div>
+        </div>
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Head to Head</div><div class="overlay-sub">Split screen athlete comparison</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-h2h" onchange="toggleOverlay('h2h',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-h2h" style="color:var(--dim)">OFF</div></div>
+        </div>
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Category Lineup</div><div class="overlay-sub">Opening intro · Weight classes</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-lineup" onchange="toggleOverlay('lineup',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-lineup" style="color:var(--dim)">OFF</div></div>
+        </div>
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Rep Counters</div><div class="overlay-sub">Live reps above nameplates</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-repsVisible" onchange="toggleOverlay('repsVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-repsVisible" style="color:var(--dim)">OFF</div></div>
+        </div>
+        <div class="overlay-row">
+          <div class="overlay-row-left"><div><div class="overlay-label">Lights Strip</div><div class="overlay-sub">Good/No Rep banner across top</div></div></div>
+          <div><label class="toggle"><input type="checkbox" id="tog-lightsVisible" onchange="toggleOverlay('lightsVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-lightsVisible" style="color:var(--dim)">OFF</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Quick Actions</span></div>
+      <div class="section-body">
+        <div class="btn-row">
+          <button class="btn btn-outline" onclick="hideAll()">Hide All</button>
+          <button class="btn btn-outline" onclick="showScoreOnly()">Score Only</button>
+          <button class="btn btn-outline" onclick="showAll()">Show All</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ATHLETES TAB -->
+  <div id="tab-athletes" class="tab-panel">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Athlete Roster</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="catFilter" onchange="filterByCategory()" style="width:auto;font-size:11px;padding:4px 8px">
+            <option value="all">All Categories</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="addAthlete()">+ Add</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div>
+            <label>Score Unit</label>
+            <input type="text" id="scoreUnit" value="PTS" oninput="pushUpdate()" placeholder="PTS / LBS / SEC">
+          </div>
+          <div>
+            <label>Sort by</label>
+            <select id="sortMode" onchange="sortAthletes()">
+              <option value="score-desc">Score High → Low</option>
+              <option value="score-asc">Score Low → High</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+        </div>
+        <div class="ath-header">
+          <span>#</span><span>Name</span><span class="origin-col">Origin</span><span>Score</span><span></span>
+        </div>
+        <div id="athlete-table" style="display:flex;flex-direction:column;gap:5px"></div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn btn-red" onclick="pushUpdate()">Push Live</button>
+          <button class="btn btn-outline" onclick="resetAthletes()">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANES TAB -->
+  <div id="tab-lanes" class="tab-panel">
+    <div class="section">
+      <div class="section-header"><span class="section-title">Lane Configuration</span></div>
+      <div class="section-body">
+        <div class="field-row">
+          <div>
+            <label>Number of Lanes</label>
+            <select id="laneCount" onchange="updateLaneCount()">
+              <option value="1">1 Lane</option>
+              <option value="2">2 Lanes</option>
+              <option value="3">3 Lanes</option>
+              <option value="4" selected>4 Lanes</option>
+            </select>
+          </div>
+          <div>
+            <label>Event Name</label>
+            <input type="text" id="eventNameInput" value="ATLAS STONES" oninput="pushUpdate()">
+          </div>
+        </div>
+        <div class="field-row single">
+          <div>
+            <label>Event Subtitle</label>
+            <input type="text" id="eventSubInput" value="IRON CHALLENGE 2025 · EVENT 4 OF 6" oninput="pushUpdate()">
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:2px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <label style="margin:0">Lane Athletes</label>
+            <span style="font-size:10px;color:var(--dim);font-family:'Barlow',sans-serif">Select from list or type manually</span>
+          </div>
+          <div id="lane-config" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-red" onclick="pushUpdate()">Push Live</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WINNER TAB -->
+  <div id="tab-winner" class="tab-panel">
+    <div class="section champ-section">
+      <div class="section-header">
+        <span class="section-title">Event Winner Graphic</span>
+        <label class="toggle"><input type="checkbox" id="tog-champion" onchange="toggleOverlay('champion',this.checked)"><div class="toggle-track"></div></label>
+      </div>
+      <div class="section-body">
+        <!-- Live winner preview banner -->
+        <div id="winner-preview" style="background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:4px">⚡ Auto-populated from Results</div>
+          <div id="winner-preview-name" style="font-size:16px;font-weight:900;letter-spacing:0.1em"></div>
+          <div id="winner-preview-detail" style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif;margin-top:2px"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Winner Name</label><input type="text" id="champName" value="" oninput="pushUpdate()"></div>
+          <div><label>Detail</label><input type="text" id="champDetail" value="" oninput="pushUpdate()"></div>
+        </div>
+        <div class="field-row three">
+          <div><label>Score</label><input type="text" id="champScore" value="" oninput="pushUpdate()"></div>
+          <div><label>Score Label</label><input type="text" id="champScoreLabel" value="EVENT SCORE" oninput="pushUpdate()"></div>
+          <div><label>Events</label><input type="text" id="champEvents" value="" oninput="pushUpdate()"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Eyebrow Text</label><input type="text" id="champEyebrow" value="" oninput="pushUpdate()"></div>
+          <div><label>Competition Name</label><input type="text" id="champComp" value="" oninput="pushUpdate()"></div>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn btn-gold" onclick="showChampion()" style="font-size:16px;padding:14px 24px">🏆 SHOW EVENT WINNER</button>
+          <button class="btn btn-outline" onclick="hideChampion()">Hide</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API TAB -->
+  <div id="tab-api" class="tab-panel">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Weight Categories</span>
+        <button class="btn btn-outline btn-sm" onclick="addCategory()">+ Add Category</button>
+      </div>
+      <div class="section-body">
+        <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.6;margin-bottom:4px">
+          Add a separate API URL for each weight category. Each has its own StrengthResults link. All athletes across all categories are merged into your roster. Use the <strong>Athletes tab</strong> to filter by category.
+        </p>
+        <div id="category-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn btn-red" onclick="fetchAllCategories()">Fetch All Categories</button>
+          <button class="btn btn-outline" id="autoRefreshBtn" onclick="autoRefreshToggle()">Auto Refresh (30s)</button>
+        </div>
+        <div class="status-bar">
+          <span id="api-status">Add categories above and hit Fetch All.</span>
+        </div>
+        <div id="api-preview" style="display:none;margin-top:8px;border-top:1px solid var(--border);padding-top:10px">
+          <label style="margin-bottom:6px;display:block">Fetched Athletes Preview</label>
+          <div id="api-preview-list" style="font-family:monospace;font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="section-title">Manual JSON Import</span></div>
+      <div class="section-body">
+        <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.5;margin-bottom:6px">Paste a JSON array of athletes.</p>
+        <label>Format: <code style="font-size:10px;background:var(--surface3);padding:1px 5px;border-radius:3px">[{"name":"...","origin":"...","score":"...","category":"..."}]</code></label>
+        <textarea id="json-import-area" placeholder='[{"name":"THOR BJORNSSON","origin":"Iceland","score":"48.5","category":"105kg+"}]' style="margin-top:6px;font-family:monospace;font-size:11px"></textarea>
+        <button class="btn btn-red" onclick="importFromJson()" style="margin-top:6px">Import & Push Live</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" class="tab-panel">
+    <div class="section">
+      <div class="section-header"><span class="section-title">Competition Settings</span></div>
+      <div class="section-body">
+        <div class="field-row">
+          <div><label>Competition Name</label><input type="text" id="compName" value="IRON CHALLENGE" oninput="pushUpdate()"></div>
+          <div><label>Subtitle</label><input type="text" id="compSub" value="2025 STRONGMAN" oninput="pushUpdate()"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Current Event Name</label><input type="text" id="eventNameGlobal" value="ATLAS STONES" oninput="syncEventName()"></div>
+          <div><label>Event Number</label><input type="text" id="eventNum" value="EVENT 4 OF 6" oninput="pushUpdate()"></div>
+        </div>
+        <button class="btn btn-red" onclick="pushUpdate()" style="margin-top:4px">Push All Settings Live</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Data</span></div>
+      <div class="section-body">
+        <div class="btn-row">
+          <button class="btn btn-outline" onclick="exportState()">Export JSON</button>
+          <button class="btn btn-outline" onclick="importState()">Import JSON</button>
+          <button class="btn btn-outline" onclick="resetAll()">Reset All</button>
+        </div>
+        <div id="export-area" style="display:none;margin-top:8px">
+          <label>JSON (copy this)</label>
+          <textarea id="export-text" style="font-family:monospace;font-size:11px;height:100px"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OBS TAB -->
+  <div id="tab-obs" class="tab-panel">
+    <div class="section">
+      <div class="section-header"><span class="section-title">OBS Browser Source URLs</span></div>
+      <div class="section-body">
+        <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.5;margin-bottom:10px">
+          Add each as a <strong>Browser Source</strong> in OBS. Width: <strong>1920</strong>, Height: <strong>1080</strong>. Enable <em>Shutdown source when not visible</em>.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="url-row"><span class="url-label">Scorebug</span><input class="url-input" type="text" readonly id="url-scorebug"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-scorebug')">Copy</button></div>
+          <div class="url-row"><span class="url-label">Leaderboard</span><input class="url-input" type="text" readonly id="url-leaderboard"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-leaderboard')">Copy</button></div>
+          <div class="url-row"><span class="url-label">Nameplates</span><input class="url-input" type="text" readonly id="url-lowerthird"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-lowerthird')">Copy</button></div>
+          <div class="url-row"><span class="url-label">Event Winner</span><input class="url-input" type="text" readonly id="url-champion"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-champion')">Copy</button></div>
+          <div class="url-row"><span class="url-label">Head to Head</span><input class="url-input" type="text" readonly id="url-h2h"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-h2h')">Copy</button></div>
+          <div class="url-row"><span class="url-label">Cat Lineup</span><input class="url-input" type="text" readonly id="url-lineup"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-lineup')">Copy</button></div>
+          <div class="url-row"><span class="url-label">Reps & Lights</span><input class="url-input" type="text" readonly id="url-reps"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-reps')">Copy</button></div>
+          <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+            <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Judge Pages — open on judge devices</div>
+            <div class="url-row"><span class="url-label">Master</span><input class="url-input" type="text" readonly id="url-judge-master"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-judge-master')">Copy</button></div>
+            <div id="judge-lane-urls" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+          </div>
+        </div>
+        <div class="status-bar" style="margin-top:10px">
+          <span id="obs-tip">Copy each URL and paste into OBS Browser Source URL field.</span>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-title">Steam Deck</span></div>
+      <div class="section-body">
+        <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.6">
+          On your Steam Deck, find your Mac's IP address by running <code style="background:var(--surface3);padding:1px 5px;border-radius:3px;font-size:10px">ifconfig | grep 192</code> in Terminal, then open:<br><br>
+          <strong style="color:var(--text)">http://YOUR-MAC-IP:8080/control.html</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEAD TO HEAD TAB -->
+  <div id="tab-h2h" class="tab-panel">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Head to Head</span>
+        <label class="toggle"><input type="checkbox" id="tog-h2h2" onchange="toggleOverlay('h2h',this.checked)"><div class="toggle-track"></div></label>
+      </div>
+      <div class="section-body">
+        <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.5;margin-bottom:4px">
+          Select two athletes to compare. Photos pulled from Google Drive URL. Leave photo URL blank for initials placeholder.
+        </p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <!-- Left athlete -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:2px">Left Athlete</div>
+            <select id="h2h-left-cat" onchange="h2hCatChanged('left')" style="font-size:12px">
+              <option value="">— Category —</option>
+            </select>
+            <select id="h2h-left-ath" onchange="h2hAthSelected('left',this.value)" style="font-size:13px">
+              <option value="">— Select Athlete —</option>
+            </select>
+            <input type="text" id="h2h-left-name"   placeholder="Name" oninput="pushUpdate()">
+            <input type="text" id="h2h-left-origin" placeholder="Origin" oninput="pushUpdate()" style="font-size:13px">
+            <input type="text" id="h2h-left-cat2"   placeholder="Weight Class" oninput="pushUpdate()" style="font-size:13px">
+            <input type="text" id="h2h-left-photo"  placeholder="Google Drive photo URL" oninput="pushUpdate()" style="font-size:11px;color:var(--dim)">
+          </div>
+          <!-- Right athlete -->
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:2px">Right Athlete</div>
+            <select id="h2h-right-cat" onchange="h2hCatChanged('right')" style="font-size:12px">
+              <option value="">— Category —</option>
+            </select>
+            <select id="h2h-right-ath" onchange="h2hAthSelected('right',this.value)" style="font-size:13px">
+              <option value="">— Select Athlete —</option>
+            </select>
+            <input type="text" id="h2h-right-name"   placeholder="Name" oninput="pushUpdate()">
+            <input type="text" id="h2h-right-origin" placeholder="Origin" oninput="pushUpdate()" style="font-size:13px">
+            <input type="text" id="h2h-right-cat2"   placeholder="Weight Class" oninput="pushUpdate()" style="font-size:13px">
+            <input type="text" id="h2h-right-photo"  placeholder="Google Drive photo URL" oninput="pushUpdate()" style="font-size:11px;color:var(--dim)">
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:4px">
+          <label style="margin-bottom:6px;display:block">Google Drive Photo URL Guide</label>
+          <p style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.7">
+            1. Upload photo to Google Drive<br>
+            2. Right-click → Share → Anyone with link<br>
+            3. Copy the link — it looks like: <code style="background:var(--surface3);padding:1px 4px;border-radius:3px;font-size:10px">https://drive.google.com/file/d/FILE_ID/view</code><br>
+            4. Change it to: <code style="background:var(--surface3);padding:1px 4px;border-radius:3px;font-size:10px">https://drive.google.com/uc?export=view&id=FILE_ID</code>
+          </p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-gold" onclick="showH2H()" style="font-size:16px;padding:14px 24px">SHOW HEAD TO HEAD</button>
+          <button class="btn btn-outline" onclick="hideH2H()">Hide</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LINEUP TAB -->
+  <div id="tab-lineup" class="tab-panel">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Category Lineup</span>
+        <label class="toggle"><input type="checkbox" id="tog-lineup2" onchange="toggleOverlay('lineup',this.checked)"><div class="toggle-track"></div></label>
+      </div>
+      <div class="section-body">
+        <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.5;margin-bottom:6px">
+          Opening intro graphic. Cycles through each weight category automatically. Uses your loaded athlete roster.
+        </p>
+        <div class="field-row">
+          <div>
+            <label>Seconds per Category</label>
+            <input type="number" id="lineupDuration" value="5" min="2" max="30" oninput="pushUpdate()">
+          </div>
+          <div>
+            <label>Auto Cycle</label>
+            <select id="lineupAuto" onchange="pushUpdate()">
+              <option value="true">On — cycles automatically</option>
+              <option value="false">Off — manual control</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:10px">
+          <label style="margin-bottom:8px;display:block">Manual Category Select</label>
+          <div id="lineup-cat-btns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn btn-gold" onclick="showLineup()" style="font-size:16px;padding:14px 24px">SHOW LINEUP</button>
+          <button class="btn btn-outline" onclick="hideLineup()">Hide</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    <span id="status-text">Ready</span>
+  </div>
+
+  <!-- MANUAL LOWER THIRD TAB -->
+  <div id="tab-manual" class="tab-panel">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Manual Name Card</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label class="toggle"><input type="checkbox" id="tog-manualVisible" onchange="toggleManual(this.checked)"><div class="toggle-track"></div></label>
+          <div class="toggle-label" id="lab-manualVisible" style="color:var(--dim)">OFF</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <div><label>Line 1 — Large Text</label><input type="text" id="manualLine1" placeholder="e.g. THOR BJORNSSON" oninput="pushManual()"></div>
+          <div><label>Line 2 — Small Text</label><input type="text" id="manualLine2" placeholder="e.g. Iceland · Mens Open" oninput="pushManual()"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Score (optional)</label><input type="text" id="manualScore" placeholder="e.g. 245" oninput="pushManual()"></div>
+          <div><label>Score Unit (optional)</label><input type="text" id="manualUnit" placeholder="e.g. KG" oninput="pushManual()"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-red" onclick="pushManual()">⚡ Push Live</button>
+          <button class="btn btn-outline" onclick="clearManual()">Clear</button>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-body" style="padding:10px 14px">
+        <div class="url-row"><span class="url-label">Overlay URL</span><input class="url-input" type="text" readonly id="url-manual"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-manual')">Copy</button></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  scorebug:false, leaderboard:false, lowerThirdVisible:false, eventBarVisible:false, champion:false,
+  h2h:false, lineup:false,
+  h2hLeft:  {name:'', origin:'', category:'', photoUrl:''},
+  h2hRight: {name:'', origin:'', category:'', photoUrl:''},
+  lineupIndex:0, lineupAuto:true, lineupDuration:5,
+  athletes:[
+    {name:"THOR BJORNSSON",origin:"Iceland",score:"48.5",category:"Open"},
+    {name:"BRIAN SHAW",origin:"USA",score:"44.0",category:"Open"},
+    {name:"EDDIE HALL",origin:"England",score:"41.5",category:"Open"},
+    {name:"MARTINS LICIS",origin:"USA",score:"38.0",category:"Open"},
+    {name:"MATEUSZ KIELISZKOWSKI",origin:"Poland",score:"35.5",category:"Open"},
+    {name:"ADAM BISHOP",origin:"Wales",score:"33.0",category:"Open"},
+    {name:"JERRY PRITCHETT",origin:"USA",score:"30.5",category:"Open"},
+    {name:"KONSTANTINE JANASHIA",origin:"Georgia",score:"28.0",category:"Open"},
+    {name:"MARK FELIX",origin:"England",score:"25.5",category:"Open"},
+    {name:"EVAN SINGLETON",origin:"USA",score:"23.0",category:"Open"},
+  ],
+  lanes:[
+    {num:1,name:"THOR BJORNSSON",detail:"Iceland · PRO",score:"48.5"},
+    {num:2,name:"BRIAN SHAW",detail:"USA · PRO",score:"44.0"},
+    {num:3,name:"EDDIE HALL",detail:"England · PRO",score:"41.5"},
+    {num:4,name:"MARTINS LICIS",detail:"USA · PRO",score:"38.0"},
+  ],
+  categories:[], // [{name, url, color}]
+  lbCategory: 'all', // which category leaderboard shows
+  laneCount:4, scoreUnit:"PTS",
+  eventName:"ATLAS STONES", eventSub:"IRON CHALLENGE 2025 · EVENT 4 OF 6",
+  compName:"IRON CHALLENGE", compSub:"2025 STRONGMAN", eventNum:"EVENT 4 OF 6",
+  champName:"", champDetail:"",
+  champScore:"", champScoreLabel:"EVENT SCORE", champEvents:"",
+  champEyebrow:"", champComp:"",
+};
+
+// ─── CONNECTION ───────────────────────────────────────────────────────────────
+async function checkConnection() {
+  try {
+    const r = await fetch('/state.json?t=' + Date.now());
+    if (r.ok) { setConn(true); return true; }
+  } catch(e) {}
+  setConn(false); return false;
+}
+function setConn(ok) {
+  document.getElementById('conn-dot').className = 'conn-dot' + (ok?' ok':'');
+  document.getElementById('conn-text').textContent = ok ? 'Connected' : 'No Server';
+  document.getElementById('conn-text').style.color = ok ? 'var(--green-bright)' : '#FF4444';
+}
+setInterval(checkConnection, 3000);
+checkConnection();
+
+// ─── PUSH UPDATE ──────────────────────────────────────────────────────────────
+async function pushUpdate() {
+  collectFromInputs();
+  try {
+    const r = await fetch('/update', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(state)});
+    showStatus(r.ok ? '✅ Pushed live' : '⚠️ Server error', r.ok);
+  } catch(e) {
+    showStatus('🔴 No server — run python3 server.py', false);
+  }
+}
+
+// ─── COLLECT INPUTS ───────────────────────────────────────────────────────────
+function collectFromInputs() {
+  const v = id => { const e=document.getElementById(id); return e?e.value:''; };
+  state.scoreUnit  = v('scoreUnit');
+  state.eventName  = v('eventNameInput') || v('eventNameGlobal');
+  state.eventSub   = v('eventSubInput');
+  state.compName   = v('compName');
+  state.compSub    = v('compSub');
+  state.eventNum   = v('eventNum');
+  state.champName  = v('champName');
+  state.champDetail= v('champDetail');
+  state.champScore = v('champScore');
+  state.champScoreLabel = v('champScoreLabel');
+  state.champEvents= v('champEvents');
+  state.champEyebrow=v('champEyebrow');
+  state.champComp  = v('champComp');
+
+  document.querySelectorAll('.ath-row').forEach((row,i) => {
+    if (!state.athletes[i]) state.athletes[i] = {};
+    state.athletes[i].name   = row.querySelector('.ath-name').value;
+    state.athletes[i].origin = row.querySelector('.ath-origin').value;
+    state.athletes[i].score  = row.querySelector('.ath-score').value;
+  });
+
+  document.querySelectorAll('.lane-cfg-row').forEach((row,i) => {
+    if (!state.lanes[i]) state.lanes[i] = {num:i+1};
+    const nameEl = row.querySelector('.lane-name-input');
+    state.lanes[i].name   = nameEl ? nameEl.value : '';
+    state.lanes[i].detail = row.querySelector('.lane-detail').value;
+    state.lanes[i].score  = row.querySelector('.lane-score').value;
+  });
+}
+
+// ─── TOGGLES ──────────────────────────────────────────────────────────────────
+function toggleOverlay(key, val) {
+  state[key] = val; updateToggleLabel(key, val); pushUpdate();
+}
+function updateToggleLabel(key, val) {
+  const lab = document.getElementById('lab-'+key);
+  if (lab) { lab.textContent = val?'ON':'OFF'; lab.style.color = val?'var(--green-bright)':'var(--dim)'; }
+  const tog = document.getElementById('tog-'+key);
+  if (tog) tog.checked = val;
+}
+function toggleManual(on) {
+  state.manualVisible = on;
+  updateToggleLabel('manualVisible', on);
+  pushUpdate();
+}
+function pushManual() {
+  state.manualLine1 = document.getElementById('manualLine1').value;
+  state.manualLine2 = document.getElementById('manualLine2').value;
+  state.manualScore = document.getElementById('manualScore').value;
+  state.manualUnit  = document.getElementById('manualUnit').value;
+  pushUpdate();
+}
+function clearManual() {
+  ['manualLine1','manualLine2','manualScore','manualUnit'].forEach(id => document.getElementById(id).value = '');
+  state.manualLine1=''; state.manualLine2=''; state.manualScore=''; state.manualUnit='';
+  state.manualVisible = false;
+  document.getElementById('tog-manualVisible').checked = false;
+  updateToggleLabel('manualVisible', false);
+  pushUpdate();
+}
+function hideAll()      { ['scorebug','leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>{state[k]=false;updateToggleLabel(k,false);}); pushUpdate(); }
+function showScoreOnly(){ hideAll(); state.scorebug=true; updateToggleLabel('scorebug',true); pushUpdate(); }
+function showAll()      { ['scorebug','leaderboard','lowerThirdVisible','eventBarVisible'].forEach(k=>{state[k]=true;updateToggleLabel(k,true);}); state.champion=false; state.h2h=false; state.lineup=false; updateToggleLabel('champion',false); pushUpdate(); }
+function showChampion() { state.champion=true;  updateToggleLabel('champion',true);  pushUpdate(); }
+function hideChampion() { state.champion=false; updateToggleLabel('champion',false); pushUpdate(); }
+function showH2H()      { state.h2h=true;  updateToggleLabel('h2h',true);  syncH2HInputs(); pushUpdate(); }
+function hideH2H()      { state.h2h=false; updateToggleLabel('h2h',false); pushUpdate(); }
+function showLineup()   { state.lineup=true;  updateToggleLabel('lineup',true);  pushUpdate(); }
+function hideLineup()   { state.lineup=false; updateToggleLabel('lineup',false); pushUpdate(); }
+
+// ─── ATHLETE TABLE ────────────────────────────────────────────────────────────
+let catFilterValue = 'all';
+function renderAthleteTable() {
+  const list = catFilterValue === 'all' ? state.athletes
+    : state.athletes.filter(a => (a.category||'') === catFilterValue);
+
+  document.getElementById('athlete-table').innerHTML = list.map((a,i) => {
+    const rc = i===0?'r1':i===1?'r2':i===2?'r3':'';
+    return `<div class="ath-row">
+      <div class="rank-badge ${rc}">${i+1}</div>
+      <input class="ath-name" type="text" value="${esc(a.name)}" placeholder="Name" oninput="debouncePush()">
+      <input class="ath-origin origin-field" type="text" value="${esc(a.origin||'')}" placeholder="Origin" oninput="debouncePush()">
+      <input class="ath-score" type="text" value="${esc(a.score)}" placeholder="0" oninput="debouncePush()" style="text-align:center">
+      <div class="del-btn" onclick="deleteAthlete(${state.athletes.indexOf(a)})">✕</div>
+    </div>`;
+  }).join('');
+  updateCategoryFilter();
+}
+function updateCategoryFilter() {
+  const cats = [...new Set(state.athletes.map(a=>a.category||'').filter(Boolean))];
+  // Athletes tab filter
+  const sel = document.getElementById('catFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="all">All Categories</option>' + cats.map(c=>`<option value="${esc(c)}">${c}</option>`).join('');
+  sel.value = cats.includes(cur) ? cur : 'all';
+  // Leaderboard category selector
+  const lbSel = document.getElementById('lbCategorySelect');
+  if (lbSel) {
+    const lbCur = lbSel.value;
+    lbSel.innerHTML = '<option value="all">All Athletes (Overall)</option>' + cats.map(c=>`<option value="${esc(c)}">${c}</option>`).join('');
+    lbSel.value = cats.includes(lbCur) ? lbCur : (state.lbCategory || 'all');
+  }
+}
+function setLbCategory(cat) {
+  state.lbCategory = cat;
+  pushUpdate();
+}
+function filterByCategory() { catFilterValue = document.getElementById('catFilter').value; renderAthleteTable(); }
+function addAthlete()    { state.athletes.push({name:'NEW ATHLETE',origin:'',score:'0',category:'Open'}); renderAthleteTable(); }
+function deleteAthlete(i){ state.athletes.splice(i,1); renderAthleteTable(); pushUpdate(); }
+function sortAthletes()  {
+  const m = document.getElementById('sortMode').value;
+  if (m==='score-desc') state.athletes.sort((a,b)=>parseFloat(b.score||0)-parseFloat(a.score||0));
+  if (m==='score-asc')  state.athletes.sort((a,b)=>parseFloat(a.score||0)-parseFloat(b.score||0));
+  renderAthleteTable(); pushUpdate();
+}
+function resetAthletes() { if(!confirm('Reset roster?')) return; state.athletes=[]; renderAthleteTable(); }
+
+// ─── LANE CONFIG ──────────────────────────────────────────────────────────────
+function updateLaneCount() {
+  state.laneCount = parseInt(document.getElementById('laneCount').value);
+  while (state.lanes.length < state.laneCount) { const n=state.lanes.length+1; state.lanes.push({num:n,name:'',detail:'',score:''}); }
+  renderLaneConfig(); pushUpdate();
+}
+
+function renderLaneConfig() {
+  const count = Math.max(1, Math.min(4, parseInt(state.laneCount)||4));
+  const cats = [...new Set(state.athletes.map(a=>a.category||'').filter(Boolean))];
+  const hasAthletes = state.athletes.length > 0;
+
+  const catOpts = cats.length
+    ? '<option value="">— All Categories —</option>' + cats.map(c=>`<option value="${esc(c)}">${c}</option>`).join('')
+    : '<option value="">No categories loaded</option>';
+
+  document.getElementById('lane-config').innerHTML = state.lanes.slice(0,count).map((l,i) => {
+    // athletes for currently selected category for this lane
+    const selCat = l._catFilter || '';
+    const filteredAthletes = selCat
+      ? state.athletes.filter(a => (a.category||'') === selCat)
+      : state.athletes;
+    const athOpts = hasAthletes
+      ? '<option value="">— Select Athlete —</option>' + filteredAthletes.map(a=>`<option value="${esc(a.name)}">${a.name}</option>`).join('')
+      : '<option value="">Load athletes via API tab</option>';
+
+    return `<div class="lane-row-config lane-cfg-row" data-lane="${i}" style="grid-template-columns:40px 1fr 70px">
+      <div class="lane-badge"><div class="lane-badge-num">${l.num}</div><div class="lane-badge-label">Lane</div></div>
+      <div class="lane-inputs">
+        ${cats.length > 1 ? `
+        <select class="lane-cat-select" onchange="laneCatChanged(${i},this.value)" style="font-size:12px;color:var(--dim);margin-bottom:4px">
+          ${catOpts}
+        </select>` : ''}
+        ${hasAthletes ? `
+        <select class="lane-ath-select" onchange="laneAthleteSelected(${i},this.value)" style="font-size:14px;margin-bottom:4px">
+          ${athOpts}
+        </select>` : ''}
+        <input class="lane-name-input" type="text" value="${esc(l.name||'')}" placeholder="Or type name manually" oninput="debouncePush()" style="font-size:15px">
+        <input class="lane-detail" type="text" value="${esc(l.detail||'')}" placeholder="Origin / Detail" oninput="debouncePush()" style="font-size:12px;margin-top:4px">
+      </div>
+      <input class="lane-score score-field" type="text" value="${esc(l.score||'')}" placeholder="Score" oninput="debouncePush()" style="text-align:center">
+    </div>`;
+  }).join('');
+
+  // Restore selections
+  state.lanes.slice(0, count).forEach((l, i) => {
+    const row = document.querySelectorAll('#lane-config .lane-cfg-row')[i];
+    if (!row) return;
+    const catSel = row.querySelector('.lane-cat-select');
+    const athSel = row.querySelector('.lane-ath-select');
+    if (catSel && l._catFilter) catSel.value = l._catFilter;
+    if (athSel && l.name) athSel.value = l.name;
+  });
+}
+
+function laneCatChanged(i, cat) {
+  if (!state.lanes[i]) state.lanes[i] = {num:i+1,name:'',detail:'',score:''};
+  state.lanes[i]._catFilter = cat;
+  // Rebuild just the athlete dropdown for this lane
+  const row = document.querySelectorAll('#lane-config .lane-cfg-row')[i];
+  if (!row) return;
+  const athSel = row.querySelector('.lane-ath-select');
+  if (!athSel) return;
+  const filtered = cat ? state.athletes.filter(a=>(a.category||'')===cat) : state.athletes;
+  athSel.innerHTML = '<option value="">— Select Athlete —</option>' +
+    filtered.map(a=>`<option value="${esc(a.name)}">${a.name}</option>`).join('');
+}
+
+function laneAthleteSelected(i, name) {
+  const athlete = state.athletes.find(a => a.name === name);
+  const row = document.querySelectorAll('#lane-config .lane-cfg-row')[i];
+  if (!row || !athlete) return;
+  const nameInput   = row.querySelector('.lane-name-input');
+  const detailInput = row.querySelector('.lane-detail');
+  const scoreInput  = row.querySelector('.lane-score');
+  if (nameInput)   nameInput.value   = athlete.name;
+  if (detailInput) detailInput.value = athlete.origin || '';
+  if (scoreInput)  scoreInput.value  = athlete.score  || '';
+  state.lanes[i] = Object.assign(state.lanes[i]||{}, {num:i+1, name:athlete.name, detail:athlete.origin||'', score:athlete.score||''});
+  debouncePush();
+}
+
+// ─── CATEGORIES (API) ─────────────────────────────────────────────────────────
+const CAT_COLORS = ['#CC0000','#D4A017','#0088CC','#00AA44','#8800CC','#CC6600','#CC0088','#006644'];
+
+function renderCategoryList() {
+  const el = document.getElementById('category-list');
+  if (!state.categories.length) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--dim);font-family:Barlow,sans-serif">No categories added yet.</p>';
+    return;
+  }
+  el.innerHTML = state.categories.map((c,i) => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+        <input type="text" value="${esc(c.name)}" placeholder="Category name e.g. 105kg+" oninput="state.categories[${i}].name=this.value" style="flex:1;font-size:14px">
+        <button class="btn btn-outline btn-sm" onclick="removeCategory(${i})">Remove</button>
+      </div>
+      <input type="text" value="${esc(c.url)}" placeholder="StrengthResults API URL" oninput="state.categories[${i}].url=this.value" style="font-size:11px;color:var(--dim)">
+      <div style="font-size:10px;color:var(--dim);font-family:Barlow,sans-serif">${c.athleteCount !== undefined ? c.athleteCount + ' athletes loaded' : 'Not fetched yet'}</div>
+    </div>`).join('');
+}
+
+function addCategory() {
+  const col = CAT_COLORS[state.categories.length % CAT_COLORS.length];
+  state.categories.push({name:'', url:'', color:col, athleteCount:undefined});
+  renderCategoryList();
+}
+
+function removeCategory(i) {
+  const catName = state.categories[i].name;
+  state.categories.splice(i, 1);
+  if (catName) state.athletes = state.athletes.filter(a => a.category !== catName);
+  renderCategoryList(); renderAthleteTable(); pushUpdate();
+}
+
+async function fetchAllCategories() {
+  const cats = state.categories.filter(c => c.url && c.name);
+  if (!cats.length) { apiStatus('⚠️ Add at least one category with a name and URL', false); return; }
+  apiStatus('⏳ Fetching ' + cats.length + ' categor' + (cats.length===1?'y':'ies') + '...', true);
+
+  let totalLoaded = 0;
+  for (const cat of cats) {
+    try {
+      const proxyUrl = '/proxy?url=' + encodeURIComponent(cat.url);
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      const athletes = parseStrengthResults(data, cat.name);
+      // Remove old athletes from this category, add new
+      state.athletes = state.athletes.filter(a => a.category !== cat.name);
+      state.athletes.push(...athletes);
+      cat.athleteCount = athletes.length;
+      totalLoaded += athletes.length;
+    } catch(e) {
+      cat.athleteCount = 0;
+      apiStatus('❌ Error fetching "' + cat.name + '": ' + e.message, false);
+    }
+  }
+
+  // Sort overall by score desc
+  state.athletes.sort((a,b) => parseFloat(b.score||0) - parseFloat(a.score||0));
+  renderCategoryList();
+  renderAthleteTable();
+  renderLaneConfig();
+  renderH2HCategorySelects();
+  renderLineupCatButtons();
+  pushUpdate();
+  apiStatus('✅ Loaded ' + totalLoaded + ' athletes across ' + cats.length + ' categories', true);
+
+  // Show preview
+  const prev = document.getElementById('api-preview');
+  const list = document.getElementById('api-preview-list');
+  prev.style.display = 'block';
+  list.innerHTML = state.athletes.slice(0,20).map((a,i) => {
+    const col = (state.categories.find(c=>c.name===a.category)||{color:'#555'}).color;
+    return `<div style="display:flex;gap:8px;align-items:center">
+      <span style="color:var(--dim);width:20px;text-align:right">${i+1}</span>
+      <span style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;display:inline-block"></span>
+      <span style="color:#ddd">${a.name}</span>
+      <span style="color:#F5C842;margin-left:auto">${a.score} PTS</span>
+      <span style="color:var(--dim);font-size:10px">${a.category}</span>
+    </div>`;
+  }).join('');
+}
+
+function parseStrengthResults(data, categoryName) {
+  // Get totalPoints from last event for overall standings
+  const events = data.events || [];
+  if (!events.length) return [];
+  const lastEvent = events[events.length - 1];
+  const pointsMap = {}, originMap = {};
+  lastEvent.results.forEach(r => {
+    pointsMap[r.competitor] = r.totalPoints ?? 0;
+    originMap[r.competitor] = (r.countryName || '').replace('UNITED KINGDOM - ','');
+  });
+  return Object.entries(pointsMap)
+    .sort((a,b) => b[1]-a[1])
+    .map(([name, pts]) => ({
+      name: name.toUpperCase(),
+      origin: originMap[name] || '',
+      score: String(pts),
+      category: categoryName
+    }));
+}
+
+let autoRefreshing = false, autoRefreshInterval = null;
+function autoRefreshToggle() {
+  if (autoRefreshing) {
+    clearInterval(autoRefreshInterval); autoRefreshing = false;
+    document.getElementById('autoRefreshBtn').textContent = 'Auto Refresh (30s)';
+    apiStatus('Auto refresh stopped', true);
+  } else {
+    autoRefreshing = true;
+    document.getElementById('autoRefreshBtn').textContent = 'Stop Auto Refresh';
+    fetchAllCategories();
+    autoRefreshInterval = setInterval(fetchAllCategories, 30000);
+    apiStatus('↻ Auto refreshing every 30s...', true);
+  }
+}
+function apiStatus(msg, ok) {
+  const el = document.getElementById('api-status');
+  if (el) { el.textContent = msg; el.className = ok ? 'status-ok' : ''; }
+}
+
+function importFromJson() {
+  const raw = document.getElementById('json-import-area').value.trim();
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    const athletes = (Array.isArray(parsed)?parsed:[parsed]).map(a=>({
+      name:(a.name||'').toUpperCase(), origin:a.origin||'', score:String(a.score||'0'), category:a.category||'Import'
+    })).filter(a=>a.name);
+    if (!athletes.length) throw new Error('No valid athletes');
+    state.athletes.push(...athletes);
+    renderAthleteTable(); renderLaneConfig(); pushUpdate();
+    showStatus('✅ Imported ' + athletes.length + ' athletes', true);
+  } catch(e) { showStatus('❌ ' + e.message, false); }
+}
+
+// ─── HEAD TO HEAD ─────────────────────────────────────────────────────────────
+function h2hCatChanged(side) {
+  const cat = document.getElementById('h2h-'+side+'-cat').value;
+  const athletes = cat ? state.athletes.filter(a=>(a.category||'')===cat) : state.athletes;
+  const sel = document.getElementById('h2h-'+side+'-ath');
+  sel.innerHTML = '<option value="">— Select Athlete —</option>' +
+    athletes.map(a=>`<option value="${esc(a.name)}">${a.name}</option>`).join('');
+}
+
+function h2hAthSelected(side, name) {
+  const a = state.athletes.find(a=>a.name===name);
+  if (!a) return;
+  document.getElementById('h2h-'+side+'-name').value   = a.name;
+  document.getElementById('h2h-'+side+'-origin').value = a.origin||'';
+  document.getElementById('h2h-'+side+'-cat2').value   = a.category||'';
+  // photoUrl stays manual — user pastes Google Drive link
+  debouncePush();
+}
+
+function syncH2HInputs() {
+  const g = id => { const e=document.getElementById(id); return e?e.value:''; };
+  state.h2hLeft  = { name:g('h2h-left-name'),  origin:g('h2h-left-origin'),  category:g('h2h-left-cat2'),  photoUrl:g('h2h-left-photo')  };
+  state.h2hRight = { name:g('h2h-right-name'), origin:g('h2h-right-origin'), category:g('h2h-right-cat2'), photoUrl:g('h2h-right-photo') };
+}
+
+function renderH2HCategorySelects() {
+  const cats = [...new Set(state.athletes.map(a=>a.category||'').filter(Boolean))];
+  const opts = '<option value="">— All —</option>' + cats.map(c=>`<option value="${esc(c)}">${c}</option>`).join('');
+  ['left','right'].forEach(side => {
+    const el = document.getElementById('h2h-'+side+'-cat');
+    if (el) el.innerHTML = opts;
+  });
+}
+
+// ─── LINEUP ───────────────────────────────────────────────────────────────────
+function renderLineupCatButtons() {
+  const cats = state.categories && state.categories.length
+    ? state.categories
+    : [...new Set(state.athletes.map(a=>a.category||'').filter(Boolean))].map((c,i)=>({name:c,color:'#F5C842'}));
+
+  const el = document.getElementById('lineup-cat-btns');
+  if (!el) return;
+  el.innerHTML = cats.map((c,i) => `
+    <button class="btn btn-outline btn-sm" onclick="jumpToCategory(${i})"
+      style="border-left:3px solid ${c.color||'#F5C842'}">${c.name}</button>
+  `).join('');
+}
+
+function jumpToCategory(i) {
+  state.lineupIndex = i;
+  state.lineup = true;
+  updateToggleLabel('lineup', true);
+  pushUpdate();
+}
+
+// ─── COLLECT H2H + LINEUP FROM INPUTS ────────────────────────────────────────
+// (called inside collectFromInputs)
+function collectH2HAndLineup() {
+  syncH2HInputs();
+  const dur = document.getElementById('lineupDuration');
+  const auto = document.getElementById('lineupAuto');
+  if (dur)  state.lineupDuration = parseInt(dur.value)||5;
+  if (auto) state.lineupAuto     = auto.value !== 'false';
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>{ if(t.getAttribute('onclick').includes("'"+name+"'")) t.classList.add('active'); });
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+let debounceTimer = null;
+function debouncePush() { clearTimeout(debounceTimer); debounceTimer = setTimeout(()=>pushUpdate(), 600); }
+function showStatus(msg, ok) {
+  const el = document.getElementById('status-text');
+  if (el) { el.textContent = msg; el.className = ok?'status-ok':''; }
+  setTimeout(()=>{ if(el){el.textContent='Ready'; el.className='';} }, 2500);
+}
+function syncEventName() {
+  const val = document.getElementById('eventNameGlobal').value;
+  const other = document.getElementById('eventNameInput');
+  if (other) other.value = val;
+  state.eventName = val; pushUpdate();
+}
+function copyUrl(id) { const e=document.getElementById(id); if(e) navigator.clipboard.writeText(e.value).then(()=>showStatus('Copied!',true)); }
+function populateObsUrls() {
+  const base = location.origin;
+  document.getElementById('url-scorebug').value      = base+'/scorebug.html';
+  document.getElementById('url-leaderboard').value   = base+'/leaderboard.html';
+  document.getElementById('url-lowerthird').value    = base+'/lowerthird.html';
+  document.getElementById('url-manual').value        = base+'/manual_lowerthird.html';
+  document.getElementById('url-champion').value      = base+'/champion.html';
+  document.getElementById('url-h2h').value           = base+'/h2h.html';
+  document.getElementById('url-lineup').value        = base+'/lineup.html';
+  document.getElementById('url-reps').value          = base+'/reps.html';
+  document.getElementById('url-judge-master').value  = base+'/judge-master.html';
+  // Lane judge URLs
+  const count = parseInt(state.laneCount)||4;
+  const laneUrlEl = document.getElementById('judge-lane-urls');
+  if (laneUrlEl) {
+    laneUrlEl.innerHTML = Array.from({length:count},(_,i)=>i+1).map(i =>
+      `<div class="url-row"><span class="url-label" style="font-size:11px">Lane ${i}</span><input class="url-input" type="text" readonly value="${base+'/judge.html?lane='+i}" id="url-judge-${i}"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-judge-${i}')">Copy</button></div>`
+    ).join('');
+  }
+}
+function exportState() { collectFromInputs(); document.getElementById('export-area').style.display='block'; document.getElementById('export-text').value=JSON.stringify(state,null,2); }
+function importState() {
+  const t=prompt('Paste JSON:'); if(!t) return;
+  try { Object.assign(state,JSON.parse(t)); initInputs(); renderAthleteTable(); renderLaneConfig(); renderCategoryList(); pushUpdate(); showStatus('Imported!',true); }
+  catch(e) { showStatus('Invalid JSON',false); }
+}
+function resetAll() { if(!confirm('Reset everything?')) return; location.reload(); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function initInputs() {
+  const set = (id,val) => { const e=document.getElementById(id); if(e) e.value=val||''; };
+  set('scoreUnit',    state.scoreUnit);
+  set('eventNameInput', state.eventName);
+  set('eventNameGlobal', state.eventName);
+  set('eventSubInput',  state.eventSub);
+  set('compName',     state.compName);
+  set('compSub',      state.compSub);
+  set('eventNum',     state.eventNum);
+  set('champName',    state.champName);
+  set('champDetail',  state.champDetail);
+  set('champScore',   state.champScore);
+  set('champScoreLabel',state.champScoreLabel);
+  set('champEvents',  state.champEvents);
+  set('champEyebrow', state.champEyebrow);
+  set('champComp',    state.champComp);
+  set('laneCount',    state.laneCount);
+  set('lineupDuration', state.lineupDuration||5);
+  ['scorebug','leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>updateToggleLabel(k,state[k]));
+  updateToggleLabel('manualVisible', !!state.manualVisible);
+  if (state.manualLine1) set('manualLine1', state.manualLine1);
+  if (state.manualLine2) set('manualLine2', state.manualLine2);
+  if (state.manualScore) set('manualScore', state.manualScore);
+  if (state.manualUnit)  set('manualUnit',  state.manualUnit);
+}
+
+// Patch collectFromInputs to include h2h/lineup
+const _origCollect = collectFromInputs;
+// Override to also collect h2h/lineup fields
+const _collectFromInputs = collectFromInputs;
+collectFromInputs = function() { _collectFromInputs(); collectH2HAndLineup(); };
+
+// ─── LIVE SYNC FROM COMP ENGINE ──────────────────────────────────────────────
+async function syncFromCompEngine() {
+  try {
+    const r = await fetch('/state.json?t=' + Date.now());
+    if (!r.ok) return;
+    const live = await r.json();
+
+    // Sync lanes from comp engine if available
+    if (live.lanes && live.lanes.length) {
+      state.lanes = live.lanes.map((l, i) => ({
+        num: i + 1,
+        name: l.name || '',
+        detail: l.category ? (l.category + (l.detail ? ' · ' + l.detail : '')) : (l.detail || ''),
+        score: l.score || ''
+      }));
+    }
+
+    // Sync leaderboard athletes from comp engine
+    if (live.athletes && live.athletes.length) {
+      state.athletes = live.athletes.map(a => ({
+        name: a.name || '',
+        origin: a.category || '',
+        score: a.score !== undefined ? String(a.score) : '',
+        category: a.category || ''
+      }));
+    }
+
+    // Sync event info
+    if (live.eventName) state.eventName = live.eventName;
+    if (live.eventNum)  state.eventNum  = live.eventNum;
+    if (live.eventSub)  state.eventSub  = live.eventSub;
+    if (live.compCategory) state.lbCategory = live.compCategory;
+
+    // Sync event winner fields
+    if (live.champName)       state.champName       = live.champName;
+    if (live.champDetail)     state.champDetail     = live.champDetail;
+    if (live.champScore)      state.champScore      = live.champScore;
+    if (live.champScoreLabel) state.champScoreLabel = live.champScoreLabel;
+    if (live.champEvents)     state.champEvents     = live.champEvents;
+    if (live.champEyebrow)    state.champEyebrow    = live.champEyebrow;
+    if (live.champComp)       state.champComp       = live.champComp;
+
+    // Re-render UI with live data
+    initInputs();
+    renderAthleteTable();
+    renderLaneConfig();
+    renderCategoryList();
+    renderH2HCategorySelects();
+    renderLineupCatButtons();
+
+    // Update event winner preview banner if data has changed
+    if (live.champName) {
+      const preview = document.getElementById('winner-preview');
+      const pName   = document.getElementById('winner-preview-name');
+      const pDetail = document.getElementById('winner-preview-detail');
+      if (preview && pName && pDetail) {
+        preview.style.display = 'block';
+        pName.textContent   = live.champName + '  ·  ' + (live.champScore||'') + ' ' + (live.scoreUnit||'PTS');
+        pDetail.textContent = (live.champEyebrow||'') + '  —  ' + (live.champComp||'');
+      }
+    }
+
+    showStatus('✅ Synced from Competition Engine', true);
+  } catch(e) {
+    console.warn('Sync failed:', e);
+  }
+}
+
+// Boot — load live data first, then fall back to defaults
+(async () => {
+  initInputs();
+  renderAthleteTable();
+  renderLaneConfig();
+  renderCategoryList();
+  renderH2HCategorySelects();
+  renderLineupCatButtons();
+  populateObsUrls();
+  // Now pull live data from comp engine and update
+  await syncFromCompEngine();
+  // Keep syncing every 5 seconds so control panel stays up to date
+  setInterval(syncFromCompEngine, 5000);
+})();
+
+// ── BROADCAST DATA SOURCE PANEL ───────────────────────────────────────────────
+(function () {
+  'use strict';
+
+  var currentAdapter   = 'strengthresults';
+  var autoRefreshTimer = null;
+
+  // Boot: read current mode from server
+  function bspInit() {
+    fetch('/comp/api/broadcast_mode')
+      .then(r => r.json())
+      .then(d => bspApplyMode(d.data_source_mode || 'engine'))
+      .catch(() => bspApplyMode('engine'));
+    bspBuildManualRows(4);
+  }
+
+  // Mode switching
+  window.bspSetMode = function (mode) {
+    const fd = new FormData(); fd.append('mode', mode);
+    fetch('/comp/action/set_broadcast_mode', { method: 'POST', body: fd })
+      .then(() => bspApplyMode(mode))
+      .catch(e => bspStatus('engine', '⚠ ' + e.message));
+  };
+
+  function bspApplyMode(mode) {
+    // Badge
+    const badge = document.getElementById('bsp-badge');
+    const labels = { engine: '🟢 Engine', api: '🔵 API', manual: '🟡 Manual' };
+    const colors  = { engine: 'var(--green-bright)', api: '#60a0ff', manual: 'var(--gold-light)' };
+    badge.textContent = labels[mode] || mode;
+    badge.style.color = colors[mode] || 'var(--text)';
+
+    // Highlight active mode button using existing .btn-gold for active state
+    document.querySelectorAll('.bsp-mode-btn').forEach(btn => {
+      const active = btn.getAttribute('data-mode') === mode;
+      btn.classList.toggle('btn-gold',    active);
+      btn.classList.toggle('btn-outline', !active);
+      btn.style.color = active ? '#000' : '';
+    });
+
+    // Show correct panel
+    document.querySelectorAll('.bsp-panel').forEach(p => p.style.display = 'none');
+    const panel = document.getElementById('bsp-panel-' + mode);
+    if (panel) panel.style.display = 'flex';
+
+    if (mode !== 'api') bspStopAutoRefresh();
+  }
+
+  // Engine: force push
+  window.bspPushNow = function () {
+    fetch('/comp/action/push_to_broadcast', { method: 'POST', body: new FormData() })
+      .then(() => bspStatus('engine', '✓ Pushed at ' + bspTime()))
+      .catch(e => bspStatus('engine', '⚠ ' + e.message));
+  };
+
+  // API: adapter tab selection
+  window.bspSelectAdapter = function (adapter) {
+    currentAdapter = adapter;
+    document.querySelectorAll('.bsp-adapter-tab').forEach(tab => {
+      const active = tab.getAttribute('data-adapter') === adapter;
+      tab.classList.toggle('btn-gold',    active);
+      tab.classList.toggle('btn-outline', !active);
+      tab.style.color = active ? '#000' : '';
+    });
+    const isCustom = adapter === 'custom';
+    document.getElementById('bsp-custom-fields').style.display   = isCustom ? 'block' : 'none';
+    document.getElementById('bsp-datapath-wrap').style.display   = isCustom ? 'block' : 'none';
+  };
+
+  // API: load data from adapter
+  window.bspLoadApiData = function () {
+    const url      = document.getElementById('bsp-api-url').value.trim();
+    const event    = document.getElementById('bsp-api-event').value.trim();
+    const category = document.getElementById('bsp-api-category').value.trim();
+    if (!url) { bspStatus('api', '⚠ Enter an API URL first.'); return; }
+    bspStatus('api', '⏳ Fetching…');
+
+    let params = '?url=' + encodeURIComponent(url);
+    if (event)    params += '&event='    + encodeURIComponent(event);
+    if (category) params += '&category=' + encodeURIComponent(category);
+
+    if (currentAdapter === 'custom') {
+      const dp = document.getElementById('bsp-api-datapath').value.trim();
+      const nf = document.getElementById('bsp-field-name').value.trim();
+      const sf = document.getElementById('bsp-field-score').value.trim();
+      const cf = document.getElementById('bsp-field-category').value.trim();
+      const rf = document.getElementById('bsp-field-rank').value.trim();
+      if (dp) params += '&data_path='      + encodeURIComponent(dp);
+      if (nf) params += '&name_field='     + encodeURIComponent(nf);
+      if (sf) params += '&score_field='    + encodeURIComponent(sf);
+      if (cf) params += '&category_field=' + encodeURIComponent(cf);
+      if (rf) params += '&rank_field='     + encodeURIComponent(rf);
+    }
+
+    fetch('/api/adapters/' + currentAdapter + params)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { bspStatus('api', '⚠ ' + data.error); return; }
+        const count = (data.athletes || []).length;
+        bspStatus('api', '✓ ' + count + ' athletes loaded at ' + bspTime());
+        bspShowApiPreview(data.athletes || [], event);
+      })
+      .catch(e => bspStatus('api', '⚠ ' + e.message));
+  };
+
+  function bspShowApiPreview(athletes, eventName) {
+    const preview = document.getElementById('bsp-api-preview');
+    const title   = document.getElementById('bsp-api-preview-title');
+    const rows    = document.getElementById('bsp-api-preview-rows');
+    if (!athletes.length) { preview.style.display = 'none'; return; }
+    title.textContent = (eventName || 'Loaded') + ' — ' + athletes.length + ' athletes';
+    rows.innerHTML = athletes.slice(0, 10).map((a, i) =>
+      `<div>${String(a.rank || i+1).padStart(2,' ')}. ${(a.name||'').padEnd(24,' ')} ${a.score||''} ${a.category||''}</div>`
+    ).join('') + (athletes.length > 10 ? `<div style="opacity:.5">…and ${athletes.length-10} more</div>` : '');
+    preview.style.display = 'block';
+  }
+
+  // API: auto-refresh
+  window.bspAutoRefreshToggle = function () {
+    const btn = document.getElementById('bsp-autorefresh-btn');
+    if (autoRefreshTimer) {
+      bspStopAutoRefresh();
+    } else {
+      bspLoadApiData();
+      autoRefreshTimer = setInterval(bspLoadApiData, 30000);
+      btn.textContent = 'Auto-refresh: ON (30s)';
+      btn.classList.add('btn-gold'); btn.classList.remove('btn-outline'); btn.style.color = '#000';
+    }
+  };
+
+  function bspStopAutoRefresh() {
+    if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+    const btn = document.getElementById('bsp-autorefresh-btn');
+    if (btn) {
+      btn.textContent = 'Auto-refresh: OFF';
+      btn.classList.remove('btn-gold'); btn.classList.add('btn-outline'); btn.style.color = '';
+    }
+  }
+
+  // Manual: build athlete rows
+  function bspBuildManualRows(n) {
+    const c = document.getElementById('bsp-manual-athletes');
+    c.innerHTML = '';
+    for (let i = 0; i < n; i++) bspAddRowEl(c, i + 1);
+  }
+
+  function bspAddRowEl(container, rank) {
+    const row = document.createElement('div');
+    row.className = 'bsp-manual-row';
+    row.style.cssText = 'display:grid;grid-template-columns:32px 1fr 1fr 100px 28px;gap:6px;align-items:center;';
+    row.innerHTML =
+      `<span style="font-size:11px;color:var(--dim);text-align:center;font-weight:800;">#${rank}</span>`
+    + `<input type="text" placeholder="Athlete name" data-field="name" style="padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:13px;">`
+    + `<input type="text" placeholder="Score / result" data-field="score" style="padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:13px;">`
+    + `<input type="text" placeholder="Category" data-field="category" style="padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:13px;">`
+    + `<button onclick="this.closest('.bsp-manual-row').remove();bspRenumber();" style="width:24px;height:24px;border:1px solid var(--border);border-radius:4px;background:var(--surface3);color:var(--dim);cursor:pointer;font-size:13px;line-height:1;padding:0;">✕</button>`;
+    container.appendChild(row);
+  }
+
+  window.bspManualAddRow = function () {
+    const c = document.getElementById('bsp-manual-athletes');
+    bspAddRowEl(c, c.querySelectorAll('.bsp-manual-row').length + 1);
+  };
+
+  window.bspManualClearRows = function () { bspBuildManualRows(4); };
+
+  function bspRenumber() {
+    document.querySelectorAll('.bsp-manual-row').forEach((row, i) => {
+      const s = row.querySelector('span'); if (s) s.textContent = '#' + (i + 1);
+    });
+  }
+
+  // Manual: push to broadcast
+  window.bspManualPush = function () {
+    const eventName = document.getElementById('bsp-manual-event').value.trim();
+    const category  = document.getElementById('bsp-manual-category').value.trim();
+    const eventSub  = document.getElementById('bsp-manual-sub').value.trim();
+    const eventNum  = document.getElementById('bsp-manual-eventnum').value.trim();
+
+    const athletes = [];
+    document.querySelectorAll('.bsp-manual-row').forEach((row, i) => {
+      const name  = row.querySelector('[data-field="name"]').value.trim();
+      const score = row.querySelector('[data-field="score"]').value.trim();
+      const cat   = row.querySelector('[data-field="category"]').value.trim();
+      if (name) athletes.push({ name: name.toUpperCase(), score, category: cat || category, rank: i + 1, origin: '' });
+    });
+
+    const lanes = [...athletes.slice(0, 4)].map((a, i) => ({ num: i + 1, name: a.name, detail: a.category, score: a.score }));
+    while (lanes.length < 4) lanes.push({ num: lanes.length + 1, name: '', detail: '', score: '' });
+
+    const payload = {
+      data_source_mode: 'manual',
+      athletes,
+      lanes,
+      laneCount: Math.min(athletes.length, 4) || 4,
+      broadcast: { data_source_mode: 'manual', athletes, lanes },
+    };
+    if (eventName) { payload.eventName = eventName.toUpperCase(); payload.compEventName = eventName; payload.broadcast.eventName = eventName.toUpperCase(); }
+    if (category)  payload.compCategory = category;
+    if (eventSub)  payload.eventSub = eventSub;
+    if (eventNum)  payload.eventNum = eventNum;
+
+    fetch('/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(d => bspStatus('manual', d.ok ? '✓ Pushed at ' + bspTime() : '⚠ Server error'))
+    .catch(e => bspStatus('manual', '⚠ ' + e.message));
+  };
+
+  // Helpers
+  function bspStatus(section, msg) {
+    const el = document.getElementById('bsp-' + section + '-status');
+    if (el) el.textContent = msg;
+  }
+  function bspTime() {
+    const d = new Date();
+    return d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+  }
+
+  document.addEventListener('DOMContentLoaded', bspInit);
+})();
+// ── END BROADCAST DATA SOURCE PANEL ──────────────────────────────────────────
+</script>
+
+
+
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reps & Lights</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
+  :root {
+    --bg:     rgba(6,6,6,0.95);
+    --border: rgba(255,255,255,0.07);
+    --gold:   #F5C842;
+    --text:   #F0F0F0;
+    --dim:    #666;
+    --green:  #00EE55;
+    --red:    #FF3322;
+  }
+
+  /* ── LIGHTS STRIP (top of screen, full width) ── */
+  #lights-strip {
+    position:absolute; top:0; left:0; right:0;
+    display:flex; align-items:stretch;
+    transform:translateY(-100%); opacity:0;
+    transition:transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease;
+  }
+  #lights-strip.visible { transform:translateY(0); opacity:1; }
+
+  .light-panel {
+    flex:1; height:70px; display:flex; align-items:center; justify-content:center; gap:14px;
+    background:rgba(8,8,8,0.96); border-bottom:1px solid var(--border);
+    border-right:1px solid var(--border); position:relative; overflow:hidden;
+    transition:background 0.3s ease;
+  }
+  .light-panel:last-child { border-right:none; }
+  .light-panel.good { background:rgba(0,160,50,0.25); border-bottom-color:rgba(0,220,70,0.5); }
+  .light-panel.no   { background:rgba(180,20,0,0.25); border-bottom-color:rgba(255,40,20,0.5); }
+
+  .lp-lane { font-size:11px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); }
+  .lp-name { font-size:18px; font-weight:900; text-transform:uppercase; color:var(--text); letter-spacing:0.03em; }
+  .lp-dot  { width:16px; height:16px; border-radius:50%; background:#222; flex-shrink:0; transition:background 0.25s, box-shadow 0.25s; }
+  .lp-dot.good { background:var(--green); box-shadow:0 0 14px var(--green), 0 0 30px rgba(0,220,70,0.4); }
+  .lp-dot.no   { background:var(--red);   box-shadow:0 0 14px var(--red),   0 0 30px rgba(255,40,20,0.4); }
+  .lp-decision { font-size:13px; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; color:transparent; transition:color 0.2s; }
+  .lp-decision.good { color:var(--green); }
+  .lp-decision.no   { color:var(--red); }
+
+  /* ── REP COUNTERS (bottom nameplate area) ── */
+  #reps-bar {
+    position:absolute; bottom:108px; left:0; right:0;
+    display:flex; justify-content:center; gap:12px; padding:0 60px;
+    pointer-events:none;
+  }
+
+  .rep-card {
+    flex:1; max-width:440px;
+    display:flex; align-items:center; height:50px;
+    background:rgba(6,6,6,0.92); border-top:1px solid var(--border);
+    clip-path:inset(0 100% 0 0);
+    transition:clip-path 0.5s cubic-bezier(0.77,0,0.18,1);
+  }
+  .rep-card.visible { clip-path:inset(0 0% 0 0); }
+  .rep-card:nth-child(1){transition-delay:0s}
+  .rep-card:nth-child(2){transition-delay:0.06s}
+  .rep-card:nth-child(3){transition-delay:0.12s}
+  .rep-card:nth-child(4){transition-delay:0.18s}
+
+  .rc-light {
+    width:4px; height:100%; flex-shrink:0;
+    background:#222; transition:background 0.25s;
+  }
+  .rep-card.good .rc-light { background:var(--green); }
+  .rep-card.no   .rc-light { background:var(--red); }
+
+  .rc-reps { padding:0 14px; font-size:32px; font-weight:900; color:var(--gold); min-width:60px; text-align:center; line-height:1; flex-shrink:0; }
+  .rc-label { font-size:8px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--dim); margin-top:2px; }
+
+  .rc-timer { padding:0 12px; border-left:1px solid var(--border); flex-shrink:0; text-align:center; }
+  .rc-timer-num { font-size:22px; font-weight:900; color:var(--text); font-variant-numeric:tabular-nums; line-height:1; }
+  .rc-timer-num.warning { color:#FF8C00; }
+  .rc-timer-num.danger  { color:var(--red); }
+  .rc-timer-label { font-size:8px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--dim); }
+
+  .rc-decision { flex:1; padding:0 12px; }
+  .rc-decision-text { font-size:12px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:transparent; transition:color 0.2s; }
+  .rep-card.good .rc-decision-text { color:var(--green); }
+  .rep-card.no   .rc-decision-text { color:var(--red); }
+</style>
+</head>
+<body>
+
+<!-- Lights strip across top -->
+<div id="lights-strip"></div>
+
+<!-- Rep counters above nameplates -->
+<div id="reps-bar"></div>
+
+<script src="ws-client.js"></script>
+<script>
+let state = {
+  repsVisible: false,
+  lightsVisible: false,
+  laneCount: 4,
+  lanes: [],
+};
+
+function fmtTime(s) {
+  if (s === undefined || s === null) return '—';
+  return Math.floor(s/60) + ':' + String(Math.max(0,s)%60).padStart(2,'0');
+}
+
+function render() {
+  const count = Math.max(1, Math.min(4, parseInt(state.laneCount)||4));
+  const lanes = state.lanes || [];
+
+  // ── LIGHTS STRIP ──
+  const strip = document.getElementById('lights-strip');
+  strip.innerHTML = Array.from({length:count},(_,i) => {
+    const jd = state['judgeL'+(i+1)] || {};
+    const lane = lanes[i] || {};
+    const light = jd.light || 'none';
+    const lightCls = light === 'good' ? 'good' : light === 'no' ? 'no' : '';
+    const dotCls   = lightCls;
+    const decText  = light === 'good' ? 'GOOD REP' : light === 'no' ? 'NO REP' : '';
+    return `<div class="light-panel ${lightCls}">
+      <div>
+        <div class="lp-lane">Lane ${i+1}</div>
+        <div class="lp-name">${lane.name||''}</div>
+      </div>
+      <div class="lp-dot ${dotCls}"></div>
+      <div class="lp-decision ${lightCls}">${decText}</div>
+    </div>`;
+  }).join('');
+
+  state.lightsVisible ? strip.classList.add('visible') : strip.classList.remove('visible');
+
+  // ── REP CARDS ──
+  const bar = document.getElementById('reps-bar');
+  bar.innerHTML = Array.from({length:count},(_,i) => {
+    const jd = state['judgeL'+(i+1)] || {};
+    const light = jd.light || 'none';
+    const lightCls = light==='good'?'good':light==='no'?'no':'';
+    const rem = jd.timerRemaining;
+    const timerCls = (rem!==undefined&&rem<=10)?'danger':(rem!==undefined&&rem<=20)?'warning':'';
+    const decText  = light==='good'?'GOOD REP':light==='no'?'NO REP':'';
+    return `<div class="rep-card ${lightCls}${state.repsVisible?' visible':''}">
+      <div class="rc-light"></div>
+      <div style="text-align:center;padding:0 10px;flex-shrink:0">
+        <div class="rc-reps">${jd.reps||0}</div>
+        <div class="rc-label">Reps</div>
+      </div>
+      <div class="rc-timer">
+        <div class="rc-timer-num ${timerCls}">${rem!==undefined?fmtTime(rem):'—'}</div>
+        <div class="rc-timer-label">Time</div>
+      </div>
+      <div class="rc-decision">
+        <div class="rc-decision-text">${decText}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.onStateUpdate = function(d) { Object.assign(state, d); render(); };
+
+fetch('/state.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(d => { Object.assign(state, d); render(); })
+  .catch(() => render());
+</script>
+</body>
+</html>

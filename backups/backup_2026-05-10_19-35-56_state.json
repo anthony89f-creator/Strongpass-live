@@ -1,0 +1,693 @@
+{
+  "lanes": [
+    {
+      "num": 1,
+      "name": "U80 ATHLETE 1",
+      "detail": "U80",
+      "score": "10.5"
+    },
+    {
+      "num": 2,
+      "name": "U80 ATHLETE 2",
+      "detail": "U80",
+      "score": "10.5"
+    },
+    {
+      "num": 3,
+      "name": "U80 ATHLETE 3",
+      "detail": "U80",
+      "score": "10.5"
+    },
+    {
+      "num": 4,
+      "name": "U80 ATHLETE 4",
+      "detail": "U80",
+      "score": "10.5"
+    }
+  ],
+  "laneCount": 4,
+  "athletes": [
+    {
+      "name": "U80 Athlete 1",
+      "category": "U80",
+      "score": "18.5",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 2",
+      "category": "U80",
+      "score": "18.5",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 3",
+      "category": "U80",
+      "score": "18.5",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 4",
+      "category": "U80",
+      "score": "18.5",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 5",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 6",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 7",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 8",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 9",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 10",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 11",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 12",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 13",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 14",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 15",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 16",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 17",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 18",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 19",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    },
+    {
+      "name": "U80 Athlete 20",
+      "category": "U80",
+      "score": "0.0",
+      "origin": ""
+    }
+  ],
+  "categories": [
+    {
+      "name": "U80",
+      "color": "#CC0044",
+      "athleteCount": 20
+    },
+    {
+      "name": "U90",
+      "color": "#D4A017",
+      "athleteCount": 20
+    },
+    {
+      "name": "U105",
+      "color": "#0088CC",
+      "athleteCount": 20
+    },
+    {
+      "name": "U120",
+      "color": "#00AA44",
+      "athleteCount": 20
+    },
+    {
+      "name": "Womens",
+      "color": "#CC0088",
+      "athleteCount": 20
+    },
+    {
+      "name": "Mens Open",
+      "color": "#8800CC",
+      "athleteCount": 20
+    }
+  ],
+  "eventName": "DEADLIFT",
+  "eventNum": "EVENT 1 OF 5",
+  "eventSub": "HEAT 1 \u00b7 U80",
+  "compCategory": "U80",
+  "compEvent": 1,
+  "compHeat": 1,
+  "compEventName": "Deadlift",
+  "scorebug": false,
+  "leaderboard": false,
+  "lowerThirdVisible": false,
+  "eventBarVisible": false,
+  "champion": false,
+  "h2h": false,
+  "lineup": false,
+  "h2hLeft": {
+    "name": "",
+    "origin": "",
+    "category": "",
+    "photoUrl": ""
+  },
+  "h2hRight": {
+    "name": "",
+    "origin": "",
+    "category": "",
+    "photoUrl": ""
+  },
+  "lineupIndex": 0,
+  "lineupAuto": true,
+  "lineupDuration": 5,
+  "lbCategory": "all",
+  "scoreUnit": "PTS",
+  "compName": "IRON CHALLENGE",
+  "compSub": "2025 STRONGMAN",
+  "champName": "U80 ATHLETE 16",
+  "champDetail": "U80",
+  "champScore": "62.5",
+  "champScoreLabel": "TOTAL POINTS",
+  "champEvents": "EVENT 5 OF 5",
+  "champEyebrow": "ATLAS STONES",
+  "champComp": "U80 CATEGORY",
+  "judgeL4": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "judgeL1": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "judgeL2": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "judgeL3": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "lightsVisible": false,
+  "repsVisible": false,
+  "manualVisible": true,
+  "manualLine1": "Log press for reps",
+  "manualLine2": "",
+  "manualScore": "",
+  "manualUnit": "",
+  "broadcast": {
+    "lanes": [
+      {
+        "num": 1,
+        "name": "U80 ATHLETE 1",
+        "detail": "U80",
+        "score": "10.5"
+      },
+      {
+        "num": 2,
+        "name": "U80 ATHLETE 2",
+        "detail": "U80",
+        "score": "10.5"
+      },
+      {
+        "num": 3,
+        "name": "U80 ATHLETE 3",
+        "detail": "U80",
+        "score": "10.5"
+      },
+      {
+        "num": 4,
+        "name": "U80 ATHLETE 4",
+        "detail": "U80",
+        "score": "10.5"
+      }
+    ],
+    "laneCount": 4,
+    "athletes": [
+      {
+        "name": "U80 Athlete 1",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 2",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 3",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 4",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 5",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 6",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 7",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 8",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 9",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 10",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 11",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 12",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 13",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 14",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 15",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 16",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 17",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 18",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 19",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 20",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      }
+    ],
+    "categories": [
+      {
+        "name": "U80",
+        "color": "#CC0044",
+        "athleteCount": 20
+      },
+      {
+        "name": "U90",
+        "color": "#D4A017",
+        "athleteCount": 20
+      },
+      {
+        "name": "U105",
+        "color": "#0088CC",
+        "athleteCount": 20
+      },
+      {
+        "name": "U120",
+        "color": "#00AA44",
+        "athleteCount": 20
+      },
+      {
+        "name": "Womens",
+        "color": "#CC0088",
+        "athleteCount": 20
+      },
+      {
+        "name": "Mens Open",
+        "color": "#8800CC",
+        "athleteCount": 20
+      }
+    ],
+    "eventName": "DEADLIFT",
+    "eventNum": "EVENT 1 OF 5",
+    "eventSub": "HEAT 1 \u00b7 U80",
+    "compCategory": "U80",
+    "compEvent": 1,
+    "compHeat": 1,
+    "compEventName": "Deadlift",
+    "data_source_mode": "engine",
+    "eventMetric": "weight",
+    "eventSecondaryMetric": null,
+    "eventType": "weight"
+  },
+  "competition": {
+    "category": "U80",
+    "event": 1,
+    "heat": 1,
+    "eventName": "Deadlift",
+    "lanes": [
+      {
+        "num": 1,
+        "name": "U80 ATHLETE 1",
+        "detail": "U80",
+        "score": "10.5"
+      },
+      {
+        "num": 2,
+        "name": "U80 ATHLETE 2",
+        "detail": "U80",
+        "score": "10.5"
+      },
+      {
+        "num": 3,
+        "name": "U80 ATHLETE 3",
+        "detail": "U80",
+        "score": "10.5"
+      },
+      {
+        "num": 4,
+        "name": "U80 ATHLETE 4",
+        "detail": "U80",
+        "score": "10.5"
+      }
+    ],
+    "leaderboard": [
+      {
+        "name": "U80 Athlete 1",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 2",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 3",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 4",
+        "category": "U80",
+        "score": "18.5",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 5",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 6",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 7",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 8",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 9",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 10",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 11",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 12",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 13",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 14",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 15",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 16",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 17",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 18",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 19",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      },
+      {
+        "name": "U80 Athlete 20",
+        "category": "U80",
+        "score": "0.0",
+        "origin": ""
+      }
+    ],
+    "eventMetric": "weight",
+    "eventSecondaryMetric": null,
+    "eventType": "weight"
+  },
+  "data_source_mode": "engine",
+  "category_start_counts": {
+    "U80": 2,
+    "U90": 20,
+    "U105": 20,
+    "U120": 20,
+    "Womens": 20,
+    "Mens Open": 20,
+    "u80": 1,
+    "u90": 2,
+    "U57": 1,
+    "u57": 1,
+    "u64": 1,
+    "U57 Woman": 4,
+    "U64 Woman": 1,
+    "U64": 1,
+    "Beginners women": 1,
+    "Novice women": 1,
+    "Beginners men": 1,
+    "Novice men": 1,
+    "Un57": 1
+  },
+  "competition_config": {
+    "lanes": 4,
+    "scoring_mode": "fixed_points",
+    "heat_order_mode": "previous_event",
+    "final_event_order_mode": "leaderboard"
+  },
+  "eventMetric": "weight",
+  "eventSecondaryMetric": null,
+  "eventType": "weight",
+  "competition_status": "live",
+  "judgeL5": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "judgeL6": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "judgeL7": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "judgeL8": {
+    "reps": 0,
+    "light": "none",
+    "timerRunning": false,
+    "timerRemaining": 60,
+    "timerSecs": 60,
+    "primaryValue": "",
+    "secondaryValue": ""
+  },
+  "category_order": [
+    "U80",
+    "U90",
+    "U105",
+    "U120",
+    "Womens",
+    "Mens Open"
+  ]
+}

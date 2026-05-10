@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Strongpass Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#202020;
+    --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666;
+    --gold:#F5C842; --green:#00DD55; --blue:#0088FF;
+  }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+
+  .header {
+    padding:28px 40px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--border);
+  }
+  .logo { display:flex; align-items:center; gap:18px; }
+  .logo-icon { width:64px; height:64px; background:var(--gold); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:900; color:#000; }
+  .logo-img { width:96px; height:96px; object-fit:contain; mix-blend-mode:lighten; flex-shrink:0; }
+  .launch-icon.img { width:144px; height:144px; object-fit:contain; mix-blend-mode:lighten; margin-bottom:16px; display:block; }
+  .logo-text { font-size:32px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; }
+  .logo-sub  { font-size:12px; font-weight:600; letter-spacing:0.22em; color:var(--dim); text-transform:uppercase; margin-top:2px; }
+  .status-pill {
+    display:flex; align-items:center; gap:8px; padding:6px 14px;
+    background:var(--surface2); border:1px solid var(--border); border-radius:20px;
+  }
+  .status-dot { width:7px; height:7px; border-radius:50%; background:#333; }
+  .status-dot.ok { background:var(--green); animation:pulse 2s infinite; }
+  .status-text { font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--dim); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .main { padding:32px 40px; max-width:1200px; margin:0 auto; }
+  .section-title { font-size:11px; font-weight:800; letter-spacing:0.28em; text-transform:uppercase; color:var(--dim); margin-bottom:16px; }
+
+  .sync-bar {
+    background:rgba(0,180,60,0.08); border:1px solid rgba(0,180,60,0.2);
+    border-radius:8px; padding:10px 16px; display:flex; align-items:center; gap:10px;
+    margin-bottom:24px;
+  }
+  .sync-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; flex-shrink:0; }
+  .sync-text { font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--green); text-transform:uppercase; }
+  .sync-sub  { font-size:11px; color:var(--dim); font-family:'Barlow',sans-serif; margin-left:auto; }
+
+  .launch-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:700px) { .launch-grid { grid-template-columns:1fr; } }
+
+  /* Cards are now divs, not <a> tags */
+  .launch-card {
+    border-radius:12px; padding:36px; display:block;
+    border:1px solid var(--border); position:relative;
+    transition:border-color 0.2s;
+  }
+  .launch-card.comp      { background:linear-gradient(135deg, rgba(0,120,255,0.08) 0%, var(--surface) 60%); }
+  .launch-card.comp:hover { border-color:rgba(0,120,255,0.4); }
+  .launch-card.broadcast      { background:linear-gradient(135deg, rgba(245,200,66,0.08) 0%, var(--surface) 60%); }
+  .launch-card.broadcast:hover { border-color:rgba(245,200,66,0.4); }
+
+  .launch-icon  { font-size:44px; margin-bottom:16px; display:block; }
+  .launch-title { font-size:32px; font-weight:900; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:6px; }
+  .launch-card.comp .launch-title      { color:var(--blue); }
+  .launch-card.broadcast .launch-title { color:var(--gold); }
+  .launch-desc  { font-size:13px; font-weight:500; color:var(--dim); font-family:'Barlow',sans-serif; line-height:1.6; margin-bottom:24px; }
+
+  /* Main CTA button at top of each card */
+  .launch-cta {
+    display:inline-block; padding:12px 24px; border-radius:8px;
+    font-size:15px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
+    text-decoration:none; margin-bottom:20px; transition:filter 0.15s;
+  }
+  .launch-cta:hover { filter:brightness(1.2); }
+  .launch-card.comp .launch-cta      { background:#1a5fd4; color:#fff; }
+  .launch-card.broadcast .launch-cta { background:#9a7800; color:#fff; }
+
+  .launch-links { display:flex; flex-wrap:wrap; gap:8px; }
+  .launch-link {
+    display:inline-block;
+    padding:8px 16px; border-radius:6px; font-size:12px; font-weight:700;
+    letter-spacing:0.08em; text-transform:uppercase; text-decoration:none;
+    border:1px solid transparent; transition:filter 0.15s;
+  }
+  .launch-link:hover { filter:brightness(1.2); }
+  .launch-card.comp .launch-link      { background:#1a5fd4; border-color:rgba(0,120,255,0.5); color:#fff; }
+  .launch-card.broadcast .launch-link { background:#9a7800; border-color:rgba(245,200,66,0.5); color:#fff; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <img src="/logo.png" alt="Logo" class="logo-img">
+    <div>
+      <div class="logo-text">Strongpass Control</div>
+      <div class="logo-sub">Unified Competition & Broadcast System</div>
+    </div>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot ok" id="status-dot"></div>
+    <div class="status-text" id="status-text">Live</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="sync-bar">
+    <div class="sync-dot"></div>
+    <div class="sync-text">Overlays Synced</div>
+    <div class="sync-sub">Competition data feeds automatically into OBS overlays</div>
+  </div>
+
+  <div class="section-title">Choose Your View</div>
+  <div class="launch-grid">
+
+    <!-- COMP ENGINE CARD -->
+    <div class="launch-card comp">
+      <img src="/logo.png" alt="" class="launch-icon img">
+      <div class="launch-title">Competition Engine</div>
+      <div class="launch-desc">Manage heats, enter results, advance through the running order, manage athletes and categories.</div>
+      <a href="/comp/run" class="launch-cta">▶ Run Competition</a>
+      <div class="launch-links">
+        <a href="/comp/events" class="launch-link">Setup</a>
+        <a href="/comp/callroom" class="launch-link" target="_blank">Call Room ↗</a>
+        <a href="/comp/heats" class="launch-link" target="_blank">Heats ↗</a>
+        <a href="/comp/athletes" class="launch-link">Athletes</a>
+        <a href="/comp/leaderboard" class="launch-link">Leaderboard</a>
+      </div>
+    </div>
+
+    <!-- BROADCAST CARD -->
+    <div class="launch-card broadcast">
+      <span class="launch-icon">📡</span>
+      <div class="launch-title">Broadcast</div>
+      <div class="launch-desc">Control all OBS overlays, judge panels, rep counters, leaderboard display, head-to-head and category lineup graphics.</div>
+      <a href="/control.html" class="launch-cta">Open Control Panel</a>
+      <div class="launch-links">
+        <a href="/judge-master.html" class="launch-link" target="_blank">Judge Master ↗</a>
+        <a href="/comp/arena" class="launch-link" target="_blank">Arena Screen ↗</a>
+        <a href="/leaderboard.html" class="launch-link" target="_blank">Leaderboard OBS ↗</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function loadState() {
+  try {
+    await fetch('/state.json?t=' + Date.now(), {cache:'no-store'});
+    document.getElementById('status-dot').className = 'status-dot ok';
+    document.getElementById('status-text').textContent = 'Live';
+  } catch(e) {
+    document.getElementById('status-dot').className = 'status-dot';
+    document.getElementById('status-text').textContent = 'Offline';
+  }
+}
+loadState();
+setInterval(loadState, 5000);
+</script>
+</body>
+</html>

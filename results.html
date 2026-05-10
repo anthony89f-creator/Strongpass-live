@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Competition Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0c;
+    --surface: #121218;
+    --surface2: #1a1a22;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f0;
+    --dim: #666;
+    --gold: #F5C842;
+    --green: #00DD55;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Barlow Condensed', sans-serif; min-height: 100vh; }
+
+  .header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-img { height: 40px; width: auto; object-fit: contain; mix-blend-mode: lighten; }
+  .title { font-size: 22px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+  .subtitle { font-size: 11px; font-weight: 600; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; margin-top: 2px; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .controls label { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); }
+  .controls select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    min-width: 140px;
+  }
+
+  .main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    min-width: 400px;
+  }
+  th, td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+    background: var(--surface2);
+    white-space: nowrap;
+  }
+  th.num, td.num { text-align: center; }
+  th.pts, td.pts { text-align: center; background: rgba(245, 200, 66, 0.06); }
+  th.total, td.total { text-align: center; font-weight: 800; background: rgba(245, 200, 66, 0.1); color: var(--gold); }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+  tbody tr:hover { background: rgba(255,255,255,0.04); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.name { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.result { font-family: 'Barlow', sans-serif; }
+  .empty { padding: 40px 24px; text-align: center; color: var(--dim); font-style: italic; }
+
+  @media (max-width: 600px) {
+    th, td { padding: 10px 8px; font-size: 12px; }
+    .header { padding: 16px; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <img src="/logo.png" alt="" class="logo-img">
+    <div>
+      <div class="title">Competition Results</div>
+      <div class="subtitle" id="comp-sub">Live results</div>
+    </div>
+  </div>
+  <div class="controls">
+    <div>
+      <label for="cat-select">Category</label>
+      <select id="cat-select" aria-label="Category"></select>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="table-wrap">
+    <table id="results-table">
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="empty-msg" style="display: none;">No results for this category. Load competition data from state.</div>
+</div>
+
+<script>
+(function() {
+  const thead = document.getElementById('thead');
+  const tbody = document.getElementById('tbody');
+  const catSelect = document.getElementById('cat-select');
+  const emptyMsg = document.getElementById('empty-msg');
+  const compSub = document.getElementById('comp-sub');
+
+  function formatResult(ed, ev) {
+    const raw = ed.raw_value;
+    const tie = ed.tiebreak;
+    const type = (ed.event_type || ev.event_type || 'reps').toLowerCase();
+    const primary = (ed.primary_metric || ev.primary_metric || '').toLowerCase();
+    const secondary = (ed.secondary_metric || ev.secondary_metric || '').toLowerCase();
+
+    if (raw === null || raw === undefined || raw === '') return '—';
+    const n = Number(raw);
+    if (isNaN(n)) return '—';
+
+    if (primary === 'objects' && secondary === 'time' && tie != null && tie !== '') {
+      const t = Number(tie);
+      return isNaN(t) ? n + ' objs' : n + ' in ' + t + ' s';
+    }
+    if (primary === 'distance' && secondary === 'time' && tie != null && tie !== '') {
+      const t = Number(tie);
+      return isNaN(t) ? n + ' m' : n + ' m in ' + t + ' s';
+    }
+    switch (type) {
+      case 'reps': return n + (n === 1 ? ' rep' : ' reps');
+      case 'weight': return n + ' kg';
+      case 'distance': return n + ' m';
+      case 'time': return n + ' s';
+      case 'object': return n + (n === 1 ? ' obj' : ' objs');
+      default: return String(n);
+    }
+  }
+
+  function buildTable(state) {
+    const events = state.events || [];
+    const results = state.results || {};
+    let categories = Object.keys(results).filter(function(c) { return (results[c] || []).length > 0; });
+    if (categories.length === 0 && state.broadcast && state.broadcast.categories) {
+      categories = state.broadcast.categories.map(function(c) { return c.name; });
+    }
+    if (categories.length === 0 && state.categories) {
+      categories = state.categories.map(function(c) { return c.name || c; });
+    }
+    if (categories.length === 0) {
+      categories = ['—'];
+    }
+
+    const prevCat = catSelect.value;
+    catSelect.innerHTML = '';
+    categories.forEach(function(cat) {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      catSelect.appendChild(opt);
+    });
+    if (prevCat && categories.indexOf(prevCat) >= 0) catSelect.value = prevCat;
+    else if (categories[0] !== '—') catSelect.value = categories[0];
+
+    const cat = catSelect.value === '—' ? '' : catSelect.value;
+    const rows = cat ? (results[cat] || []) : [];
+
+    if (events.length === 0 && rows.length === 0) {
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+      emptyMsg.style.display = 'block';
+      return;
+    }
+    emptyMsg.style.display = 'none';
+
+    let headerHtml = '<tr><th class="name">Name</th>';
+    events.forEach(function(ev) {
+      headerHtml += '<th class="result">' + (ev.name || 'Event ' + ev.event_number) + '</th><th class="num">Pos</th><th class="pts">Pts</th>';
+    });
+    headerHtml += '<th class="total">Total</th></tr>';
+    thead.innerHTML = headerHtml;
+
+    tbody.innerHTML = '';
+    rows.forEach(function(row) {
+      const tr = document.createElement('tr');
+      let html = '<td class="name">' + (row.name || '—') + '</td>';
+      let total = 0;
+      (row.event_data || []).forEach(function(ed, i) {
+        const ev = events[i] || {};
+        html += '<td class="result">' + formatResult(ed, ev) + '</td>';
+        html += '<td class="num">' + (ed.rank != null ? ed.rank : '—') + '</td>';
+        const pts = ed.points != null ? Number(ed.points) : 0;
+        total += pts;
+        html += '<td class="pts">' + (ed.points != null ? ed.points : '—') + '</td>';
+      });
+      html += '<td class="total">' + (row.total_points != null ? row.total_points : total) + '</td>';
+      tr.innerHTML = html;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function load() {
+    fetch('/state.json')
+      .then(function(r) { return r.json(); })
+      .then(function(state) {
+        if (state.compName) compSub.textContent = state.compName;
+        if (state.compSub) compSub.textContent = (compSub.textContent ? compSub.textContent + ' · ' : '') + state.compSub;
+        buildTable(state);
+      })
+      .catch(function() {
+        emptyMsg.textContent = 'Could not load results. Ensure the competition server is running.';
+        emptyMsg.style.display = 'block';
+      });
+  }
+
+  catSelect.addEventListener('change', function() {
+    fetch('/state.json')
+      .then(function(r) { return r.json(); })
+      .then(buildTable)
+      .catch(function() {});
+  });
+
+  load();
+  setInterval(load, 15000);
+})();
+</script>
+
+</body>
+</html>

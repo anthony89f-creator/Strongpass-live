@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Competition Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#202020; --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666; --gold:#F5C842; --green:#00DD55; --blue:#0088FF; }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 20px; display:flex; align-items:center; gap:16px; }
+  .topbar a { color:var(--dim); text-decoration:none; font-size:12px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+  .topbar a:hover { color:var(--text); }
+  .topbar-nav-group { display:flex; align-items:center; gap:16px; }
+  .topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
+  .topbar-title { font-size:16px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:var(--blue); margin-right:auto; }
+  .topbar-logo { height:48px; width:auto; object-fit:contain; mix-blend-mode:lighten; display:block; }
+  .main { padding:20px; max-width:1100px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .section-head { padding:10px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .section-title { font-size:11px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); }
+  .section-body { padding:16px; }
+  .state-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .state-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+  .state-card-label { font-size:9px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); margin-bottom:4px; }
+  .state-card-val { font-size:28px; font-weight:900; color:var(--gold); line-height:1; }
+  .state-card-sub { font-size:11px; color:var(--dim); font-family:'Barlow',sans-serif; margin-top:4px; }
+  .btn-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
+  .btn { border:none; border-radius:7px; padding:11px 16px; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; text-decoration:none; display:block; text-align:center; transition:filter 0.15s; }
+  .btn:hover { filter:brightness(1.15); }
+  .btn-primary  { background:rgba(0,120,255,0.15); color:var(--blue); border:1px solid rgba(0,120,255,0.3); }
+  .btn-gold     { background:rgba(245,200,66,0.12); color:var(--gold); border:1px solid rgba(245,200,66,0.3); }
+  .btn-green    { background:rgba(0,180,60,0.12); color:var(--green); border:1px solid rgba(0,180,60,0.3); }
+  .btn-outline  { background:var(--surface2); color:var(--dim); border:1px solid var(--border); }
+  .btn-danger   { background:rgba(200,30,0,0.12); color:#FF4422; border:1px solid rgba(200,30,0,0.3); }
+  .cats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+  .cat-card { background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:12px; text-align:center; }
+  .cat-name { font-size:16px; font-weight:900; text-transform:uppercase; margin-bottom:4px; }
+  .cat-count { font-size:12px; color:var(--dim); font-family:'Barlow',sans-serif; }
+  .events-list { display:flex; flex-direction:column; gap:6px; }
+  .event-row { display:flex; align-items:center; gap:12px; padding:8px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; }
+  .event-num { font-size:11px; font-weight:800; letter-spacing:0.15em; color:var(--dim); min-width:60px; }
+  .event-name { font-size:16px; font-weight:800; text-transform:uppercase; }
+  .event-row.current { border-color:rgba(245,200,66,0.3); background:rgba(245,200,66,0.05); }
+  .event-row.current .event-name { color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="/logo.png" alt="Logo" class="topbar-logo">
+  <span class="topbar-title" style="color:var(--blue)">Events</span>
+  <a href="/">← Home</a>
+  <a href="/comp/events" style="color:var(--blue)">Setup</a>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run">Run</a></span>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
+  <a href="/control.html" style="color:var(--gold)">📡 Broadcast →</a>
+</div>
+<div class="main">
+
+
+
+  <!-- Events -->
+  <div class="section">
+    <div class="section-head"><span class="section-title">Events</span></div>
+    <div class="section-body" style="gap:10px">
+      <!-- Current events list -->
+      <div class="events-list">
+        {% for e in events %}
+        <div class="event-row {% if e[2] == state.event %}current{% endif %}" style="display:flex;align-items:center;gap:10px">
+          <span class="event-num">{{ e[2] }}</span>
+          <span class="event-name" style="flex:1">{{ e[1] }}</span>
+
+          <!-- Scoring Method Dropdown -->
+          <form method="POST" action="/comp/action/update_event_scoring" style="display:flex;align-items:center;gap:6px;margin-right:8px" class="scoring-form">
+            <input type="hidden" name="event_id" value="{{ e[0] }}">
+            <input type="hidden" name="primary_metric" value="">
+            <input type="hidden" name="secondary_metric" value="">
+            <input type="hidden" name="primary_direction" value="">
+            <input type="hidden" name="secondary_direction" value="">
+
+            <select name="scoring_method" onchange="setScoringFromPreset(this); this.form.submit();" style="background:var(--surface3);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:11px">
+              <option value="max_weight" {% if e[4] == "weight" and not e[5] %}selected{% endif %}>Max Weight</option>
+              <option value="reps" {% if e[4] == "reps" %}selected{% endif %}>Reps</option>
+              <option value="distance" {% if e[4] == "distance" and not e[5] %}selected{% endif %}>Distance</option>
+              <option value="time" {% if e[4] == "time" %}selected{% endif %}>Time</option>
+              <option value="objects_time" {% if e[4] == "objects" and e[5] == "time" %}selected{% endif %}>Objects + Time</option>
+              <option value="distance_time" {% if e[4] == "distance" and e[5] == "time" %}selected{% endif %}>Distance + Time</option>
+            </select>
+          </form>
+
+          {% if e[2] == state.event %}
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.15em;color:var(--gold)">CURRENT</span>
+          {% else %}
+            <form action="/comp/action/delete_event" method="post" style="display:contents">
+              <input type="hidden" name="event_id" value="{{ e[0] }}">
+              <button type="submit" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:2px 6px" onclick="return confirm('Delete {{ e[1] }}?')">✕</button>
+            </form>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% if not events %}
+        <div style="padding:12px;text-align:center;color:var(--dim);font-family:'Barlow',sans-serif;font-size:13px">No events yet — add your first event below.</div>
+        {% endif %}
+      </div>
+      <!-- Add event form -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Add Event</div>
+        <form action="/comp/action/add_event" method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <input type="text" id="add-event-name" name="name" placeholder="EVENT NAME e.g. Deadlift" required
+            style="flex:1;min-width:180px;background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px">
+          <button type="submit" class="btn btn-primary" style="padding:8px 18px">+ Add Event</button>
+        </form>
+        <div style="font-size:11px;color:var(--dim);margin-top:8px;font-family:'Barlow',sans-serif">
+          Events are numbered in the order you add them. The last event will use seeded heats based on standings.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function setScoringFromPreset(selectEl) {
+    var preset = {
+      max_weight:     { primary_metric: "weight",   secondary_metric: "", primary_direction: "higher", secondary_direction: "" },
+      reps:           { primary_metric: "reps",     secondary_metric: "", primary_direction: "higher", secondary_direction: "" },
+      distance:       { primary_metric: "distance", secondary_metric: "", primary_direction: "higher", secondary_direction: "" },
+      time:           { primary_metric: "time",     secondary_metric: "", primary_direction: "lower",  secondary_direction: "" },
+      objects_time:   { primary_metric: "objects", secondary_metric: "time", primary_direction: "higher", secondary_direction: "lower" },
+      distance_time:  { primary_metric: "distance", secondary_metric: "time", primary_direction: "higher", secondary_direction: "lower" }
+    };
+    var form = selectEl.form;
+    var m = preset[selectEl.value] || preset.max_weight;
+    form.primary_metric.value = m.primary_metric;
+    form.secondary_metric.value = m.secondary_metric || "";
+    form.primary_direction.value = m.primary_direction;
+    form.secondary_direction.value = m.secondary_direction || "";
+  }
+  </script>
+
+  <!-- Categories -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Categories</span>
+      <a href="/comp/athletes" style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);text-decoration:none">Manage Athletes →</a>
+    </div>
+    <div class="section-body" style="gap:10px">
+      <!-- Category list -->
+      <div class="events-list">
+        {% for cat in categories %}
+        <div class="event-row {% if cat.name == state.category %}current{% endif %}" style="display:flex;align-items:center;gap:10px">
+          <span style="width:12px;height:12px;border-radius:50%;background:{{ cat.color }};flex-shrink:0;display:inline-block"></span>
+          <span class="event-name" style="flex:1">{{ cat.name }}</span>
+          <span style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif">{{ stats.get(cat.name, 0) }} athletes</span>
+          {% if cat.name == state.category %}
+            <span style="font-size:10px;font-weight:700;letter-spacing:0.15em;color:var(--gold)">CURRENT</span>
+          {% endif %}
+          <!-- Reorder and delete for every category (current switches to another when you delete it) -->
+          <form action="/comp/action/reorder_category" method="post" style="display:contents">
+            <input type="hidden" name="name" value="{{ cat.name }}">
+            <input type="hidden" name="direction" value="up">
+            <button type="submit" style="background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;padding:2px 4px" {% if not category_order or (category_order and category_order[0] == cat.name) %}disabled title="Already first"{% endif %}>▲</button>
+          </form>
+          <form action="/comp/action/reorder_category" method="post" style="display:contents">
+            <input type="hidden" name="name" value="{{ cat.name }}">
+            <input type="hidden" name="direction" value="down">
+            <button type="submit" style="background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;padding:2px 4px" {% if not category_order or (category_order and category_order[-1] == cat.name) %}disabled title="Already last"{% endif %}>▼</button>
+          </form>
+          <form action="/comp/action/delete_category" method="post" style="display:contents">
+            <input type="hidden" name="name" value="{{ cat.name }}">
+            <button type="submit" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:2px 6px" onclick="return confirm('Delete category {{ cat.name }}? Athletes in this category are not deleted.')">✕</button>
+          </form>
+        </div>
+        {% endfor %}
+        {% if not categories %}
+        <div style="padding:12px;text-align:center;color:var(--dim);font-family:'Barlow',sans-serif;font-size:13px">No categories yet — add your first below.</div>
+        {% endif %}
+      </div>
+      <!-- Add category form -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Add Category</div>
+        <form action="/comp/action/add_category" method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <input type="text" id="add-category-name" name="name" placeholder="CATEGORY NAME e.g. U105" required
+            style="flex:1;min-width:140px;background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:14px">
+          <div>
+            <label style="font-size:10px;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;display:block;margin-bottom:4px">Colour</label>
+            <input type="color" name="color" value="#F5C842"
+              style="width:44px;height:36px;border:1px solid var(--border);border-radius:6px;background:var(--surface3);cursor:pointer;padding:2px">
+          </div>
+          <button type="submit" class="btn btn-primary" style="padding:8px 18px">+ Add Category</button>
+        </form>
+        <div style="font-size:11px;color:var(--dim);margin-top:8px;font-family:'Barlow',sans-serif">
+          Categories run in the order shown. Use ▲▼ to reorder. The colour appears on the leaderboard overlay.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div class="section">
+    <div class="section-head"><span class="section-title">Setup</span></div>
+    <div class="section-body" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <form action="/comp/action/generate_heats" method="post" style="display:contents">
+          <button type="submit" class="btn btn-primary" onclick="return confirm('Regenerate all heats?')">Generate Heats</button>
+        </form>
+        <form action="/comp/action/generate_test" method="post" style="display:contents">
+          <button type="submit" class="btn btn-danger" onclick="return confirm('Reset with 120 test athletes and 5 events?')">Load Test Data</button>
+        </form>
+        <form action="/comp/action/simulate_results" method="post" style="display:contents">
+          <button type="submit" class="btn btn-gold" onclick="return confirm('Simulate results for all athletes across all events?')">Simulate Results</button>
+        </form>
+        <form action="/comp/action/clear_all" method="post" style="display:contents">
+          <button type="submit" class="btn btn-danger" style="background:rgba(180,0,0,0.15);border-color:rgba(180,0,0,0.4)" onclick="return confirm('⚠️ This will permanently delete ALL athletes, events, heats and results. Are you sure?')">🗑️ Clear All Data</button>
+        </form>
+        <form action="/comp/action/backup" method="post" style="display:contents">
+          <button type="submit" class="btn btn-outline" style="border-color:rgba(0,180,60,0.4);color:var(--green)">💾 Backup Now</button>
+        </form>
+      </div>
+      {% if backup_status == 'ok' %}
+      <div style="background:rgba(0,180,60,0.12);border:1px solid rgba(0,180,60,0.3);border-radius:7px;padding:10px 14px;font-size:12px;color:var(--green)">✓ Backup saved to <code>backups/</code> folder.</div>
+      {% elif backup_status == 'error' %}
+      <div style="background:rgba(200,0,0,0.12);border:1px solid rgba(200,0,0,0.3);border-radius:7px;padding:10px 14px;font-size:12px;color:var(--red)">Backup failed. Check server logs or copy <code>state.json</code> and <code>comp.db</code> manually.</div>
+      {% endif %}
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Platforms</div>
+        <form action="/comp/action/set_lanes" method="post" style="display:flex;align-items:center;gap:8px">
+          <select name="lanes" onchange="this.form.submit()" style="background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:14px">
+            <option value="1" {% if lane_count == 1 %}selected{% endif %}>1 Platform</option>
+            <option value="2" {% if lane_count == 2 %}selected{% endif %}>2 Platforms</option>
+            <option value="3" {% if lane_count == 3 %}selected{% endif %}>3 Platforms</option>
+            <option value="4" {% if lane_count == 4 %}selected{% endif %}>4 Platforms</option>
+          </select>
+          <span style="font-size:11px;color:var(--dim)">Heats, run screen and broadcast use this count.</span>
+        </form>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
+        <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Jump to Heat</div>
+        <form action="/comp/action/set_heat" method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div>
+            <label style="font-size:10px;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;display:block;margin-bottom:4px">Category</label>
+            <select name="category" style="background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:14px">
+              {% for cat in category_order %}<option value="{{ cat }}" {% if cat==state.category %}selected{% endif %}>{{ cat }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;display:block;margin-bottom:4px">Event</label>
+            <select name="event" style="background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:14px">
+              {% for e in events %}<option value="{{ e[2] }}" {% if e[2]==state.event %}selected{% endif %}>{{ e[1] }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;display:block;margin-bottom:4px">Heat #</label>
+            <input type="number" name="heat" value="{{ state.heat }}" min="1" style="background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:14px;width:80px">
+          </div>
+          <button type="submit" class="btn btn-gold" style="padding:8px 16px">Jump</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <span style="font-size:13px;color:var(--dim);font-family:'Barlow',sans-serif">Events and categories saved.</span>
+      <a href="/comp/athletes" class="btn btn-gold">Next: Add Athletes →</a>
+    </div>
+  </div>
+
+</div>
+<script>
+(function() {
+  var focus = new URLSearchParams(window.location.search).get('focus');
+  if (focus === 'add_event') {
+    var el = document.getElementById('add-event-name');
+    if (el) { el.focus(); }
+  } else if (focus === 'add_category') {
+    var el = document.getElementById('add-category-name');
+    if (el) { el.focus(); }
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lower Third</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
+  :root {
+    --bg:     rgba(8,8,8,0.95);
+    --border: rgba(255,255,255,0.07);
+    --gold:   #F5C842;
+    --text:   #F0F0F0;
+    --dim:    #888;
+  }
+
+  /* Slim event strip */
+  #event-bar {
+    position:absolute; bottom:148px; left:60px; right:60px;
+    transform:translateY(14px); opacity:0;
+    transition:transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease;
+  }
+  #event-bar.visible { transform:translateY(0); opacity:1; }
+  .eb-inner {
+    display:flex; align-items:center; height:26px;
+    background:var(--bg); border-left:2px solid rgba(255,255,255,0.18);
+    padding:0 14px 0 10px; gap:10px;
+  }
+  .eb-dot  { width:4px; height:4px; background:rgba(255,255,255,0.4); border-radius:50%; flex-shrink:0; animation:pulse 1.8s ease-in-out infinite; }
+  .eb-name { font-size:11px; font-weight:800; letter-spacing:0.22em; color:rgba(255,255,255,0.85); text-transform:uppercase; flex-shrink:0; }
+  .eb-sep  { width:1px; height:11px; background:rgba(255,255,255,0.1); flex-shrink:0; }
+  .eb-sub  { font-size:10px; font-weight:500; letter-spacing:0.14em; color:var(--dim); text-transform:uppercase; font-family:'Barlow',sans-serif; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  /* Lane cards */
+  #lower-thirds {
+    position:absolute; bottom:28px; left:0; right:0;
+    display:flex; justify-content:center; gap:12px; padding:0 60px;
+  }
+
+  .lane-card {
+    flex:1; max-width:440px;
+    clip-path:inset(0 100% 0 0);
+    transition:clip-path 0.6s cubic-bezier(0.77,0,0.18,1);
+  }
+  .lane-card.visible { clip-path:inset(0 0% 0 0); }
+  .lane-card:nth-child(1){transition-delay:0s}
+  .lane-card:nth-child(2){transition-delay:0.1s}
+  .lane-card:nth-child(3){transition-delay:0.2s}
+  .lane-card:nth-child(4){transition-delay:0.3s}
+
+  .card-accent {
+    height:2px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.06) 60%, transparent 100%);
+    transform:scaleX(0); transform-origin:left;
+    transition:transform 0.5s cubic-bezier(0.77,0,0.18,1);
+  }
+  .lane-card:nth-child(1) .card-accent{transition-delay:0.3s}
+  .lane-card:nth-child(2) .card-accent{transition-delay:0.4s}
+  .lane-card:nth-child(3) .card-accent{transition-delay:0.5s}
+  .lane-card:nth-child(4) .card-accent{transition-delay:0.6s}
+  .lane-card.visible .card-accent { transform:scaleX(1); }
+
+  .card-body {
+    background:var(--bg);
+    border-left:2px solid rgba(255,255,255,0.1);
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    display:flex; align-items:center;
+    padding:11px 14px; position:relative; overflow:hidden;
+  }
+  .card-body::before {
+    content:''; position:absolute; top:0; left:0; width:80px; height:100%;
+    background:linear-gradient(90deg, rgba(255,255,255,0.03), transparent);
+    pointer-events:none;
+  }
+
+  .lane-badge {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    width:32px; flex-shrink:0; margin-right:14px;
+    border-right:1px solid rgba(255,255,255,0.06); padding-right:14px; gap:1px;
+  }
+  .lane-badge-num   { font-size:22px; font-weight:900; color:rgba(255,255,255,0.4); line-height:1; }
+  .lane-badge-label { font-size:7px;  font-weight:700; letter-spacing:0.18em; color:var(--dim); text-transform:uppercase; }
+
+  .athlete-info { flex:1; min-width:0; }
+  .athlete-name {
+    font-size:30px; font-weight:900; letter-spacing:0.03em;
+    text-transform:uppercase; color:var(--text); line-height:1;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .athlete-detail {
+    font-size:10px; font-weight:500; letter-spacing:0.15em;
+    color:var(--dim); text-transform:uppercase; margin-top:2px; font-family:'Barlow',sans-serif;
+  }
+
+  .score-block {
+    text-align:right; flex-shrink:0; padding-left:12px;
+    border-left:1px solid rgba(255,255,255,0.05); margin-left:10px;
+  }
+  .score-val  { font-size:30px; font-weight:900; color:var(--gold); line-height:1; }
+  .score-unit { font-size:8px;  font-weight:700; letter-spacing:0.18em; color:var(--dim); text-transform:uppercase; }
+</style>
+</head>
+<body>
+
+<div id="event-bar">
+  <div class="eb-inner">
+    <div class="eb-dot"></div>
+    <div class="eb-name" id="eb-name">ATLAS STONES</div>
+    <div class="eb-sep"></div>
+    <div class="eb-sub"  id="eb-sub">IRON CHALLENGE 2025 · EVENT 4 OF 6</div>
+  </div>
+</div>
+
+<div id="lower-thirds"></div>
+
+<script src="ws-client.js"></script>
+<script>
+let state = {
+  lowerThirdVisible:false, eventBarVisible:false,
+  lanes:[
+    {num:1,name:"THOR BJORNSSON", detail:"Iceland · PRO",score:"48.5"},
+    {num:2,name:"BRIAN SHAW",     detail:"USA · PRO",    score:"44.0"},
+    {num:3,name:"EDDIE HALL",     detail:"England · PRO",score:"41.5"},
+    {num:4,name:"MARTINS LICIS",  detail:"USA · PRO",    score:"38.0"},
+  ],
+  laneCount:4, eventName:"ATLAS STONES",
+  eventSub:"IRON CHALLENGE 2025 · EVENT 4 OF 6", scoreUnit:"PTS"
+};
+let currentlyVisible = false;
+
+function buildCards(instant) {
+  const count = Math.max(1, Math.min(4, parseInt(state.laneCount)||4));
+  const lanes  = (state.lanes||[]).slice(0, count);
+  document.getElementById('lower-thirds').innerHTML = lanes.map(l => `
+    <div class="lane-card${instant?' visible':''}">
+      <div class="card-accent"></div>
+      <div class="card-body">
+        <div class="lane-badge">
+          <div class="lane-badge-num">${l.num}</div>
+          <div class="lane-badge-label">LANE</div>
+        </div>
+        <div class="athlete-info">
+          <div class="athlete-name">${l.name||''}</div>
+          <div class="athlete-detail">${l.detail||''}</div>
+        </div>
+        ${l.score?`<div class="score-block"><div class="score-val">${l.score}</div><div class="score-unit">${state.scoreUnit||'PTS'}</div></div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function animIn()  { buildCards(false); requestAnimationFrame(()=>requestAnimationFrame(()=>{ document.querySelectorAll('.lane-card').forEach(c=>c.classList.add('visible')); })); }
+function animOut(cb){ document.querySelectorAll('.lane-card').forEach((c,i)=>{ c.style.transitionDelay=(0.06*i)+'s'; c.classList.remove('visible'); }); setTimeout(cb,700); }
+
+function render() {
+  const bar = document.getElementById('event-bar');
+  document.getElementById('eb-name').textContent = state.eventName||'';
+  document.getElementById('eb-sub').textContent  = state.eventSub||'';
+  state.eventBarVisible ? bar.classList.add('visible') : bar.classList.remove('visible');
+
+  const want = !!state.lowerThirdVisible;
+  if (want && !currentlyVisible)       { animIn(); currentlyVisible=true; }
+  else if (!want && currentlyVisible)  { animOut(()=>buildCards(false)); currentlyVisible=false; }
+  else if (want && currentlyVisible)   { animOut(()=>animIn()); }
+}
+
+window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
+
+fetch('/state.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(data => { Object.assign(state, data); render(); })
+  .catch(() => buildCards(false));
+</script>
+</body>
+</html>

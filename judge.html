@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Judge Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --bg:#0A0A0A; --surface:#161616; --surface2:#1E1E1E; --border:rgba(255,255,255,0.08);
+    --text:#F0F0F0; --dim:#666;
+    --green:#00CC44; --green-bright:#00FF55; --green-bg:rgba(0,180,60,0.15);
+    --red:#CC2200; --red-bright:#FF3322; --red-bg:rgba(200,30,0,0.15);
+    --gold:#F5C842; --gold-bg:rgba(245,200,66,0.12);
+  }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; min-height:100dvh; overscroll-behavior:none; user-select:none; }
+
+  .header {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:14px 16px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:10;
+  }
+  .lane-badge { display:flex; align-items:center; gap:10px; }
+  .lane-num { font-size:36px; font-weight:900; color:var(--gold); line-height:1; }
+  .lane-info { display:flex; flex-direction:column; }
+  .lane-label { font-size:9px; font-weight:700; letter-spacing:0.25em; color:var(--dim); text-transform:uppercase; }
+  .lane-name  { font-size:18px; font-weight:800; color:var(--text); text-transform:uppercase; line-height:1.1; }
+
+  .conn-dot { width:8px; height:8px; border-radius:50%; background:#333; }
+  .conn-dot.ok { background:var(--green-bright); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .main { padding:12px; display:flex; flex-direction:column; gap:10px; max-width:480px; margin:0 auto; }
+
+  /* REP COUNTER */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .card-head { padding:8px 14px; background:var(--surface2); border-bottom:1px solid var(--border); }
+  .card-title { font-size:10px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); }
+  .card-body { padding:14px; }
+
+  .rep-display {
+    text-align:center; padding:10px 0 16px;
+  }
+  .rep-num { font-size:120px; font-weight:900; color:var(--gold); line-height:1; }
+  .rep-label { font-size:11px; font-weight:700; letter-spacing:0.25em; text-transform:uppercase; color:var(--dim); margin-top:4px; }
+
+  .rep-btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .rep-btn {
+    border:none; border-radius:10px; cursor:pointer; font-family:'Barlow Condensed',sans-serif;
+    font-weight:900; text-transform:uppercase; letter-spacing:0.08em;
+    transition:transform 0.1s, background 0.15s; touch-action:manipulation;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:16px 8px; gap:4px;
+  }
+  .rep-btn:active { transform:scale(0.94); }
+  .rep-btn-plus  { background:rgba(245,200,66,0.12); color:var(--gold); font-size:44px; border:1px solid rgba(245,200,66,0.2); }
+  .rep-btn-minus { background:var(--surface2); color:var(--dim); font-size:28px; border:1px solid var(--border); }
+  .rep-btn-reset { background:var(--surface2); color:var(--dim); font-size:14px; border:1px solid var(--border); }
+  .rep-btn-sub   { font-size:9px; letter-spacing:0.15em; opacity:0.6; }
+
+  /* TIMER */
+  .timer-display { text-align:center; padding:10px 0 16px; }
+  .timer-num { font-size:80px; font-weight:900; color:var(--text); line-height:1; font-variant-numeric:tabular-nums; }
+  .timer-num.warning { color:#FF8C00; }
+  .timer-num.danger  { color:var(--red-bright); animation:blink 0.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .timer-set { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .timer-preset {
+    flex:1; min-width:60px; padding:8px 4px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface2); color:var(--dim); font-family:'Barlow Condensed',sans-serif;
+    font-size:14px; font-weight:700; cursor:pointer; text-align:center; touch-action:manipulation;
+  }
+  .timer-preset.active { background:rgba(245,200,66,0.1); border-color:rgba(245,200,66,0.3); color:var(--gold); }
+  .timer-preset:active { transform:scale(0.96); }
+
+  .timer-btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .timer-btn {
+    border:none; border-radius:10px; padding:14px 8px; cursor:pointer;
+    font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:800;
+    letter-spacing:0.08em; text-transform:uppercase; touch-action:manipulation;
+    transition:transform 0.1s;
+  }
+  .timer-btn:active { transform:scale(0.94); }
+  .timer-btn-start { background:rgba(0,180,60,0.15); color:var(--green-bright); border:1px solid rgba(0,180,60,0.3); }
+  .timer-btn-pause { background:var(--surface2); color:var(--dim); border:1px solid var(--border); }
+  .timer-btn-reset { background:var(--surface2); color:var(--dim); border:1px solid var(--border); }
+
+  /* LIGHTS */
+  .lights-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .light-btn {
+    border:none; border-radius:12px; padding:24px 16px; cursor:pointer;
+    font-family:'Barlow Condensed',sans-serif; font-weight:900; text-transform:uppercase;
+    letter-spacing:0.1em; touch-action:manipulation; transition:transform 0.1s, opacity 0.2s;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .light-btn:active { transform:scale(0.95); }
+  .light-btn-good {
+    background:var(--green-bg); color:var(--green-bright);
+    border:2px solid rgba(0,200,60,0.3); font-size:22px;
+  }
+  .light-btn-no {
+    background:var(--red-bg); color:var(--red-bright);
+    border:2px solid rgba(200,30,0,0.3); font-size:22px;
+  }
+  .light-btn.active-good { background:rgba(0,200,60,0.35); border-color:var(--green-bright); }
+  .light-btn.active-no   { background:rgba(200,30,0,0.35);  border-color:var(--red-bright); }
+  .light-icon { font-size:40px; }
+  .light-btn-clear {
+    grid-column:span 2; background:var(--surface2); color:var(--dim);
+    border:1px solid var(--border); border-radius:10px; padding:12px;
+    font-size:14px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+    cursor:pointer; touch-action:manipulation; font-family:'Barlow Condensed',sans-serif;
+  }
+  .light-btn-clear:active { transform:scale(0.97); }
+
+  /* Current status bar */
+  .status-row {
+    display:flex; gap:8px; padding:8px 14px;
+    border-top:1px solid var(--border); background:var(--surface2);
+  }
+  .status-pill {
+    display:flex; align-items:center; gap:5px; padding:4px 10px;
+    border-radius:20px; background:rgba(255,255,255,0.04); border:1px solid var(--border);
+    font-size:11px; font-weight:700; letter-spacing:0.08em; color:var(--dim);
+  }
+  .status-pill-dot { width:5px; height:5px; border-radius:50%; background:var(--dim); }
+
+  /* Number input (weight, distance, objects) */
+  .number-display { text-align:center; padding:10px 0 16px; }
+  .number-num { font-size:64px; font-weight:900; color:var(--gold); line-height:1; font-variant-numeric:tabular-nums; }
+  .number-input-wrap { display:flex; gap:8px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+  .number-input-wrap input { width:120px; padding:12px; font-size:28px; font-weight:800; text-align:center; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'Barlow Condensed',sans-serif; }
+  .number-row { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .number-row label { font-size:10px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); }
+
+  .scoreboard-bar { background:rgba(0,180,60,0.1); border-bottom:1px solid rgba(0,180,60,0.3); padding:10px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .scoreboard-bar-text { font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--green-bright); }
+  .scoreboard-bar-btn { padding:8px 16px; border-radius:8px; border:none; background:rgba(0,180,60,0.25); color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; }
+  .scoreboard-bar-btn:active { transform:scale(0.97); }
+  .scoreboard-bar-btn.sent { background:var(--green-bright); color:#000; }
+
+  /* DNS */
+  .dns-card { background:rgba(68,136,255,0.08); border:1px solid rgba(68,136,255,0.25); border-radius:12px; overflow:hidden; }
+  .dns-btn {
+    width:100%; border:none; border-radius:0; padding:18px;
+    font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900;
+    letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; touch-action:manipulation;
+    background:transparent; color:#4488FF; transition:background 0.15s;
+  }
+  .dns-btn:active { transform:scale(0.97); background:rgba(68,136,255,0.15); }
+  .dns-btn.dns-active { background:rgba(68,136,255,0.25); color:#fff; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="lane-badge">
+    <a href="/" style="font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);text-decoration:none;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;margin-right:6px">← Home</a>
+    <div class="lane-num" id="hdr-lane">1</div>
+    <div class="lane-info">
+      <div class="lane-label">Lane</div>
+      <div class="lane-name" id="hdr-name">—</div>
+    </div>
+  </div>
+  <div class="conn-dot" id="conn-dot"></div>
+</div>
+
+<div class="scoreboard-bar">
+  <span class="scoreboard-bar-text">Pause stops your lane's timer only (others keep running). Submit sends your result to Run Competition.</span>
+  <button type="button" class="scoreboard-bar-btn" id="submit-scoreboard-btn" onclick="submitToScoreboard()">Submit to scoreboard</button>
+</div>
+
+<div class="main">
+
+  <!-- SCORING (adapts to eventMetric / eventSecondaryMetric from competition engine) -->
+  <div class="card" id="scoring-card">
+    <div class="card-head"><span class="card-title" id="scoring-card-title">Rep Counter</span></div>
+    <div class="card-body">
+      <!-- Reps -->
+      <div id="block-reps" class="scoring-block">
+        <div class="rep-display">
+          <div class="rep-num" id="rep-num">0</div>
+          <div class="rep-label" id="label-reps">Reps Completed</div>
+        </div>
+        <div class="rep-btns">
+          <button class="rep-btn rep-btn-minus" onclick="adjustRep(-1)"><span>−</span><span class="rep-btn-sub">Undo</span></button>
+          <button class="rep-btn rep-btn-plus" onclick="adjustRep(1)"><span>+</span><span class="rep-btn-sub">Rep</span></button>
+          <button class="rep-btn rep-btn-reset" onclick="resetRep()"><span style="font-size:20px">↺</span><span class="rep-btn-sub">Reset</span></button>
+        </div>
+      </div>
+      <!-- Timer -->
+      <div id="block-time" class="scoring-block" style="display:none">
+        <div class="timer-display">
+          <div class="timer-num" id="timer-disp">0:60</div>
+          <div class="rep-label" id="label-time">Time</div>
+        </div>
+        <div class="timer-set">
+          <div class="timer-preset" onclick="setTimer(30)">0:30</div>
+          <div class="timer-preset active" onclick="setTimer(60)">1:00</div>
+          <div class="timer-preset" onclick="setTimer(75)">1:15</div>
+          <div class="timer-preset" onclick="setTimer(90)">1:30</div>
+          <div class="timer-preset" onclick="setTimer(120)">2:00</div>
+        </div>
+        <div class="timer-btns">
+          <button class="timer-btn timer-btn-start" id="start-btn" onclick="startTimer()">Start</button>
+          <button class="timer-btn timer-btn-pause" onclick="pauseTimer()">Pause</button>
+          <button class="timer-btn timer-btn-reset" onclick="resetTimer()">Reset</button>
+        </div>
+      </div>
+      <!-- Weight / Distance / Objects (single number) -->
+      <div id="block-number" class="scoring-block" style="display:none">
+        <div class="number-display">
+          <div class="number-num" id="number-disp">0</div>
+          <div class="rep-label" id="label-number">—</div>
+        </div>
+        <div class="number-input-wrap">
+          <input type="number" id="number-input" step="0.01" min="0" placeholder="0" inputmode="decimal" oninput="syncNumberInput()">
+        </div>
+      </div>
+      <!-- Objects + Time (two inputs) -->
+      <div id="block-objects-time" class="scoring-block" style="display:none">
+        <div class="number-row">
+          <label id="label-objects">Objects</label>
+          <input type="number" id="objects-input" min="0" placeholder="0" style="padding:10px;font-size:20px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow Condensed',sans-serif" oninput="syncObjectsTime()">
+        </div>
+        <div class="number-row">
+          <label id="label-time-secondary">Time (s)</label>
+          <input type="number" id="time-input" step="0.01" min="0" placeholder="0.00" style="padding:10px;font-size:20px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Barlow Condensed',sans-serif" oninput="syncObjectsTime()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTS -->
+  <div class="card">
+    <div class="card-head"><span class="card-title">Judge's Decision</span></div>
+    <div class="card-body">
+      <div class="lights-btns">
+        <button class="light-btn light-btn-good" id="btn-good" onclick="setLight('good')">
+          <span class="light-icon">🟢</span>
+          <span>Good Rep</span>
+        </button>
+        <button class="light-btn light-btn-no" id="btn-no" onclick="setLight('no')">
+          <span class="light-icon">🔴</span>
+          <span>No Rep</span>
+        </button>
+        <button class="light-btn-clear" onclick="setLight('none')">Clear Decision</button>
+      </div>
+    </div>
+    <div class="status-row" id="status-row">
+      <div class="status-pill"><div class="status-pill-dot" id="light-dot"></div><span id="light-status">No decision</span></div>
+      <div class="status-pill"><div class="status-pill-dot" style="background:var(--gold)"></div><span id="rep-status">0 reps</span></div>
+    </div>
+  </div>
+
+  <!-- DNS / DNF -->
+  <div class="dns-card">
+    <div class="card-head" style="background:rgba(68,136,255,0.06);border-bottom:1px solid rgba(68,136,255,0.2)">
+      <span class="card-title" style="color:rgba(68,136,255,0.7)">Athlete Status</span>
+      <span style="font-size:10px;color:rgba(68,136,255,0.5)">Tap to mark — notifies Run Comp</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+      <button class="dns-btn" id="dns-btn" style="border-right:1px solid rgba(68,136,255,0.15)" onclick="setAthleteStatus('dns')">
+        DNS<br><span style="font-size:10px;font-weight:600;opacity:0.6;letter-spacing:0.1em">Did Not Start</span>
+      </button>
+      <button class="dns-btn" id="dnf-btn" onclick="setAthleteStatus('dnf')">
+        DNF<br><span style="font-size:10px;font-weight:600;opacity:0.6;letter-spacing:0.1em">Did Not Finish</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Get lane from URL ?lane=1
+const urlParams = new URLSearchParams(location.search);
+const LANE = parseInt(urlParams.get('lane')) || 1;
+const LANE_KEY = 'lane' + LANE;
+
+document.getElementById('hdr-lane').textContent = LANE;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let laneState = { reps: 0, light: 'none', timerSecs: 60, timerRunning: false, timerRemaining: 60, primaryValue: '', secondaryValue: '' };
+let globalState = {};
+let timerInterval = null;   // local countdown (reps mode) or display-only tick (time mode when master running)
+let timerSet = 60;
+let scoringMode = 'reps'; // reps | weight | distance | time | objects_time
+let lastCompKey = ''; // compCategory+event+heat to detect new heat and reset local state
+
+// Scoring labels from competition engine eventMetric / eventSecondaryMetric
+const METRIC_LABELS = {
+  reps: 'Reps',
+  weight: 'Weight (kg)',
+  distance: 'Distance (m)',
+  time: 'Time',
+  objects: 'Objects',
+  time_secondary: 'Time (s)'
+};
+
+function getScoringMode(metric, secondary) {
+  if (!metric) return 'reps';
+  const m = (metric || '').toLowerCase();
+  const s = (secondary || '').toLowerCase();
+  if (m === 'objects' && s === 'time') return 'objects_time';
+  if (m === 'reps') return 'reps';
+  if (m === 'weight') return 'weight';
+  if (m === 'distance') return 'distance';
+  if (m === 'time') return 'time';
+  if (m === 'objects') return 'weight'; // single number, reuse number block with "Objects" label
+  return 'reps';
+}
+
+function applyScoringMode(metric, secondary) {
+  const mode = getScoringMode(metric, secondary);
+  scoringMode = mode;
+  document.querySelectorAll('.scoring-block').forEach(el => { el.style.display = 'none'; });
+  const blockReps = document.getElementById('block-reps');
+  const blockTime = document.getElementById('block-time');
+  const blockNumber = document.getElementById('block-number');
+  const blockOT = document.getElementById('block-objects-time');
+  const titleEl = document.getElementById('scoring-card-title');
+  if (mode === 'reps') {
+    blockReps.style.display = 'block';
+    document.getElementById('label-reps').textContent = METRIC_LABELS.reps;
+    titleEl.textContent = METRIC_LABELS.reps;
+  } else if (mode === 'time') {
+    blockTime.style.display = 'block';
+    document.getElementById('label-time').textContent = METRIC_LABELS.time;
+    titleEl.textContent = METRIC_LABELS.time;
+  } else if (mode === 'objects_time') {
+    blockOT.style.display = 'block';
+    document.getElementById('label-objects').textContent = METRIC_LABELS.objects;
+    document.getElementById('label-time-secondary').textContent = METRIC_LABELS.time_secondary;
+    titleEl.textContent = METRIC_LABELS.objects + ' + ' + METRIC_LABELS.time_secondary;
+  } else {
+    blockNumber.style.display = 'block';
+    const label = mode === 'weight' ? METRIC_LABELS.weight : mode === 'distance' ? METRIC_LABELS.distance : METRIC_LABELS.objects;
+    document.getElementById('label-number').textContent = label;
+    const pv = laneState.primaryValue ?? '';
+    document.getElementById('number-disp').textContent = pv === '' ? '0' : pv;
+    const ni = document.getElementById('number-input');
+    if (ni) ni.value = pv;
+    titleEl.textContent = label;
+  }
+  if (mode === 'objects_time') {
+    const oi = document.getElementById('objects-input');
+    const ti = document.getElementById('time-input');
+    if (oi) oi.value = laneState.primaryValue ?? '';
+    if (ti) ti.value = laneState.secondaryValue ?? '';
+  }
+}
+
+function syncNumberInput() {
+  const v = document.getElementById('number-input').value;
+  laneState.primaryValue = v;
+  const el = document.getElementById('number-disp');
+  if (el) el.textContent = v === '' ? '0' : v;
+  push();
+}
+function syncObjectsTime() {
+  laneState.primaryValue = document.getElementById('objects-input').value || '';
+  laneState.secondaryValue = document.getElementById('time-input').value || '';
+  push();
+}
+
+// ─── CONNECTION ───────────────────────────────────────────────────────────────
+async function push() {
+  const payload = {};
+  payload['judgeL' + LANE] = {
+    reps: laneState.reps,
+    light: laneState.light,
+    timerRunning: laneState.timerRunning,
+    timerRemaining: laneState.timerRemaining,
+    timerSecs: timerSet,
+    primaryValue: laneState.primaryValue,
+    secondaryValue: laneState.secondaryValue
+  };
+  try {
+    const r = await fetch('/update', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    document.getElementById('conn-dot').className = 'conn-dot' + (r.ok?' ok':'');
+  } catch(e) { document.getElementById('conn-dot').className = 'conn-dot'; }
+}
+
+async function submitToScoreboard() {
+  push();
+  const btn = document.getElementById('submit-scoreboard-btn');
+  if (btn) { btn.textContent = 'Sent ✓'; btn.classList.add('sent'); setTimeout(function(){ btn.textContent = 'Submit to scoreboard'; btn.classList.remove('sent'); }, 2000); }
+}
+
+// ─── APPLY STATE FROM SERVER ──────────────────────────────────────────────────
+function applyServerState(data) {
+  globalState = data;
+  const state = data.broadcast || data;
+  const metric = state.eventMetric;
+  const secondary = state.eventSecondaryMetric;
+  if (metric != null && metric !== '') {
+    applyScoringMode(metric, secondary);
+  }
+  const lane = (data.lanes||[])[LANE-1];
+  if (lane) document.getElementById('hdr-name').textContent = lane.name || '—';
+  document.getElementById('conn-dot').className = 'conn-dot ok';
+
+  // Detect new heat/category/event: reset local state from server
+  const compKey = (state.compCategory || '') + '-' + (state.compEvent || '') + '-' + (state.compHeat || '');
+  if (compKey && compKey !== lastCompKey) {
+    lastCompKey = compKey;
+    const myData = data['judgeL' + LANE] || {};
+    laneState.reps = typeof myData.reps === 'number' ? myData.reps : (parseInt(myData.reps, 10) || 0);
+    laneState.light = (myData.light === 'good' || myData.light === 'no') ? myData.light : 'none';
+    laneState.primaryValue = (myData.primaryValue != null && myData.primaryValue !== '') ? String(myData.primaryValue) : '';
+    laneState.secondaryValue = (myData.secondaryValue != null && myData.secondaryValue !== '') ? String(myData.secondaryValue) : '';
+    laneState.timerRunning = myData.timerRunning === true;
+    laneState.timerRemaining = typeof myData.timerRemaining === 'number' ? myData.timerRemaining : (parseInt(myData.timerRemaining, 10) || timerSet || 60);
+    timerSet = typeof myData.timerSecs === 'number' ? myData.timerSecs : (parseInt(myData.timerSecs, 10) || 60);
+    const repEl = document.getElementById('rep-num');
+    if (repEl) repEl.textContent = laneState.reps;
+    const repStatus = document.getElementById('rep-status');
+    if (repStatus) repStatus.textContent = laneState.reps + ' rep' + (laneState.reps !== 1 ? 's' : '');
+    const numInp = document.getElementById('number-input');
+    if (numInp) numInp.value = laneState.primaryValue;
+    const numDisp = document.getElementById('number-disp');
+    if (numDisp) numDisp.textContent = laneState.primaryValue === '' ? '0' : laneState.primaryValue;
+    const objInp = document.getElementById('objects-input');
+    const timeInp = document.getElementById('time-input');
+    if (objInp) objInp.value = laneState.primaryValue;
+    if (timeInp) timeInp.value = laneState.secondaryValue;
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    const timerEl = document.getElementById('timer-disp');
+    if (timerEl) { timerEl.textContent = Math.floor(laneState.timerRemaining/60) + ':' + String(laneState.timerRemaining%60).padStart(2,'0'); timerEl.className = 'timer-num'; }
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) startBtn.textContent = laneState.timerRunning ? 'Running' : 'Start';
+    document.getElementById('btn-good').className = 'light-btn light-btn-good' + (laneState.light === 'good' ? ' active-good' : '');
+    document.getElementById('btn-no').className = 'light-btn light-btn-no' + (laneState.light === 'no' ? ' active-no' : '');
+  }
+
+  // Time mode: master is source of truth
+  const myData = data['judgeL' + LANE] || {};
+  const hasTimerData = myData.timerRemaining !== undefined || myData.timerSecs !== undefined;
+  if (hasTimerData && scoringMode !== 'time') {
+    applyScoringMode('time', state.eventSecondaryMetric || '');
+    scoringMode = 'time';
+  }
+  if (scoringMode === 'time' && hasTimerData) {
+    const rem = typeof myData.timerRemaining === 'number' ? myData.timerRemaining : (typeof myData.timerRemaining === 'string' ? parseInt(myData.timerRemaining, 10) : undefined);
+    const secs = typeof myData.timerSecs === 'number' ? myData.timerSecs : (typeof myData.timerSecs === 'string' ? parseInt(myData.timerSecs, 10) : 60);
+    timerSet = isNaN(secs) ? 60 : secs;
+    document.querySelectorAll('.timer-preset').forEach(p => p.classList.remove('active'));
+    const labels = {30:'0:30',60:'1:00',75:'1:15',90:'1:30',120:'2:00'};
+    document.querySelectorAll('.timer-preset').forEach(p => { if (p.textContent === labels[timerSet]) p.classList.add('active'); });
+    if (rem !== undefined && !isNaN(rem)) {
+      laneState.timerRemaining = rem;
+      laneState.timerRunning = myData.timerRunning === true;
+    }
+    if (myData.timerRunning === false || myData.timerRemaining === 0) {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      laneState.timerRunning = false;
+      laneState.timerRemaining = typeof myData.timerRemaining === 'number' ? myData.timerRemaining : (myData.timerSecs || timerSet || 60);
+    }
+    const el = document.getElementById('timer-disp');
+    const startBtn = document.getElementById('start-btn');
+    const showRem = laneState.timerRemaining;
+    if (el) { el.textContent = fmtTime(showRem); el.className = 'timer-num' + (showRem<=10?' danger': showRem<=20?' warning':''); }
+    if (startBtn) startBtn.textContent = laneState.timerRunning ? 'Running' : 'Start';
+    if (laneState.timerRunning) {
+      if (!timerInterval) {
+        timerInterval = setInterval(function() {
+          laneState.timerRemaining = Math.max(0, laneState.timerRemaining - 1);
+          const r = laneState.timerRemaining;
+          const disp = document.getElementById('timer-disp');
+          if (disp) { disp.textContent = fmtTime(r); disp.className = 'timer-num' + (r<=10?' danger': r<=20?' warning':''); }
+          if (r <= 0) {
+            clearInterval(timerInterval); timerInterval = null;
+            laneState.timerRunning = false;
+            const sb = document.getElementById('start-btn');
+            if (sb) sb.textContent = 'Start';
+          }
+        }, 1000);
+      }
+    } else {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+  } else {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  }
+}
+
+// ─── SSE (Server-Sent Events) — primary update path ──────────────────────────
+let _sseActive = false;
+function startSSE() {
+  const es = new EventSource('/stream');
+  es.onopen = function() { _sseActive = true; document.getElementById('conn-dot').className = 'conn-dot ok'; };
+  es.onmessage = function(e) {
+    try { applyServerState(JSON.parse(e.data)); } catch(ex) {}
+  };
+  es.onerror = function() {
+    _sseActive = false;
+    document.getElementById('conn-dot').className = 'conn-dot';
+    es.close();
+    // Fallback: reopen after 3s
+    setTimeout(startSSE, 3000);
+  };
+}
+startSSE();
+
+// ─── FALLBACK POLL — fires only when SSE is not active ───────────────────────
+async function poll() {
+  if (_sseActive) return;
+  try {
+    const r = await fetch('/state.json?t=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) return;
+    applyServerState(await r.json());
+  } catch(e) { document.getElementById('conn-dot').className = 'conn-dot'; }
+}
+setInterval(poll, 2000);
+poll();
+
+// ─── REPS ─────────────────────────────────────────────────────────────────────
+function adjustRep(delta) {
+  laneState.reps = Math.max(0, laneState.reps + delta);
+  document.getElementById('rep-num').textContent = laneState.reps;
+  document.getElementById('rep-status').textContent = laneState.reps + ' rep' + (laneState.reps!==1?'s':'');
+  // Bounce animation
+  const el = document.getElementById('rep-num');
+  el.style.transform = 'scale(1.15)';
+  setTimeout(() => el.style.transform = '', 120);
+  push();
+}
+function resetRep() {
+  if (!confirm('Reset reps to 0?')) return;
+  laneState.reps = 0;
+  document.getElementById('rep-num').textContent = 0;
+  document.getElementById('rep-status').textContent = '0 reps';
+  push();
+}
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+function fmtTime(s) {
+  const m = Math.floor(s/60);
+  const sec = s % 60;
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+function setTimer(secs) {
+  clearInterval(timerInterval); timerInterval = null;
+  timerSet = secs;
+  laneState.timerRemaining = secs;
+  laneState.timerRunning = false;
+  document.getElementById('timer-disp').textContent = fmtTime(secs);
+  document.getElementById('timer-disp').className = 'timer-num';
+  document.getElementById('start-btn').textContent = 'Start';
+  document.querySelectorAll('.timer-preset').forEach(p => p.classList.remove('active'));
+  const labels = {30:'0:30',60:'1:00',75:'1:15',90:'1:30',120:'2:00'};
+  document.querySelectorAll('.timer-preset').forEach(p => { if(p.textContent===labels[secs]) p.classList.add('active'); });
+  push();
+}
+
+function startTimer() {
+  if (timerInterval) return;
+  if (laneState.timerRemaining <= 0) laneState.timerRemaining = timerSet;
+  laneState.timerRunning = true;
+  document.getElementById('start-btn').textContent = 'Running';
+  timerInterval = setInterval(tick, 1000);
+  push();
+}
+
+function pauseTimer() {
+  clearInterval(timerInterval); timerInterval = null;
+  laneState.timerRunning = false;
+  document.getElementById('start-btn').textContent = 'Resume';
+  // Keep display showing current remaining time (so athlete time is visible for scoring)
+  const el = document.getElementById('timer-disp');
+  if (el) { el.textContent = fmtTime(laneState.timerRemaining); el.className = 'timer-num' + (laneState.timerRemaining<=10?' danger': laneState.timerRemaining<=20?' warning':''); }
+  push(); // server keeps this lane stopped; master must not overwrite (server protects)
+}
+
+function resetTimer() {
+  clearInterval(timerInterval); timerInterval = null;
+  laneState.timerRunning = false;
+  laneState.timerRemaining = timerSet;
+  document.getElementById('timer-disp').textContent = fmtTime(timerSet);
+  document.getElementById('timer-disp').className = 'timer-num';
+  document.getElementById('start-btn').textContent = 'Start';
+  push();
+}
+
+function tick() {
+  laneState.timerRemaining = Math.max(0, laneState.timerRemaining - 1);
+  const rem = laneState.timerRemaining;
+  const el = document.getElementById('timer-disp');
+  el.textContent = fmtTime(rem);
+  el.className = 'timer-num' + (rem<=10?' danger': rem<=20?' warning':'');
+  if (rem <= 0) {
+    clearInterval(timerInterval); timerInterval = null;
+    laneState.timerRunning = false;
+    document.getElementById('start-btn').textContent = 'Start';
+  }
+  push();
+}
+
+// ─── LIGHTS ───────────────────────────────────────────────────────────────────
+function setLight(val) {
+  laneState.light = val;
+  document.getElementById('btn-good').className = 'light-btn light-btn-good' + (val==='good'?' active-good':'');
+  document.getElementById('btn-no').className   = 'light-btn light-btn-no'   + (val==='no'  ?' active-no':'');
+  const dot = document.getElementById('light-dot');
+  const txt = document.getElementById('light-status');
+  if (val==='good') { dot.style.background='var(--green-bright)'; txt.textContent='GOOD REP'; txt.style.color='var(--green-bright)'; }
+  else if (val==='no') { dot.style.background='var(--red-bright)'; txt.textContent='NO REP'; txt.style.color='var(--red-bright)'; }
+  else { dot.style.background='var(--dim)'; txt.textContent='No decision'; txt.style.color=''; }
+  push();
+}
+
+// ─── DNS / DNF ────────────────────────────────────────────────────────────────
+let _athleteStatus = 'score';
+async function setAthleteStatus(status) {
+  const newStatus = _athleteStatus === status ? 'score' : status;
+  _athleteStatus = newStatus;
+  const dnsBtn = document.getElementById('dns-btn');
+  const dnfBtn = document.getElementById('dnf-btn');
+  if (dnsBtn) dnsBtn.className = 'dns-btn' + (newStatus === 'dns' ? ' dns-active' : '');
+  if (dnfBtn) dnfBtn.className = 'dns-btn' + (newStatus === 'dnf' ? ' dns-active' : '');
+  try {
+    const lane = (globalState.lanes||[])[LANE-1];
+    const name = (lane && lane.name) || document.getElementById('hdr-name').textContent || '';
+    await fetch('/judge/set_status', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ athlete_name: name, result_type: newStatus })
+    });
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

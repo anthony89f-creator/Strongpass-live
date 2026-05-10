@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
+  :root {
+    --bg:      rgba(8,8,8,0.96);
+    --surface: rgba(18,18,18,0.98);
+    --border:  rgba(255,255,255,0.06);
+    --gold:    #F5C842;
+    --silver:  #C8C8C8;
+    --bronze:  #CD7F32;
+    --accent:  rgba(255,255,255,0.12);
+    --text:    #F0F0F0;
+    --dim:     #777;
+  }
+
+  #leaderboard {
+    position:absolute; right:40px; top:40px; width:460px;
+    transform:translateX(520px); opacity:0;
+    transition:transform 0.65s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease;
+  }
+  #leaderboard.visible { transform:translateX(0); opacity:1; }
+
+  /* Header */
+  .lb-head {
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:12px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .lb-head-title { font-size:13px; font-weight:900; letter-spacing:0.25em; text-transform:uppercase; color:var(--dim); }
+  .lb-head-event { font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text); text-align:right; }
+
+  /* Body */
+  .lb-body { background:var(--bg); }
+
+  /* Rows */
+  .lb-row {
+    display:flex; align-items:center; height:52px;
+    border-bottom:1px solid var(--border);
+    opacity:0; transform:translateX(16px);
+    transition:opacity 0.35s ease, transform 0.35s ease;
+  }
+  .lb-row.in { opacity:1; transform:translateX(0); }
+
+  .lb-row:nth-child(1)  { transition-delay:0.05s }
+  .lb-row:nth-child(2)  { transition-delay:0.10s }
+  .lb-row:nth-child(3)  { transition-delay:0.15s }
+  .lb-row:nth-child(4)  { transition-delay:0.20s }
+  .lb-row:nth-child(5)  { transition-delay:0.25s }
+  .lb-row:nth-child(6)  { transition-delay:0.30s }
+  .lb-row:nth-child(7)  { transition-delay:0.35s }
+  .lb-row:nth-child(8)  { transition-delay:0.40s }
+  .lb-row:nth-child(9)  { transition-delay:0.45s }
+  .lb-row:nth-child(10) { transition-delay:0.50s }
+
+  /* Rank */
+  .lb-rank {
+    width:44px; height:100%; display:flex; align-items:center; justify-content:center;
+    font-size:18px; font-weight:900; color:var(--dim); flex-shrink:0;
+    border-right:1px solid var(--border);
+  }
+  .lb-row.pos-1 .lb-rank { color:var(--gold); }
+  .lb-row.pos-2 .lb-rank { color:var(--silver); }
+  .lb-row.pos-3 .lb-rank { color:var(--bronze); }
+
+  /* Subtle left accent for top 3 */
+  .lb-row.pos-1 { border-left:2px solid rgba(245,200,66,0.6); }
+  .lb-row.pos-2 { border-left:2px solid rgba(200,200,200,0.4); }
+  .lb-row.pos-3 { border-left:2px solid rgba(205,127,50,0.4); }
+
+  /* Athlete info */
+  .lb-info { flex:1; padding:0 12px; min-width:0; }
+  .lb-name   { font-size:18px; font-weight:800; color:var(--text); letter-spacing:0.03em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.1; }
+  .lb-origin { font-size:10px; font-weight:500; letter-spacing:0.14em; color:var(--dim); text-transform:uppercase; font-family:'Barlow',sans-serif; }
+
+  /* Score */
+  .lb-score { padding-right:14px; text-align:right; flex-shrink:0; }
+  .lb-score-val   { font-size:24px; font-weight:900; color:var(--dim); line-height:1; }
+  .lb-row.pos-1 .lb-score-val { color:var(--gold); }
+  .lb-row.pos-2 .lb-score-val { color:var(--silver); }
+  .lb-row.pos-3 .lb-score-val { color:var(--bronze); }
+  .lb-score-unit  { font-size:9px; font-weight:600; letter-spacing:0.15em; color:var(--dim); text-transform:uppercase; }
+
+  /* Footer */
+  .lb-foot {
+    background:var(--surface); border-top:1px solid var(--border);
+    padding:7px 14px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .lb-foot-text { font-size:10px; color:var(--dim); letter-spacing:0.1em; text-transform:uppercase; font-family:'Barlow',sans-serif; }
+  .live-dot { display:inline-block; width:5px; height:5px; background:rgba(255,255,255,0.5); border-radius:50%; margin-right:5px; animation:pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+<div id="leaderboard">
+  <div class="lb-head">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div id="lb-cat-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0;transition:background 0.3s"></div>
+      <span class="lb-head-title" id="lb-cat-label">Overall</span>
+    </div>
+    <span class="lb-head-event" id="lb-event"></span>
+  </div>
+  <div class="lb-body" id="lb-body"></div>
+  <div class="lb-foot">
+    <span class="lb-foot-text"><span class="live-dot"></span>LIVE</span>
+    <span class="lb-foot-text" id="lb-comp"></span>
+  </div>
+</div>
+
+<script src="ws-client.js"></script>
+<script>
+let state = {
+  leaderboard:false,
+  athletes:[
+    {name:"THOR BJORNSSON",origin:"Iceland",score:"48.5",category:"Open"},
+    {name:"BRIAN SHAW",origin:"USA",score:"44.0",category:"Open"},
+    {name:"EDDIE HALL",origin:"England",score:"41.5",category:"Open"},
+    {name:"MARTINS LICIS",origin:"USA",score:"38.0",category:"Open"},
+    {name:"MATEUSZ KIELISZKOWSKI",origin:"Poland",score:"35.5",category:"Open"},
+    {name:"ADAM BISHOP",origin:"Wales",score:"33.0",category:"Open"},
+    {name:"JERRY PRITCHETT",origin:"USA",score:"30.5",category:"Open"},
+    {name:"KONSTANTINE JANASHIA",origin:"Georgia",score:"28.0",category:"Open"},
+    {name:"MARK FELIX",origin:"England",score:"25.5",category:"Open"},
+    {name:"EVAN SINGLETON",origin:"USA",score:"23.0",category:"Open"},
+  ],
+  categories:[],
+  eventName:"IRON CHALLENGE 2025", compName:"STRONGMAN CHAMPIONSHIP", scoreUnit:"PTS",
+  lbCategory:"all"
+};
+
+function catColor(catName) {
+  const found = (state.categories||[]).find(c=>c.name===catName);
+  return found ? found.color : 'rgba(255,255,255,0.3)';
+}
+
+function render() {
+  const lb = document.getElementById('leaderboard');
+  const cat = state.lbCategory || 'all';
+  const filtered = cat === 'all'
+    ? state.athletes
+    : state.athletes.filter(a => (a.category||'') === cat);
+
+  // Header
+  const catLabel = cat === 'all' ? 'Overall' : cat;
+  const dotCol   = cat === 'all' ? 'rgba(255,255,255,0.3)' : catColor(cat);
+  document.getElementById('lb-cat-label').textContent = catLabel;
+  document.getElementById('lb-cat-dot').style.background = dotCol;
+  document.getElementById('lb-event').textContent  = state.eventName||'';
+  document.getElementById('lb-comp').textContent   = state.compName||'';
+
+  document.getElementById('lb-body').innerHTML = filtered.slice(0,10).map((a,i) => {
+    const pc  = i===0?'pos-1':i===1?'pos-2':i===2?'pos-3':'';
+    const col = cat === 'all' ? catColor(a.category) : 'transparent';
+    return `<div class="lb-row ${pc}">
+      <div class="lb-rank">${i+1}</div>
+      <div class="lb-info">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${cat==='all'&&a.category?`<span style="width:6px;height:6px;border-radius:50%;background:${col};flex-shrink:0;display:inline-block"></span>`:''}
+          <div class="lb-name">${a.name}</div>
+        </div>
+        <div class="lb-origin">${a.origin||''}${cat==='all'&&a.category?' · '+a.category:''}</div>
+      </div>
+      <div class="lb-score">
+        <div class="lb-score-val">${a.score}</div>
+        <div class="lb-score-unit">${state.scoreUnit||'PTS'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (state.leaderboard) {
+    lb.classList.add('visible');
+    setTimeout(() => document.querySelectorAll('.lb-row').forEach(r => r.classList.add('in')), 100);
+  } else {
+    lb.classList.remove('visible');
+    document.querySelectorAll('.lb-row').forEach(r => r.classList.remove('in'));
+  }
+}
+
+window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
+
+fetch('/state.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(data => { Object.assign(state, data); render(); })
+  .catch(() => render());
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Manual Lower Third</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
+  :root {
+    --bg:   rgba(8,8,8,0.95);
+    --gold: #F5C842;
+    --text: #F0F0F0;
+    --dim:  #888;
+  }
+
+  /* Single name card — bottom left */
+  #manual-card {
+    position:absolute; bottom:28px; left:60px;
+    clip-path:inset(0 100% 0 0);
+    transition:clip-path 0.6s cubic-bezier(0.77,0,0.18,1);
+    min-width:400px; max-width:700px;
+  }
+  #manual-card.visible { clip-path:inset(0 0% 0 0); }
+
+  .card-accent {
+    height:2px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.06) 60%, transparent 100%);
+    transform:scaleX(0); transform-origin:left;
+    transition:transform 0.5s cubic-bezier(0.77,0,0.18,1) 0.3s;
+  }
+  #manual-card.visible .card-accent { transform:scaleX(1); }
+
+  .card-body {
+    background:var(--bg);
+    border-left:2px solid rgba(255,255,255,0.1);
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    display:flex; align-items:center;
+    padding:11px 18px; gap:0; position:relative; overflow:hidden;
+  }
+  .card-body::before {
+    content:''; position:absolute; top:0; left:0; width:80px; height:100%;
+    background:linear-gradient(90deg, rgba(255,255,255,0.03), transparent);
+    pointer-events:none;
+  }
+
+  .card-info { flex:1; min-width:0; }
+  .card-line1 {
+    font-size:34px; font-weight:900; letter-spacing:0.03em;
+    text-transform:uppercase; color:var(--text); line-height:1;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .card-line2 {
+    font-size:11px; font-weight:500; letter-spacing:0.18em;
+    color:var(--dim); text-transform:uppercase; margin-top:3px;
+    font-family:'Barlow',sans-serif;
+  }
+  .card-line2:empty { display:none; }
+
+  /* Optional score badge */
+  .card-score {
+    text-align:right; flex-shrink:0; padding-left:16px;
+    border-left:1px solid rgba(255,255,255,0.05); margin-left:14px;
+  }
+  .card-score-val  { font-size:34px; font-weight:900; color:var(--gold); line-height:1; }
+  .card-score-unit { font-size:8px; font-weight:700; letter-spacing:0.18em; color:var(--dim); text-transform:uppercase; }
+  .card-score:empty { display:none; }
+</style>
+</head>
+<body>
+
+<div id="manual-card">
+  <div class="card-accent"></div>
+  <div class="card-body">
+    <div class="card-info">
+      <div class="card-line1" id="line1">ATHLETE NAME</div>
+      <div class="card-line2" id="line2">Detail line</div>
+    </div>
+    <div class="card-score" id="score-block">
+      <div class="card-score-val" id="score-val"></div>
+      <div class="card-score-unit" id="score-unit"></div>
+    </div>
+  </div>
+</div>
+
+<script src="ws-client.js"></script>
+<script>
+let visible = false;
+
+function show() {
+  const card = document.getElementById('manual-card');
+  card.classList.add('visible');
+  visible = true;
+}
+
+function hide() {
+  const card = document.getElementById('manual-card');
+  card.classList.remove('visible');
+  visible = false;
+}
+
+function update(data) {
+  if (data.manualLine1 !== undefined) document.getElementById('line1').textContent      = data.manualLine1 || '';
+  if (data.manualLine2 !== undefined) document.getElementById('line2').textContent      = data.manualLine2 || '';
+  if (data.manualScore !== undefined) document.getElementById('score-val').textContent  = data.manualScore || '';
+  if (data.manualUnit  !== undefined) document.getElementById('score-unit').textContent = data.manualUnit  || '';
+
+  const scoreBlock = document.getElementById('score-block');
+  scoreBlock.style.display = document.getElementById('score-val').textContent ? '' : 'none';
+
+  if (data.manualVisible === true  && !visible) show();
+  if (data.manualVisible === false && visible)  hide();
+}
+
+window.onStateUpdate = function(d) { update(d); };
+
+fetch('/state.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(d => update(d))
+  .catch(() => {});
+</script>
+</body>
+</html>

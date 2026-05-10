@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heats</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root { --bg:#080808; --surface:#111; --surface2:#181818; --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666; --gold:#F5C842; --blue:#0088FF; }
+  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .topbar a { color:var(--dim); text-decoration:none; font-size:12px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+  .topbar-nav-group { display:flex; align-items:center; gap:16px; }
+  .topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
+  .topbar-title { font-size:16px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; }
+  .main { padding:20px; max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+  .cat-section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .cat-head { padding:10px 16px; background:var(--surface2); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  .cat-name { font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:0.1em; color:var(--gold); }
+  .heat-row { display:flex; border-bottom:1px solid var(--border); }
+  .heat-row:last-child { border-bottom:none; }
+  .heat-label { width:90px; flex-shrink:0; padding:10px 14px; background:var(--surface2); border-right:1px solid var(--border); display:flex; align-items:center; }
+  .heat-label-text { font-size:10px; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; color:var(--dim); }
+  .heat-athletes { display:flex; flex:1; min-width:0; }
+  .heat-cell { padding:10px 14px; border-right:1px solid var(--border); flex:0 0 25%; min-width:100px; max-width:25%; }
+  .heat-cell:last-child { border-right:none; }
+  .heat-num { font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim); margin-bottom:3px; }
+  .heat-name { font-size:15px; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .heat-name.empty { color:var(--dim); font-weight:600; }
+  .btn { padding:8px 14px; border-radius:6px; border:none; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; display:inline-block; }
+  .btn-primary { background:rgba(0,120,255,0.15); color:var(--blue); border:1px solid rgba(0,120,255,0.3); }
+  .btn-gold { background:rgba(245,200,66,0.12); color:var(--gold); border:1px solid rgba(245,200,66,0.3); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-title">📋 Heats</span>
+  <a href="/">← Home</a>
+  <a href="/comp/events">Setup</a>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats" style="color:var(--blue)">Heats</a><a href="/comp/run">Run</a></span>
+  <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
+  {% if rows %}
+  <form action="/comp/action/generate_heats" method="post" style="display:contents">
+    <button type="submit" class="btn btn-primary" onclick="return confirm('Regenerate heats?')">Regenerate Heats</button>
+  </form>
+  {% endif %}
+  <a href="/control.html" style="color:var(--gold)">📡 Broadcast →</a>
+</div>
+<div class="main">
+{% for cat, cat_heats in rows_grouped.items() %}
+<div class="cat-section">
+  <div class="cat-head"><span class="cat-name">{{ cat }}</span></div>
+  {% for heat_num, lanes in cat_heats.items() %}
+  <div class="heat-row">
+    <div class="heat-label"><span class="heat-label-text">Heat {{ heat_num }}<br><span style="color:var(--gold)">{{ lanes|length }} athletes</span></span></div>
+    <div class="heat-athletes">
+      {% for slot in range(1, lane_count + 1) %}
+      <div class="heat-cell">
+        <div class="heat-num">Lane {{ slot }}</div>
+        {% if slot <= lanes|length %}
+        <div class="heat-name">{{ lanes[slot - 1].athlete_name }}</div>
+        {% else %}
+        <div class="heat-name empty">—</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% if not rows %}
+<div style="padding:40px;text-align:center;color:var(--dim);font-family:'Barlow',sans-serif">No heats generated yet. <a href="/comp/events" style="color:var(--gold)">Go to Setup →</a> or <form action="/comp/action/generate_heats" method="post" style="display:inline"><button type="submit" class="btn btn-gold" onclick="return confirm('Generate heats?')">Generate Heats</button></form></div>
+{% else %}
+<div class="cat-section" style="margin-top:8px">
+  <div class="cat-head" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <span class="cat-name">Next Step</span>
+    <a href="/comp/run" class="btn btn-gold">Start Competition →</a>
+  </div>
+</div>
+{% endif %}
+</div>
+<script>
+setInterval(() => location.reload(), 10000);
+</script>
+</body>
+</html>
