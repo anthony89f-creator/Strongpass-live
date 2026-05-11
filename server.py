@@ -2067,46 +2067,103 @@ def api_event_points():
     resp = jsonify({str(k): v for k,v in pts.items()})
     resp.headers["Access-Control-Allow-Origin"] = "*"; return resp
 
-# ─── BOOT ─────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    os.chdir(DIR)
+# ─── STARTUP INITIALIZATION ───────────────────────────────────────────────────
+# These functions are called at module load time so they execute under both
+# `python server.py` (direct) and `gunicorn server:app` (production).
+# Previously all of this lived inside `if __name__ == "__main__":` which
+# Gunicorn never executes, causing silent failures on every production start.
 
+_DEFAULT_COMP_CONFIG = {
+    "lanes": 4,
+    "scoring_mode": "fixed_points",
+    "heat_order_mode": "previous_event",
+    "final_event_order_mode": "leaderboard",
+}
+
+
+def _init_state_file():
+    """Create state.json with safe defaults if missing; backfill any keys added
+    since the file was last written. Idempotent — safe to call on every start."""
+    if not os.path.exists(STATE_FILE):
+        save_state({
+            "competition": {},
+            "competition_config": _DEFAULT_COMP_CONFIG.copy(),
+            "broadcast": {"data_source_mode": "engine"},
+            "data_source_mode": "engine",
+        })
+        return
+    try:
+        s = load_state()
+        changed = False
+        if "broadcast" not in s:
+            s["broadcast"] = {"data_source_mode": s.get("data_source_mode", "engine")}
+            changed = True
+        if "competition" not in s:
+            s["competition"] = {}
+            changed = True
+        if "data_source_mode" not in s:
+            s["data_source_mode"] = "engine"
+            changed = True
+        if "competition_config" not in s:
+            s["competition_config"] = _DEFAULT_COMP_CONFIG.copy()
+            changed = True
+        else:
+            for k, v in _DEFAULT_COMP_CONFIG.items():
+                if k not in s["competition_config"]:
+                    s["competition_config"][k] = v
+                    changed = True
+        if changed:
+            save_state(s)
+    except Exception:
+        pass
+
+
+def _migrate_templates():
+    """One-time migration: move any root-level HTML templates that were created
+    before the templates/ subdirectory existed. Safe no-op if already done."""
     os.makedirs(TPL_DIR, exist_ok=True)
-    import shutil
-    for f in ["comp_home.html","comp_heats.html","comp_callroom.html","comp_arena.html",
-              "comp_results.html","comp_leaderboard.html","comp_athletes.html"]:
+    for f in ["comp_home.html", "comp_heats.html", "comp_callroom.html", "comp_arena.html",
+              "comp_results.html", "comp_leaderboard.html", "comp_athletes.html"]:
         src = os.path.join(DIR, f)
         dst = os.path.join(TPL_DIR, f)
         if os.path.exists(src) and not os.path.exists(dst):
             shutil.move(src, dst)
 
-    ensure_schema()
-    default_comp_config = {"lanes": 4, "scoring_mode": "fixed_points", "heat_order_mode": "previous_event", "final_event_order_mode": "leaderboard"}
-    if not os.path.exists(STATE_FILE):
-        save_state({"competition": {}, "competition_config": default_comp_config, "broadcast": {"data_source_mode": "engine"}, "data_source_mode": "engine"})
-    else:
-        try:
-            s = load_state()
-            changed = False
-            if "broadcast" not in s: s["broadcast"] = {"data_source_mode": s.get("data_source_mode","engine")}; changed = True
-            if "competition" not in s: s["competition"] = {}; changed = True
-            if "data_source_mode" not in s: s["data_source_mode"] = "engine"; changed = True
-            if "competition_config" not in s:
-                s["competition_config"] = default_comp_config.copy()
-                changed = True
-            else:
-                for k, v in default_comp_config.items():
-                    if k not in s["competition_config"]:
-                        s["competition_config"][k] = v
-                        changed = True
-            if changed: save_state(s)
-        except: pass
-    # Restore category order from state (persists across restarts)
-    try: _restore_category_order()
-    except: pass
-    try: sync_comp_to_broadcast()
-    except: pass
 
+def _startup():
+    """
+    Initialize the application. Called unconditionally at module level so it
+    runs under both `python server.py` and `gunicorn server:app`.
+
+    Execution order:
+      1. chdir to the app directory so relative paths work regardless of how
+         the process was launched.
+      2. Migrate any root-level templates still in the wrong place.
+      3. Ensure the SQLite schema exists and is up to date.
+      4. Ensure state.json exists with all required keys.
+      5. Restore the persisted category order into CATEGORY_ORDER.
+      6. Push the initial competition state to broadcast (best-effort).
+
+    All steps are idempotent — calling _startup() more than once is safe.
+    """
+    os.chdir(DIR)
+    _migrate_templates()
+    ensure_schema()
+    _init_state_file()
+    try:
+        _restore_category_order()
+    except Exception:
+        pass
+    try:
+        sync_comp_to_broadcast()
+    except Exception:
+        pass
+
+
+_startup()
+
+# ─── BOOT ─────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
     print("=" * 55)
     print("  STRONGMAN UNIFIED SERVER")
     print("=" * 55)
