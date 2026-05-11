@@ -126,6 +126,7 @@
   <div class="empty" id="empty-msg" style="display: none;">No results for this category. Load competition data from state.</div>
 </div>
 
+<script src="sse-client.js"></script>
 <script>
 (function() {
   const thead = document.getElementById('thead');
@@ -246,8 +247,13 @@
       .catch(function() {});
   });
 
+  window.onStateUpdate = function(state) {
+    if (state.compName) compSub.textContent = state.compName;
+    if (state.compSub) compSub.textContent = (compSub.textContent ? compSub.textContent + ' · ' : '') + state.compSub;
+    buildTable(state);
+  };
+
   load();
-  setInterval(load, 15000);
 })();
 </script>
 
