@@ -29,6 +29,32 @@ CATEGORY_ORDER = list(DEFAULT_CATEGORY_ORDER)
 
 state_lock = threading.Lock()
 
+# ─── RESULTS CACHE ────────────────────────────────────────────────────────────
+# Shared across all SSE threads and /state.json. Invalidated whenever raw_results,
+# athletes, or events tables change. Timer ticks that write the same score value
+# do NOT invalidate it (see change detection in _apply_judge_scores_to_raw_results).
+_results_lock  = threading.Lock()
+_results_cache = None   # (events_list, results_by_cat) tuple, or None if not yet built
+_results_dirty = True   # True → recompute before next use
+
+def _invalidate_results_cache():
+    global _results_dirty
+    with _results_lock:
+        _results_dirty = True
+
+def _get_cached_results():
+    """Return (events_list, results_by_cat), recomputing only when dirty. Thread-safe."""
+    global _results_cache, _results_dirty
+    with _results_lock:
+        if _results_dirty or _results_cache is None:
+            try:
+                evs, res = get_public_results()
+            except Exception:
+                evs, res = [], {}
+            _results_cache = (evs, res)
+            _results_dirty = False
+        return _results_cache
+
 def load_state():
     """Load state.json; returns {} on missing file, invalid JSON, or I/O error."""
     try:
@@ -668,12 +694,14 @@ def get_broadcast_mode():
 
 def sync_comp_to_broadcast():
     """Push current competition state to broadcast state.json. Engine mode only. Single DB connection, single atomic write."""
-    if get_broadcast_mode() != "engine":
+    # Read state once to derive broadcast_mode and lane_count — avoids two separate load_state() calls.
+    _s = load_state()
+    if _s.get("broadcast", {}).get("data_source_mode", _s.get("data_source_mode", "engine")) != "engine":
         return
+    lane_count = _s.get("competition_config", {}).get("lanes", LANES)
     cs = get_comp_state()
     category, event, heat = cs["category"], cs["event"], cs["heat"]
     heat_lanes = get_heat_lanes(category, heat)
-    lane_count = get_lane_count()
 
     # One connection for all DB reads in this function
     con = db()
@@ -776,13 +804,9 @@ def stream():
                 seen_version = _sse_mod._sse_version
             if changed:
                 data = load_state()
-                try:
-                    events_list, results_by_cat = get_public_results()
-                    data["events"] = events_list
-                    data["results"] = results_by_cat
-                except Exception:
-                    data.setdefault("events", [])
-                    data.setdefault("results", {})
+                evs, res = _get_cached_results()
+                data["events"] = evs
+                data["results"] = res
                 yield f"data: {json.dumps(data)}\n\n"
             else:
                 yield ": keepalive\n\n"
@@ -824,32 +848,34 @@ def root():
 @app.route("/state.json")
 def state_json():
     data = load_state()
-    try:
-        events_list, results_by_cat = get_public_results()
-        data["events"] = events_list
-        data["results"] = results_by_cat
-    except Exception:
-        data.setdefault("events", [])
-        data.setdefault("results", {})
+    evs, res = _get_cached_results()
+    data["events"] = evs
+    data["results"] = res
     resp = app.response_class(response=json.dumps(data), mimetype="application/json")
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
 
 def _apply_judge_scores_to_raw_results(judge_payload=None):
-    """When in engine mode, write judge panel scores (judgeL1..judgeL4) into raw_results for current heat/event.
-    judge_payload: the request body just received (dict with judgeL1, judgeL2, ...). If None, use load_state()."""
-    if get_broadcast_mode() != "engine":
+    """Write judge panel scores to raw_results (engine mode only).
+    Uses one DB connection for all lanes. Skips writes when value is unchanged;
+    only invalidates the results cache when a value actually changes."""
+    # Read state once to derive broadcast_mode and lane_count — avoids two separate load_state() calls.
+    _s = load_state()
+    if _s.get("broadcast", {}).get("data_source_mode", _s.get("data_source_mode", "engine")) != "engine":
         return
     cs = get_comp_state()
     category, event, heat = cs["category"], cs["event"], cs["heat"]
     heat_lanes = get_heat_lanes(category, heat)
     if not heat_lanes:
         return
+
     con = db()
-    ev_row = con.execute("SELECT id, primary_metric, secondary_metric FROM events WHERE event_number=?", (event,)).fetchone()
-    con.close()
+    ev_row = con.execute(
+        "SELECT id, primary_metric, secondary_metric FROM events WHERE event_number=?", (event,)
+    ).fetchone()
     if not ev_row:
+        con.close()
         return
     ev_row = dict(ev_row)
     event_id = ev_row["id"]
@@ -859,12 +885,13 @@ def _apply_judge_scores_to_raw_results(judge_payload=None):
     primary_metric = primary_metric.lower()
     secondary_metric = (ev_row.get("secondary_metric") or "")
     secondary_metric = secondary_metric.lower() if isinstance(secondary_metric, str) else ""
-    lane_count = get_lane_count()
-    source = judge_payload if judge_payload is not None else load_state()
+    lane_count = _s.get("competition_config", {}).get("lanes", LANES)
+    source = judge_payload if judge_payload is not None else _s
+
+    results_changed = False
+    cur = con.cursor()
     for i in range(min(lane_count, len(heat_lanes))):
-        lane_idx = i + 1
-        jkey = "judgeL" + str(lane_idx)
-        jd = source.get(jkey) if isinstance(source, dict) else {}
+        jd = source.get("judgeL" + str(i + 1)) if isinstance(source, dict) else {}
         if not isinstance(jd, dict):
             jd = {}
         athlete_name = heat_lanes[i]["athlete_name"]
@@ -876,7 +903,7 @@ def _apply_judge_scores_to_raw_results(judge_payload=None):
                 try: raw_value = float(r)
                 except (TypeError, ValueError): pass
         elif primary_metric == "time":
-            # Time events: judge sends timerRemaining/timerSecs (countdown). Score = elapsed seconds = timerSecs - timerRemaining.
+            # Time events: score = elapsed seconds = timerSecs - timerRemaining
             pv = jd.get("primaryValue")
             if pv is not None and str(pv).strip() != "":
                 try: raw_value = float(pv)
@@ -893,26 +920,47 @@ def _apply_judge_scores_to_raw_results(judge_payload=None):
             if pv is not None and str(pv).strip() != "":
                 try: raw_value = float(pv)
                 except (TypeError, ValueError): pass
-            if secondary_metric == "time" and (primary_metric == "objects" or primary_metric == "distance"):
+            if secondary_metric == "time" and (primary_metric in ("objects", "distance")):
                 sv = jd.get("secondaryValue")
                 if sv is not None and str(sv).strip() != "":
                     try: tiebreak = float(sv)
                     except (TypeError, ValueError): pass
         if raw_value is None:
             continue
-        con = db()
         ath = con.execute("SELECT id FROM athletes WHERE name=?", (athlete_name,)).fetchone()
         if not ath:
-            con.close()
             continue
-        cur = con.cursor()
+        aid = ath["id"]
+        # Change detection: skip write if value hasn't changed
+        existing = con.execute(
+            "SELECT raw_value, tiebreak FROM raw_results WHERE athlete_id=? AND event_id=?",
+            (aid, event_id)
+        ).fetchone()
+        if existing and existing["raw_value"] is not None:
+            try:
+                same_primary = abs(float(existing["raw_value"]) - raw_value) < 0.001
+                old_tb = existing["tiebreak"]
+                same_tiebreak = (
+                    (tiebreak is None and old_tb is None) or
+                    (tiebreak is not None and old_tb is not None and abs(float(old_tb) - tiebreak) < 0.001)
+                )
+                if same_primary and same_tiebreak:
+                    continue  # value unchanged — skip write, do NOT dirty the cache
+            except (TypeError, ValueError):
+                pass
         cur.execute(
             """INSERT INTO raw_results(athlete_id, event_id, raw_value, tiebreak)
-               VALUES(?,?,?,?) ON CONFLICT(athlete_id, event_id) DO UPDATE SET raw_value=excluded.raw_value, tiebreak=excluded.tiebreak""",
-            (ath["id"], event_id, raw_value, tiebreak)
+               VALUES(?,?,?,?)
+               ON CONFLICT(athlete_id, event_id)
+               DO UPDATE SET raw_value=excluded.raw_value, tiebreak=excluded.tiebreak""",
+            (aid, event_id, raw_value, tiebreak)
         )
+        results_changed = True
+
+    if results_changed:
         con.commit()
-        con.close()
+        _invalidate_results_cache()
+    con.close()
     sync_comp_to_broadcast()
 
 def _active_lane_count():
@@ -1229,6 +1277,7 @@ def action_save_results():
         """, (athlete["id"], event_id, raw_value, tiebreak))
 
     con.commit(); con.close()
+    _invalidate_results_cache()
     sync_comp_to_broadcast()
     return redirect("/comp/results")
 
@@ -1240,6 +1289,7 @@ def action_update_event_type():
         con = db()
         con.execute("UPDATE events SET event_type=? WHERE id=?", (event_type, event_id))
         con.commit(); con.close()
+        _invalidate_results_cache()
     return redirect(request.referrer or "/comp/events")
 
 @app.route("/comp/action/generate_heats", methods=["POST"])
@@ -1286,6 +1336,7 @@ def action_generate_test():
             (name, i, etype) + _type_map.get(etype, ("reps", None, "higher", None)),
         )
     con.commit(); con.close()
+    _invalidate_results_cache()
     generate_heats(); set_comp_state(CATEGORY_ORDER[0], 1, 1); sync_comp_to_broadcast()
     return redirect("/comp/events")
 
@@ -1294,6 +1345,7 @@ def action_add_athlete():
     name = request.form.get("name","").strip().upper(); category = request.form.get("category","")
     if name and category:
         con = db(); con.execute("INSERT INTO athletes(name,category) VALUES(?,?)",(name,category)); con.commit(); con.close()
+        _invalidate_results_cache()
         regenerate_remaining_heats()
         sync_comp_to_broadcast()
     return redirect(f"/comp/athletes?category={category}&focus=add_athlete" if category else "/comp/athletes?focus=add_athlete")
@@ -1303,6 +1355,7 @@ def action_delete_athlete():
     aid = request.form.get("id"); cat = request.form.get("category","")
     if aid:
         con = db(); con.execute("DELETE FROM athletes WHERE id=?",(aid,)); con.commit(); con.close()
+        _invalidate_results_cache()
     return redirect(f"/comp/athletes?category={cat}")
 
 @app.route("/comp/action/withdraw_athlete", methods=["POST"])
@@ -1313,6 +1366,7 @@ def action_withdraw_athlete():
         con = db()
         con.execute("UPDATE athletes SET status=? WHERE id=?", (reason, aid))
         con.commit(); con.close()
+        _invalidate_results_cache()
         regenerate_remaining_heats()
         sync_comp_to_broadcast()
     return redirect(f"/comp/athletes?category={cat}")
@@ -1324,6 +1378,7 @@ def action_reinstate_athlete():
         con = db()
         con.execute("UPDATE athletes SET status='active' WHERE id=?", (aid,))
         con.commit(); con.close()
+        _invalidate_results_cache()
         regenerate_remaining_heats()
         sync_comp_to_broadcast()
     return redirect(f"/comp/athletes?category={cat}")
@@ -1348,6 +1403,7 @@ def action_add_event():
             (name, next_num, event_type, primary_metric, secondary_metric, primary_direction, secondary_direction)
         )
         con.commit(); con.close()
+        _invalidate_results_cache()
     return redirect("/comp/events?focus=add_event")
 
 @app.route("/comp/action/delete_event", methods=["POST"])
@@ -1362,6 +1418,7 @@ def action_delete_event():
         for i, ev in enumerate(events, 1):
             cur.execute("UPDATE events SET event_number=? WHERE id=?", (i, ev["id"]))
         con.commit(); con.close()
+        _invalidate_results_cache()
     return redirect(request.referrer or "/comp/events")
 
 @app.route("/comp/action/update_event_scoring", methods=["POST"])
@@ -1378,6 +1435,7 @@ def action_update_event_scoring():
         con.execute("UPDATE events SET primary_metric=?, secondary_metric=?, primary_direction=?, secondary_direction=?, event_type=? WHERE id=?",
                     (primary_metric, secondary_metric, primary_direction, secondary_direction, event_type, eid))
         con.commit(); con.close()
+        _invalidate_results_cache()
     return redirect(request.referrer or "/comp/events")
 
 @app.route("/comp/action/edit_event", methods=["POST"])
@@ -1398,6 +1456,7 @@ def action_edit_event():
         else:
             con.execute("UPDATE events SET name=?, event_type=? WHERE id=?", (name, event_type, eid))
         con.commit(); con.close()
+        _invalidate_results_cache()
     return redirect(request.referrer or "/comp/events")
 
 @app.route("/comp/action/add_category", methods=["POST"])
@@ -1474,6 +1533,7 @@ def action_save_results_run():
         """, (athlete["id"], event_id, raw_value, tiebreak))
 
     con.commit(); con.close()
+    _invalidate_results_cache()
     sync_comp_to_broadcast()
 
     mode = request.form.get("mode") or request.form.get("action","save_only")
@@ -1631,6 +1691,7 @@ def action_clear_all():
     for t in ["raw_results", "heats", "events", "athletes"]:
         cur.execute(f"DELETE FROM {t}")
     con.commit(); con.close()
+    _invalidate_results_cache()
     CATEGORY_ORDER.clear()
     _persist_category_order()
     set_comp_state("", 1, 1)
@@ -1664,6 +1725,7 @@ def action_simulate_results():
                 ON CONFLICT(athlete_id, event_id) DO UPDATE SET raw_value=excluded.raw_value, tiebreak=excluded.tiebreak
             """, (a["id"], ev["id"], val, tb))
     con.commit(); con.close()
+    _invalidate_results_cache()
     sync_comp_to_broadcast()
     return redirect(request.referrer or "/comp/events")
 
@@ -1790,6 +1852,7 @@ def action_set_result_type():
         ON CONFLICT(athlete_id, event_id) DO UPDATE SET result_type=excluded.result_type
     """, (ath["id"], ev["id"], result_type))
     con.commit(); con.close()
+    _invalidate_results_cache()
     sync_comp_to_broadcast()
     return redirect(request.referrer or "/comp/run")
 
@@ -1817,6 +1880,7 @@ def judge_set_status():
         ON CONFLICT(athlete_id, event_id) DO UPDATE SET result_type=excluded.result_type
     """, (ath["id"], ev["id"], result_type))
     con.commit(); con.close()
+    _invalidate_results_cache()
     sync_comp_to_broadcast()
     return jsonify({"ok": True, "result_type": result_type})
 
