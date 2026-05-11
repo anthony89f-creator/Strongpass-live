@@ -9,51 +9,25 @@ import json, os, shutil, sqlite3, math, urllib.request, urllib.parse, threading,
 from datetime import datetime
 from flask import Flask, render_template, redirect, jsonify, request, send_from_directory, abort, Response
 
-DIR        = os.path.dirname(os.path.abspath(__file__))
-TPL_DIR    = os.path.join(DIR, "templates")
-STATE_FILE = os.path.join(DIR, "state.json")
-DB_FILE    = os.path.join(DIR, "comp.db")
-BACKUPS_DIR = os.path.join(DIR, "backups")
+from app.config import (
+    DIR, TPL_DIR, STATE_FILE, DB_FILE, BACKUPS_DIR,
+    LANES, CAT_COLORS, EVENT_TYPES, SCORING_PRESETS,
+    DEFAULT_CATEGORY_ORDER, UPDATE_MAX_BODY, _SAFE_STATIC_EXTS, _DEFAULT_COMP_CONFIG,
+)
+import app.sse as _sse_mod
+from app.sse import _sse_notify, _sse_condition
+from app.database import db, ensure_schema
+from app.utils import (
+    balanced_heats, _event_direction_flags, _safe_int,
+    _event_type_from_scoring, _filter_payload_to_active_lanes,
+    _default_inactive_judge, _protect_lane_stopped_timers,
+)
 
 app = Flask(__name__, template_folder=TPL_DIR, static_folder=None)
 
-LANES          = 4
-CATEGORY_ORDER = ["U80", "U90", "U105", "U120", "Womens", "Mens Open"]
-CAT_COLORS     = {"U80":"#CC0044","U90":"#D4A017","U105":"#0088CC","U120":"#00AA44","Womens":"#CC0088","Mens Open":"#8800CC"}
-
-# Supported event types and their ranking direction
-# higher = True  → highest value wins (reps, weight, distance, object count)
-# higher = False → lowest value wins (time)
-EVENT_TYPES = {
-    "reps":     {"label": "Reps",     "unit": "reps", "higher": True,  "primary_metric": "reps",     "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
-    "weight":   {"label": "Weight",   "unit": "kg",   "higher": True,  "primary_metric": "weight",   "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
-    "distance": {"label": "Distance", "unit": "m",    "higher": True,  "primary_metric": "distance", "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
-    "time":     {"label": "Time",     "unit": "s",    "higher": False, "primary_metric": "time",     "secondary_metric": None,   "primary_direction": "lower",  "secondary_direction": None},
-    "object":   {"label": "Objects",  "unit": "objs", "higher": True,  "primary_metric": "objects",  "secondary_metric": "time", "primary_direction": "higher", "secondary_direction": "lower"},
-}
-
-# Promoter-facing scoring method presets — maps dropdown value → metric/direction fields
-SCORING_PRESETS = {
-    "max_weight":     {"primary_metric": "weight",   "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
-    "reps":           {"primary_metric": "reps",     "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
-    "distance":       {"primary_metric": "distance", "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
-    "time":           {"primary_metric": "time",     "secondary_metric": None,   "primary_direction": "lower",  "secondary_direction": None},
-    "objects_time":   {"primary_metric": "objects",  "secondary_metric": "time", "primary_direction": "higher", "secondary_direction": "lower"},
-    "distance_time":  {"primary_metric": "distance", "secondary_metric": "time", "primary_direction": "higher", "secondary_direction": "lower"},
-}
+CATEGORY_ORDER = list(DEFAULT_CATEGORY_ORDER)
 
 state_lock = threading.Lock()
-
-# ─── SSE (Server-Sent Events) infrastructure ─────────────────────────────────
-_sse_condition = threading.Condition()
-_sse_version   = 0
-
-def _sse_notify():
-    """Wake all SSE clients after a state change. Called outside state_lock."""
-    global _sse_version
-    with _sse_condition:
-        _sse_version += 1
-        _sse_condition.notify_all()
 
 def load_state():
     """Load state.json; returns {} on missing file, invalid JSON, or I/O error."""
@@ -214,83 +188,6 @@ def lock_category_start_counts():
                     s["category_start_counts"][k] = v
             save_state(s)
 
-def db():
-    con = sqlite3.connect(DB_FILE, timeout=10)
-    con.row_factory = sqlite3.Row
-    con.execute("PRAGMA journal_mode=WAL")
-    con.execute("PRAGMA synchronous=NORMAL")
-    return con
-
-def ensure_schema():
-    con = db(); cur = con.cursor()
-    cur.executescript("""
-        CREATE TABLE IF NOT EXISTS athletes (id INTEGER PRIMARY KEY, name TEXT, category TEXT, status TEXT DEFAULT 'active');
-        CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, name TEXT, event_number INTEGER, event_type TEXT DEFAULT 'reps');
-        CREATE TABLE IF NOT EXISTS heats (id INTEGER PRIMARY KEY, event_id INTEGER, category TEXT, heat_number INTEGER, lane INTEGER, athlete_name TEXT);
-        CREATE TABLE IF NOT EXISTS raw_results (id INTEGER PRIMARY KEY, athlete_id INTEGER, event_id INTEGER, raw_value REAL, tiebreak REAL, UNIQUE(athlete_id, event_id));
-        CREATE TABLE IF NOT EXISTS competition_state (id INTEGER PRIMARY KEY, category TEXT, event INTEGER, heat INTEGER);
-    """)
-    # Migrate: add event_type column if it doesn't exist yet
-    try:
-        cur.execute("ALTER TABLE events ADD COLUMN event_type TEXT DEFAULT 'reps'")
-        con.commit()
-    except: pass
-    # Migrate: add tiebreak column to raw_results if missing
-    try:
-        cur.execute("ALTER TABLE raw_results ADD COLUMN tiebreak REAL")
-        con.commit()
-    except: pass
-    # Migrate: add result_type column (score | dns | dnf)
-    try:
-        cur.execute("ALTER TABLE raw_results ADD COLUMN result_type TEXT DEFAULT 'score'")
-        con.commit()
-    except: pass
-    # SECTION 3: add extended scoring structure columns
-    for col_sql in [
-        "ALTER TABLE events ADD COLUMN primary_metric TEXT",
-        "ALTER TABLE events ADD COLUMN secondary_metric TEXT",
-        "ALTER TABLE events ADD COLUMN primary_direction TEXT DEFAULT 'higher'",
-        "ALTER TABLE events ADD COLUMN secondary_direction TEXT",
-    ]:
-        try: cur.execute(col_sql); con.commit()
-        except: pass
-    # Backfill from event_type for existing rows
-    _type_map = {
-        "reps":     ("reps",     None,   "higher", None),
-        "weight":   ("weight",   None,   "higher", None),
-        "distance": ("distance", None,   "higher", None),
-        "time":     ("time",     None,   "lower",  None),
-        "object":   ("objects",  "time", "higher", "lower"),
-    }
-    for _etype, (_pm, _sm, _pd, _sd) in _type_map.items():
-        cur.execute(
-            "UPDATE events SET primary_metric=?, secondary_metric=?, "
-            "primary_direction=?, secondary_direction=? "
-            "WHERE event_type=? AND primary_metric IS NULL",
-            (_pm, _sm, _pd, _sd, _etype)
-        )
-    con.commit(); con.close()
-
-def balanced_heats(athletes, lanes):
-    """
-    Balance heats so the difference between heats is at most one athlete.
-    Avoids single-athlete heats. Assign athletes sequentially, preserving order.
-    Example: 17 athletes, 4 lanes → Heat1: 3, Heat2: 3, Heat3: 3, Heat4: 4, Heat5: 4.
-    """
-    n = len(athletes)
-    if n == 0:
-        return []
-    n_heats = math.ceil(n / lanes)
-    base = n // n_heats
-    remainder = n % n_heats
-    heats = []
-    idx = 0
-    for i in range(n_heats):
-        size = base + (1 if i >= n_heats - remainder else 0)
-        heats.append(athletes[idx:idx + size])
-        idx += size
-    return heats
-
 def get_comp_state():
     con = db()
     row = con.execute("SELECT category,event,heat FROM competition_state").fetchone()
@@ -312,19 +209,6 @@ def get_heat_lanes(category, heat):
     return [dict(r) for r in rows]
 
 # ─── SCORING ENGINE ──────────────────────────────────────────────────────────
-
-def _event_direction_flags(event_row, event_type):
-    """Derive primary_higher, has_secondary, secondary_higher from event row or EVENT_TYPES."""
-    if event_row and event_row.get("primary_direction"):
-        primary_higher = (event_row["primary_direction"] == "higher")
-    else:
-        primary_higher = EVENT_TYPES.get(event_type, {"higher": True})["higher"]
-    if event_row and event_row.get("secondary_direction"):
-        secondary_higher = (event_row["secondary_direction"] == "higher")
-    else:
-        secondary_higher = False
-    has_secondary = bool(event_row and event_row.get("secondary_metric"))
-    return primary_higher, has_secondary, secondary_higher
 
 def _compute_event_points_core(con, event_id, category, total_athletes, primary_higher, has_secondary, secondary_higher):
     """
@@ -888,8 +772,8 @@ def stream():
         seen_version = -1
         while True:
             with _sse_condition:
-                changed = _sse_condition.wait_for(lambda: _sse_version != seen_version, timeout=30)
-                seen_version = _sse_version
+                changed = _sse_condition.wait_for(lambda: _sse_mod._sse_version != seen_version, timeout=30)
+                seen_version = _sse_mod._sse_version
             if changed:
                 data = load_state()
                 try:
@@ -951,8 +835,6 @@ def state_json():
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
-
-UPDATE_MAX_BODY = 512 * 1024  # 512 KB max for /update to avoid DoS
 
 def _apply_judge_scores_to_raw_results(judge_payload=None):
     """When in engine mode, write judge panel scores (judgeL1..judgeL4) into raw_results for current heat/event.
@@ -1037,56 +919,6 @@ def _active_lane_count():
     """Number of active lanes from state['competition_config']['lanes'] (1-8). Used so only judgeL1..judgeL{N} are updated; inactive lanes are forced to timerRunning=False."""
     return get_lane_count()
 
-def _filter_payload_to_active_lanes(payload, lane_count):
-    """Return a copy of payload with only judgeL1..judgeL{lane_count} (and resetAllTimers, other keys).
-    Lanes beyond lane_count are ignored so they are not updated by master/lane pushes."""
-    out = {}
-    for k, v in payload.items():
-        if k == "resetAllTimers":
-            out[k] = v
-        elif k.startswith("judgeL"):
-            try:
-                idx = int(k[6:])
-                if 1 <= idx <= lane_count:
-                    out[k] = v
-            except (ValueError, TypeError):
-                pass
-        else:
-            out[k] = v
-    return out
-
-def _default_inactive_judge():
-    """Default judge state for inactive lanes (timer not running)."""
-    return {"reps": 0, "light": "none", "timerRunning": False, "timerRemaining": 60, "timerSecs": 60, "primaryValue": "", "secondaryValue": ""}
-
-def _protect_lane_stopped_timers(payload, current):
-    """Given current state, modify payload so any lane that has stopped (timerRunning false,
-    remaining != secs) is not overwritten with timerRunning true. Use this with current state
-    read under the same lock as the merge to avoid races."""
-    if payload.get("resetAllTimers") is True:
-        return
-    for i in range(1, 9):
-        key = "judgeL" + str(i)
-        inc = payload.get(key)
-        cur = current.get(key)
-        if not isinstance(inc, dict) or not isinstance(cur, dict):
-            continue
-        cur_stopped = cur.get("timerRunning") is False
-        inc_running = inc.get("timerRunning") is True
-        cur_secs = cur.get("timerSecs")
-        cur_rem = cur.get("timerRemaining")
-        if cur_secs is not None and cur_rem is not None:
-            try:
-                if abs(float(cur_rem) - float(cur_secs)) < 0.01:
-                    continue
-            except (TypeError, ValueError):
-                pass
-        if cur_stopped and inc_running:
-            payload[key] = dict(inc)
-            payload[key]["timerRunning"] = False
-            if "timerRemaining" in cur:
-                payload[key]["timerRemaining"] = cur["timerRemaining"]
-
 @app.route("/update", methods=["POST", "OPTIONS"])
 def update_state():
     if request.method == "OPTIONS":
@@ -1133,9 +965,6 @@ def proxy():
         return resp
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-# Safe extensions for broadcast overlay files
-_SAFE_STATIC_EXTS = {".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf", ".mp4", ".webm"}
 
 @app.route("/<path:filename>")
 def static_files(filename):
@@ -1309,18 +1138,6 @@ def action_prev_heat():
     cs = get_comp_state()
     if cs["heat"] > 1: set_comp_state(cs["category"], cs["event"], cs["heat"]-1); sync_comp_to_broadcast()
     return redirect(request.referrer or "/comp/callroom")
-
-def _safe_int(val, default, min_val=None, max_val=None):
-    """Parse form/query int without raising; clamp to [min_val, max_val] if given."""
-    try:
-        n = int(val)
-    except (TypeError, ValueError):
-        return default
-    if min_val is not None and n < min_val:
-        return min_val
-    if max_val is not None and n > max_val:
-        return max_val
-    return n
 
 @app.route("/comp/action/set_heat", methods=["GET", "POST"])
 def action_set_heat():
@@ -1546,22 +1363,6 @@ def action_delete_event():
             cur.execute("UPDATE events SET event_number=? WHERE id=?", (i, ev["id"]))
         con.commit(); con.close()
     return redirect(request.referrer or "/comp/events")
-
-def _event_type_from_scoring(primary_metric, secondary_metric):
-    """Map primary/secondary metric to event_type so Run/Results pages show correct unit."""
-    if primary_metric == "weight" and not secondary_metric:
-        return "weight"
-    if primary_metric == "reps":
-        return "reps"
-    if primary_metric == "distance" and not secondary_metric:
-        return "distance"
-    if primary_metric == "time":
-        return "time"
-    if primary_metric == "objects" and secondary_metric == "time":
-        return "object"
-    if primary_metric == "distance" and secondary_metric == "time":
-        return "distance"  # unit "m"; tiebreak used in scoring
-    return "reps"
 
 @app.route("/comp/action/update_event_scoring", methods=["POST"])
 def action_update_event_scoring():
@@ -2072,14 +1873,6 @@ def api_event_points():
 # `python server.py` (direct) and `gunicorn server:app` (production).
 # Previously all of this lived inside `if __name__ == "__main__":` which
 # Gunicorn never executes, causing silent failures on every production start.
-
-_DEFAULT_COMP_CONFIG = {
-    "lanes": 4,
-    "scoring_mode": "fixed_points",
-    "heat_order_mode": "previous_event",
-    "final_event_order_mode": "leaderboard",
-}
-
 
 def _init_state_file():
     """Create state.json with safe defaults if missing; backfill any keys added
