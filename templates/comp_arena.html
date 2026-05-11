@@ -55,6 +55,22 @@
   <a href="/comp/events" class="btn btn-outline">Setup</a>
   <div class="auto-refresh"><div class="live-dot"></div>Auto-refreshes every 5s</div>
 </div>
-<script>setTimeout(()=>location.reload(), 5000);</script>
+<script>
+// Reload only when the active event or heat changes, not on a fixed timer.
+// Falls back to 30s interval if SSE is unavailable.
+(function() {
+  var _ev = {{ state.event | tojson }};
+  var _ht = {{ state.heat  | tojson }};
+  var _fallback = setInterval(() => location.reload(), 30000);
+  var _es = new EventSource('/stream');
+  _es.onopen  = function() { clearInterval(_fallback); };
+  _es.onmessage = function(e) {
+    try {
+      var d = JSON.parse(e.data);
+      if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
+    } catch(ex) {}
+  };
+})();
+</script>
 </body>
 </html>

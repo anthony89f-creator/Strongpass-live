@@ -147,18 +147,20 @@
 </div>
 
 <script>
-async function loadState() {
-  try {
-    await fetch('/state.json?t=' + Date.now(), {cache:'no-store'});
+// SSE connection drives the server status indicator — no periodic poll needed.
+(function startStatusSSE() {
+  const es = new EventSource('/stream');
+  es.onopen  = () => {
     document.getElementById('status-dot').className = 'status-dot ok';
     document.getElementById('status-text').textContent = 'Live';
-  } catch(e) {
+  };
+  es.onerror = () => {
     document.getElementById('status-dot').className = 'status-dot';
     document.getElementById('status-text').textContent = 'Offline';
-  }
-}
-loadState();
-setInterval(loadState, 5000);
+    es.close();
+    setTimeout(startStatusSSE, 3000);
+  };
+})();
 </script>
 </body>
 </html>

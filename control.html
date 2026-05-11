@@ -691,20 +691,19 @@ let state = {
 };
 
 // ─── CONNECTION ───────────────────────────────────────────────────────────────
-async function checkConnection() {
-  try {
-    const r = await fetch('/state.json?t=' + Date.now());
-    if (r.ok) { setConn(true); return true; }
-  } catch(e) {}
-  setConn(false); return false;
-}
 function setConn(ok) {
   document.getElementById('conn-dot').className = 'conn-dot' + (ok?' ok':'');
   document.getElementById('conn-text').textContent = ok ? 'Connected' : 'No Server';
   document.getElementById('conn-text').style.color = ok ? 'var(--green-bright)' : '#FF4444';
 }
-setInterval(checkConnection, 3000);
-checkConnection();
+
+// SSE connection drives the status dot — no periodic poll needed.
+(function startConnSSE() {
+  const es = new EventSource('/stream');
+  es.onopen  = () => setConn(true);
+  es.onerror = () => { setConn(false); es.close(); setTimeout(startConnSSE, 3000); };
+  // Ignore onmessage — syncFromCompEngine handles data updates on its own schedule.
+})();
 
 // ─── PUSH UPDATE ──────────────────────────────────────────────────────────────
 async function pushUpdate() {
