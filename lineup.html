@@ -166,7 +166,7 @@
   <div class="progress-bar" id="progress-bar"></div>
 </div>
 
-<script src="ws-client.js"></script>
+<script src="sse-client.js"></script>
 <script>
 let state = {
   lineup: false,
@@ -292,10 +292,6 @@ window.onStateUpdate = function(d) {
   }
 };
 
-fetch('/state.json?t=' + Date.now())
-  .then(r => r.json())
-  .then(d => { Object.assign(state, d); render(); })
-  .catch(() => render());
 </script>
 </body>
 </html>

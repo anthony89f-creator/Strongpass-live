@@ -115,7 +115,7 @@
 
 <div id="lower-thirds"></div>
 
-<script src="ws-client.js"></script>
+<script src="sse-client.js"></script>
 <script>
 let state = {
   lowerThirdVisible:false, eventBarVisible:false,
@@ -166,11 +166,6 @@ function render() {
 }
 
 window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
-
-fetch('/state.json?t=' + Date.now())
-  .then(r => r.json())
-  .then(data => { Object.assign(state, data); render(); })
-  .catch(() => buildCards(false));
 </script>
 </body>
 </html>

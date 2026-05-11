@@ -83,7 +83,7 @@
   </div>
 </div>
 
-<script src="ws-client.js"></script>
+<script src="sse-client.js"></script>
 <script>
 let visible = false;
 
@@ -113,11 +113,6 @@ function update(data) {
 }
 
 window.onStateUpdate = function(d) { update(d); };
-
-fetch('/state.json?t=' + Date.now())
-  .then(r => r.json())
-  .then(d => update(d))
-  .catch(() => {});
 </script>
 </body>
 </html>

@@ -130,7 +130,7 @@
   </div>
 </div>
 
-<script src="ws-client.js"></script>
+<script src="sse-client.js"></script>
 <script>
 let state = {
   scorebug:false,
@@ -187,12 +187,6 @@ function render() {
 }
 
 window.onStateUpdate = function(data) { Object.assign(state, data); render(); };
-
-// Also fetch state immediately on load so we don't wait for ws-client
-fetch('/state.json?t=' + Date.now())
-  .then(r => r.json())
-  .then(data => { Object.assign(state, data); render(); })
-  .catch(() => render());
 </script>
 </body>
 </html>

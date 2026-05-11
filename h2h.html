@@ -175,7 +175,7 @@
   </div>
 </div>
 
-<script src="ws-client.js"></script>
+<script src="sse-client.js"></script>
 <script>
 let state = {
   h2h: false,
@@ -220,11 +220,6 @@ function render() {
 }
 
 window.onStateUpdate = function(d) { Object.assign(state, d); render(); };
-
-fetch('/state.json?t=' + Date.now())
-  .then(r => r.json())
-  .then(d => { Object.assign(state, d); render(); })
-  .catch(() => render());
 </script>
 </body>
 </html>

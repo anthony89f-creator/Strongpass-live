@@ -127,7 +127,7 @@
   <div id="particles"></div>
 </div>
 
-<script src="ws-client.js"></script>
+<script src="sse-client.js"></script>
 <script>
 let state = {
   champion:false, champName:"THOR BJORNSSON", champDetail:"Iceland · Professional Division",
@@ -163,11 +163,6 @@ function render() {
 }
 
 window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
-
-fetch('/state.json?t=' + Date.now())
-  .then(r => r.json())
-  .then(data => { Object.assign(state, data); render(); })
-  .catch(() => render());
 </script>
 </body>
 </html>
