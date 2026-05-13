@@ -69,11 +69,9 @@ None currently active. TD-C1 (Gunicorn init bypass) was resolved in Phase 1.
 **Impact:** Broadcast display state and competition engine config are mixed in one file. A judge button tap rewrites competition config fields and vice versa.  
 **Fix:** Separate into `broadcast_state.json` and engine config in DB. Medium-term architectural change.
 
-### M5 — `comp_leaderboard.html` Template Ignores Computed Data
-**Source:** TD-L8  
-**File:** `templates/comp_leaderboard.html`  
-**Impact:** Server computes full `detailed_rows` + `events_list` but template only renders name + total score.  
-**Fix:** Implement per-event breakdown columns in the template. Phase 5 in refactor plan.
+### ~~M5~~ — `comp_leaderboard.html` Template Ignores Computed Data
+**Resolved in:** `ab093ec`  
+Full per-event breakdown table now rendered when category selected. SSE live updates added. Public `/api/results/<cat>` endpoint added for spectator pages.
 
 ### M6 — No `/health` Endpoint
 **Source:** TD-L4  
@@ -141,6 +139,9 @@ None currently active. TD-C1 (Gunicorn init bypass) was resolved in Phase 1.
 |----|-------------|----------|
 | TD-C1 | Gunicorn bypasses all initialization | Phase 1 (`1f69015`) |
 | TD-C3 | SSE triggers full leaderboard recalc per update | Phase 4 (`074b7bd`) |
+| M5 | comp_leaderboard.html ignores detailed_rows | Phase 5 (`ab093ec`) |
+| Mobile | comp_results_public.html hides event cols on phones | Phase 5 (`5ce14d4`) |
+| Polling | comp_heats.html 10s setInterval reload | Phase 5 (`ab093ec`) |
 | TD-M4 | 8 overlays using ws-client.js 500ms polling | Phase 2 (`f624a8e`) |
 | TD-M3 | `control.html` polling only | Phase 2 (`23e1bc6`) |
 | TD-M6 | `results.html` 15s polling | Phase 2 (`88c48f3`) |

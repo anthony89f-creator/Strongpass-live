@@ -1,6 +1,7 @@
 # Project Status — StrongPass Competition OS
 **Last updated:** 2026-05-13  
-**Status:** Beta — live, protected, pre-production
+**Status:** Beta — live, protected, pre-production  
+**Last updated:** 2026-05-13 (post phase3-lb)
 
 ---
 
@@ -28,8 +29,8 @@
 
 | Layer | Status |
 |-------|--------|
-| `server.py` | 2,036 lines — monolith with app/ helpers extracted |
-| `app/config.py` | Done — all constants |
+| `server.py` | ~2,070 lines — monolith with app/ helpers extracted |
+| `app/config.py` | Done — all constants; weight_reps event type added |
 | `app/sse.py` | Done — SSE condition + notify |
 | `app/database.py` | Done — `db()` + `ensure_schema()` |
 | `app/utils.py` | Done — pure helpers |
@@ -67,6 +68,18 @@ Extracted `app/config.py`, `app/sse.py`, `app/database.py`, `app/utils.py`.
 - `load_state()` call count reduced in hot path
 - Before: ~551 DB queries/tick (8 SSE clients, 6 cats, 5 events). After: ~20 queries/tick (no score change), ~85 (score change)
 
+### Phase 5 (scoring) — Weight+Reps Event Type
+**Commit:** `d8e0975`  
+Added `weight_reps` as a first-class scoring type (heavier weight wins, more reps as tiebreak). Changes: `app/config.py` (EVENT_TYPES, SCORING_PRESETS), `app/utils.py` (_event_type_from_scoring), `judge.html` (block-weight-reps with weight input + rep counter), `comp_home.html` (preset dropdown), `comp_run.html` (secondary input step fix for reps).
+
+### Phase 5 (mobile) — Responsive Redesign
+**Commits:** `5ce14d4`, `b12c759`  
+`comp_results_public.html`: replaced `display:none` on mobile with horizontal scroll + sticky min-width (all event data now visible on phones). All 7 other comp templates: added `@media(max-width:600px)` breakpoints. `comp_callroom.html`: `@media(max-width:768px)` single-column stacked layout.
+
+### Phase 5 (leaderboard) — Architecture Redesign
+**Commit:** `ab093ec`  
+`comp_results_public.html`: SSE-driven DOM re-render via `/api/results/<cat>` replaces `location.reload()` — no flicker for spectators. `comp_leaderboard.html`: full per-event breakdown table (was name+total only, fixes M5), SSE live updates. `comp_heats.html`: 10s polling replaced with SSE-triggered reload. New public endpoint `/api/results/<category>` and updated `/comp/api/leaderboard` (version + optional detailed breakdown).
+
 ### Security — Beta Auth Gate
 **Commits:** `1f87961`, `1329897`  
 - `app/beta_auth.py`: sitewide cookie-based gate
@@ -83,8 +96,8 @@ Extracted `app/config.py`, `app/sse.py`, `app/database.py`, `app/utils.py`.
 
 | Plan Phase | Description | State |
 |------------|-------------|-------|
-| 4 (scoring) | Weight & Reps event type | **Not started** |
-| 5 | Leaderboard expansion (per-event breakdown) | **Not started** |
+| 4 (scoring) | Weight & Reps event type | **Done** (`d8e0975`) |
+| 5 | Leaderboard expansion (per-event breakdown) | **Done** (`ab093ec`) |
 | 6 | DB layer — request-scoped connection, migration framework | **Not started** |
 | 7 | Frontend cleanup — shared CSS, base template | **Not started** |
 | 9 | Production hardening — logging, healthcheck, .env, Docker | **Not started** |

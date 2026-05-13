@@ -22,6 +22,9 @@
 - ✅ Partial modularisation — app/ package (Phase 3)
 - ✅ Performance optimization — results cache + change detection (Phase 4 perf)
 - ✅ Beta access gate — sitewide cookie auth + robots.txt noindex
+- ✅ Weight+Reps scoring type (Phase 5 scoring, `d8e0975`)
+- ✅ Mobile-first responsive redesign — all comp templates (`5ce14d4`, `b12c759`)
+- ✅ Leaderboard architecture — SSE DOM updates, per-event breakdown, public API (`ab093ec`)
 
 ---
 
@@ -79,11 +82,11 @@ Video integration, VOD hosting, content delivery for competitions.
 
 | Phase | Item | Priority | Depends on |
 |-------|------|----------|-----------|
-| Scoring | Weight & Reps event type | High | Nothing |
+| Scoring | Weight & Reps event type | ~~High~~ **Done** | — |
 | Security | CSRF protection on all forms | High | Nothing |
 | DB | Request-scoped connection (Flask `g`) | Medium | Nothing |
 | DB | Fix bare `except: pass` in migrations | Medium | Nothing |
-| Leaderboard | Per-event breakdown in comp_leaderboard.html | Medium | Nothing |
+| Leaderboard | Per-event breakdown in comp_leaderboard.html | ~~Medium~~ **Done** | — |
 | Hardening | `/health` endpoint | Medium | Nothing |
 | Hardening | Structured logging (replace bare except) | Medium | Nothing |
 | Hardening | `requirements.txt` with pinned versions | Low | Nothing |
