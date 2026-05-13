@@ -1,7 +1,7 @@
 # Project Status — StrongPass Competition OS
 **Last updated:** 2026-05-13  
 **Status:** Beta — live, protected, pre-production  
-**Last updated:** 2026-05-13 (post phase3-lb)
+**Last updated:** 2026-05-13 (post phase5 deployment verification)
 
 ---
 
@@ -103,6 +103,29 @@ Added `weight_reps` as a first-class scoring type (heavier weight wins, more rep
 | 9 | Production hardening — logging, healthcheck, .env, Docker | **Not started** |
 | 10 | Security — CSRF, rate limiting | **Not started** |
 | 11 | Deployment docs | Partial |
+
+---
+
+## Phase 5 Deployment Verification (2026-05-13)
+
+All checks passed against live `strongpass.live`:
+
+| Check | Result |
+|-------|--------|
+| Beta gate (no auth → 401) | ✅ |
+| Beta gate (`?token=` → 200) | ✅ |
+| Comp admin auth (beta-only → 401, beta+comp → 200) | ✅ |
+| SSE stream `/stream` | ✅ 200 |
+| `/api/results/<category>` JSON (version, events, rows) | ✅ |
+| `/comp/api/leaderboard?detailed=1` JSON | ✅ |
+| `weight_reps` option in event setup dropdown | ✅ |
+| `judge.html` `block-weight-reps` block present | ✅ |
+| All 7 OBS overlays (`*.html`) | ✅ 200 |
+| Overlays use `sse-client.js` (not polling) | ✅ |
+| `comp_leaderboard` detailed breakdown CSS/HTML | ✅ |
+| `comp_results_public` uses fetch+SSE (no `location.reload`) | ✅ |
+| `comp_heats` uses SSE-triggered reload (no `setInterval`) | ✅ |
+| Mobile `viewport` meta on all comp templates | ✅ |
 
 ---
 
