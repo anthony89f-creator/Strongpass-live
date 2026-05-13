@@ -46,6 +46,7 @@ def _invalidate_results_cache():
     global _results_dirty
     with _results_lock:
         _results_dirty = True
+        _sse_mod._results_version += 1
 
 def _get_cached_results():
     """Return (events_list, results_by_cat), recomputing only when dirty. Thread-safe."""
@@ -809,9 +810,11 @@ def stream():
                 seen_version = _sse_mod._sse_version
             if changed:
                 data = load_state()
-                evs, res = _get_cached_results()
+                evs, _res = _get_cached_results()
                 data["events"] = evs
-                data["results"] = res
+                data["results_version"] = _sse_mod._results_version
+                # results blob omitted from SSE stream (126 KB) — consumers fetch
+                # /state.json or the API endpoints when results_version changes
                 yield f"data: {json.dumps(data)}\n\n"
             else:
                 yield ": keepalive\n\n"
@@ -856,6 +859,7 @@ def state_json():
     evs, res = _get_cached_results()
     data["events"] = evs
     data["results"] = res
+    data["results_version"] = _sse_mod._results_version
     resp = app.response_class(response=json.dumps(data), mimetype="application/json")
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -908,12 +912,15 @@ def _apply_judge_scores_to_raw_results(judge_payload=None):
                 try: raw_value = float(r)
                 except (TypeError, ValueError): pass
         elif primary_metric == "time":
-            # Time events: score = elapsed seconds = timerSecs - timerRemaining
+            # Time events: only commit a score when the timer has stopped.
+            # While timerRunning==True the elapsed value changes every tick; writing
+            # it each tick dirtied the results cache every second and fired an SSE
+            # event per tick.  The final time is captured when the timer stops.
             pv = jd.get("primaryValue")
             if pv is not None and str(pv).strip() != "":
                 try: raw_value = float(pv)
                 except (TypeError, ValueError): pass
-            if raw_value is None:
+            if raw_value is None and not jd.get("timerRunning"):
                 try:
                     secs = jd.get("timerSecs")
                     rem = jd.get("timerRemaining")
@@ -926,6 +933,13 @@ def _apply_judge_scores_to_raw_results(judge_payload=None):
                 try: raw_value = float(pv)
                 except (TypeError, ValueError): pass
             if secondary_metric == "time" and (primary_metric in ("objects", "distance")):
+                sv = jd.get("secondaryValue")
+                if sv is not None and str(sv).strip() != "":
+                    try: tiebreak = float(sv)
+                    except (TypeError, ValueError): pass
+            elif secondary_metric and secondary_metric != "time":
+                # Covers weight_reps (secondary_metric=="reps") and any future
+                # event type where a secondary numeric value acts as tiebreak.
                 sv = jd.get("secondaryValue")
                 if sv is not None and str(sv).strip() != "":
                     try: tiebreak = float(sv)
@@ -1306,6 +1320,7 @@ def action_generate_heats():
         generate_heats(); set_comp_state(CATEGORY_ORDER[0] if CATEGORY_ORDER else "", 1, 1)
     else:
         regenerate_remaining_heats()
+    _invalidate_results_cache()
     sync_comp_to_broadcast()
     set_competition_status("heats")
     return redirect("/comp/events")
@@ -1927,11 +1942,11 @@ def api_leaderboard():
             rows, events = get_leaderboard_detailed(cat)
         except Exception:
             rows, events = [], []
-        data = {"version": _sse_mod._sse_version,
+        data = {"version": _sse_mod._results_version,
                 "events": [{"name": ev["name"], "id": ev["id"]} for ev in events],
                 "rows": rows}
     else:
-        data = {"version": _sse_mod._sse_version,
+        data = {"version": _sse_mod._results_version,
                 "rows": get_leaderboard(category=cat if cat else None)}
     resp = jsonify(data)
     resp.headers["Access-Control-Allow-Origin"] = "*"
@@ -1946,7 +1961,7 @@ def api_results_category(category):
     except Exception:
         rows, events = [], []
     resp = jsonify({
-        "version": _sse_mod._sse_version,
+        "version": _sse_mod._results_version,
         "category": category,
         "events": [{"name": ev["name"], "id": ev["id"]} for ev in events],
         "rows": rows,

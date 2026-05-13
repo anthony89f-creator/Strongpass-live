@@ -172,11 +172,10 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 
 <div class="main">
 
-{% if rows %}
-
   <!-- Event column headers -->
   <div class="section-hdr">{{ selected_category }}</div>
   <div class="results-table">
+  {% if rows %}
   <div class="events-header-inner">
     <div class="ev-head-name">Athlete</div>
     <div class="ev-head-total">Total</div>
@@ -221,11 +220,12 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   {% endfor %}
   </div>
 
-{% elif category_order %}
-  <div class="empty-state">No results yet for {{ selected_category }}.</div>
-{% else %}
-  <div class="empty-state">Competition not yet started.</div>
-{% endif %}
+  {% else %}
+  <div class="empty-state" id="results-empty">
+    {% if category_order %}No results yet for {{ selected_category }}.{% else %}Competition not yet started.{% endif %}
+  </div>
+  {% endif %}
+  </div>
 
 </div>
 
@@ -287,10 +287,13 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   }
 
   function updateResults(data) {
-    if (data.version === lastVersion) return;
+    if (data.version <= lastVersion) return;
     lastVersion = data.version;
     var tableEl = document.querySelector('.results-table');
     if (!tableEl) return;
+    // Remove the no-results placeholder if present
+    var empty = document.getElementById('results-empty');
+    if (empty) empty.remove();
     tableEl.innerHTML = renderHeader(data.events) + data.rows.map(renderRow).join('');
   }
 
@@ -303,7 +306,14 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 
   function connect() {
     var es = new EventSource('/stream');
-    es.onmessage = function() { fetchAndUpdate(); };
+    es.onmessage = function(evt) {
+      try {
+        var msg = JSON.parse(evt.data);
+        // Only fetch when results_version advances — timer ticks don't bump it
+        if (msg.results_version !== undefined && msg.results_version <= lastVersion) return;
+      } catch(e) {}
+      fetchAndUpdate();
+    };
     es.onerror = function() { es.close(); setTimeout(connect, 5000); };
   }
   connect();

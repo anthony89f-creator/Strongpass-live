@@ -89,9 +89,20 @@
 </div>
 <script>
 (function() {
+  var lastResultsVersion = null;
   function connect() {
     var es = new EventSource('/stream');
-    es.onmessage = function() { location.reload(); };
+    es.onmessage = function(evt) {
+      try {
+        var msg = JSON.parse(evt.data);
+        // Reload only when heats/results data changed, not on timer ticks
+        if (msg.results_version !== undefined) {
+          if (msg.results_version <= lastResultsVersion) return;
+          lastResultsVersion = msg.results_version;
+        }
+      } catch(e) {}
+      location.reload();
+    };
     es.onerror = function() { es.close(); setTimeout(connect, 5000); };
   }
   connect();

@@ -226,12 +226,15 @@
     });
   }
 
-  function load() {
-    fetch('/state.json')
+  var lastResultsVersion = null;
+
+  function fetchState() {
+    fetch('/state.json?t=' + Date.now(), {cache: 'no-store'})
       .then(function(r) { return r.json(); })
       .then(function(state) {
         if (state.compName) compSub.textContent = state.compName;
         if (state.compSub) compSub.textContent = (compSub.textContent ? compSub.textContent + ' · ' : '') + state.compSub;
+        if (state.results_version !== undefined) lastResultsVersion = state.results_version;
         buildTable(state);
       })
       .catch(function() {
@@ -240,20 +243,19 @@
       });
   }
 
-  catSelect.addEventListener('change', function() {
-    fetch('/state.json')
-      .then(function(r) { return r.json(); })
-      .then(buildTable)
-      .catch(function() {});
-  });
+  catSelect.addEventListener('change', fetchState);
 
-  window.onStateUpdate = function(state) {
-    if (state.compName) compSub.textContent = state.compName;
-    if (state.compSub) compSub.textContent = (compSub.textContent ? compSub.textContent + ' · ' : '') + state.compSub;
-    buildTable(state);
+  // SSE payload no longer carries the results blob — fetch /state.json only when
+  // results_version advances (score change) not on every timer tick.
+  window.onStateUpdate = function(d) {
+    if (d.compName) compSub.textContent = d.compName;
+    if (d.compSub) compSub.textContent = (compSub.textContent ? compSub.textContent + ' · ' : '') + d.compSub;
+    var rv = d.results_version;
+    if (rv !== undefined && rv <= lastResultsVersion) return;
+    fetchState();
   };
 
-  load();
+  fetchState();
 })();
 </script>
 

@@ -1,7 +1,8 @@
 import threading
 
-_sse_condition = threading.Condition()
-_sse_version   = 0
+_sse_condition   = threading.Condition()
+_sse_version     = 0
+_results_version = 0  # increments only when scores/results data changes
 
 
 def _sse_notify():
