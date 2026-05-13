@@ -230,22 +230,81 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 </div>
 
 <script>
-// Auto-reload via SSE: reconnect and reload page content on state change
 (function() {
-  let lastReload = 0;
-  function connect() {
-    const es = new EventSource('/stream');
-    es.onmessage = function() {
-      const now = Date.now();
-      if (now - lastReload > 3000) {
-        lastReload = now;
-        location.reload();
+  const CAT = {{ selected_category | tojson }};
+  let lastVersion = null;
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtPts(v) { return v === Math.floor(v) ? Math.floor(v) : v; }
+  function fmtRaw(v) {
+    if (v === null || v === undefined) return '';
+    var n = parseFloat(v);
+    return isNaN(n) ? '' : (n % 1 === 0 ? n : n.toFixed(2).replace(/\.?0+$/, ''));
+  }
+
+  function renderHeader(events) {
+    var evHeads = events.map(function(e) {
+      return '<div class="ev-head-event">' + escHtml(e.name) + '</div>';
+    }).join('');
+    return '<div class="events-header-inner">' +
+      '<div class="ev-head-name">Athlete</div>' +
+      '<div class="ev-head-total">Total</div>' +
+      '<div class="ev-head-events">' + evHeads + '</div>' +
+      '</div>';
+  }
+
+  function renderRow(r) {
+    var rnk = r.overall_rank;
+    var rnkCls = rnk <= 3 ? 'rank-' + rnk : '';
+    var rankIconCls = rnk <= 3 ? 'r' + rnk : '';
+    var evCells = r.event_data.map(function(ed) {
+      var inner;
+      if (ed.result_type === 'dns') {
+        inner = '<span class="cell-dns">DNS</span>';
+      } else if (ed.result_type === 'dnf') {
+        inner = '<span class="cell-dnf">DNF</span>';
+        if (ed.raw_value !== null && ed.raw_value !== undefined) {
+          inner += '<span class="cell-raw">' + fmtRaw(ed.raw_value) + '</span>';
+        }
+      } else if (ed.raw_value !== null && ed.raw_value !== undefined) {
+        var topCls = ed.rank === 1 ? ' top' : '';
+        inner = '<span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + '</span>' +
+                '<span class="cell-raw">' + fmtRaw(ed.raw_value) + '</span>' +
+                (ed.rank ? '<span class="cell-rank">#' + ed.rank + '</span>' : '');
+      } else {
+        inner = '<span class="cell-empty">—</span>';
       }
-    };
-    es.onerror = function() {
-      es.close();
-      setTimeout(connect, 5000);
-    };
+      return '<div class="ath-event-cell">' + inner + '</div>';
+    }).join('');
+    return '<div class="athlete-row ' + rnkCls + '">' +
+      '<div class="ath-rank ' + rankIconCls + '">' + rnk + '</div>' +
+      '<div class="ath-name-col">' + escHtml(r.name) + '</div>' +
+      '<div class="ath-total"><div class="ath-total-pts">' + fmtPts(r.total_points) + '</div><div class="ath-total-lbl">pts</div></div>' +
+      '<div class="ath-events">' + evCells + '</div>' +
+      '</div>';
+  }
+
+  function updateResults(data) {
+    if (data.version === lastVersion) return;
+    lastVersion = data.version;
+    var tableEl = document.querySelector('.results-table');
+    if (!tableEl) return;
+    tableEl.innerHTML = renderHeader(data.events) + data.rows.map(renderRow).join('');
+  }
+
+  function fetchAndUpdate() {
+    fetch('/api/results/' + encodeURIComponent(CAT))
+      .then(function(r) { return r.json(); })
+      .then(updateResults)
+      .catch(function() {});
+  }
+
+  function connect() {
+    var es = new EventSource('/stream');
+    es.onmessage = function() { fetchAndUpdate(); };
+    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
   }
   connect();
 })();

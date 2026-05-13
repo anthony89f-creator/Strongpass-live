@@ -88,7 +88,14 @@
 {% endif %}
 </div>
 <script>
-setInterval(() => location.reload(), 10000);
+(function() {
+  function connect() {
+    var es = new EventSource('/stream');
+    es.onmessage = function() { location.reload(); };
+    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+  }
+  connect();
+})();
 </script>
 </body>
 </html>

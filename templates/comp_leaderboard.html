@@ -35,6 +35,41 @@
   .lb-row.pos-2 .lb-score { color:var(--silver); }
   .lb-row.pos-3 .lb-score { color:var(--bronze); }
   .empty { padding:30px; text-align:center; color:var(--dim); font-family:'Barlow',sans-serif; }
+  /* Per-event breakdown table (when category selected) */
+  .results-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .ev-table-header, .ev-table-row {
+    display:flex; align-items:stretch; min-width:480px;
+    border:1px solid var(--border); border-radius:6px; margin-bottom:3px; overflow:hidden;
+  }
+  .ev-table-header { background:var(--surface2); margin-bottom:6px; }
+  .ev-table-row:hover { background:var(--surface2); }
+  .ev-table-row.rank-1 { border-color:rgba(255,215,0,0.3); }
+  .ev-table-row.rank-2 { border-color:rgba(192,192,192,0.2); }
+  .ev-table-row.rank-3 { border-color:rgba(205,127,50,0.2); }
+  .ev-rank { width:36px; min-width:36px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900; color:var(--dim); border-right:1px solid var(--border); }
+  .ev-rank.r1 { color:var(--gold); }
+  .ev-rank.r2 { color:var(--silver); }
+  .ev-rank.r3 { color:var(--bronze); }
+  .ev-name-col { width:140px; min-width:140px; padding:8px 10px; font-size:14px; font-weight:800; text-transform:uppercase; border-right:1px solid var(--border); display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ev-total-col { width:60px; min-width:60px; display:flex; align-items:center; justify-content:center; flex-direction:column; border-right:1px solid var(--border); padding:4px; }
+  .ev-total-pts { font-size:18px; font-weight:900; color:var(--gold); line-height:1; }
+  .ev-total-lbl { font-size:8px; color:var(--dim); letter-spacing:0.12em; text-transform:uppercase; }
+  .ev-events { flex:1; display:flex; }
+  .ev-event-cell { flex:1; min-width:52px; padding:4px 3px; text-align:center; border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+  .ev-event-cell:last-child { border-right:none; }
+  .ev-head-rank { width:36px; min-width:36px; padding:6px; border-right:1px solid var(--border); }
+  .ev-head-name { width:140px; min-width:140px; padding:6px 10px; border-right:1px solid var(--border); font-size:9px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:var(--dim); }
+  .ev-head-total { width:60px; min-width:60px; padding:6px; border-right:1px solid var(--border); font-size:9px; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); text-align:center; }
+  .ev-head-events { flex:1; display:flex; }
+  .ev-head-event { flex:1; min-width:52px; padding:6px 3px; text-align:center; border-right:1px solid var(--border); font-size:9px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim2); line-height:1.2; }
+  .ev-head-event:last-child { border-right:none; }
+  .cell-pts { font-size:13px; font-weight:900; color:var(--text); line-height:1; }
+  .cell-pts.top { color:var(--gold); }
+  .cell-raw { font-size:9px; color:var(--dim); font-family:'Barlow',sans-serif; }
+  .cell-rank { font-size:8px; color:var(--dim); }
+  .cell-dns { font-size:9px; font-weight:800; letter-spacing:0.1em; color:var(--blue); background:rgba(0,136,255,0.1); padding:2px 4px; border-radius:3px; }
+  .cell-dnf { font-size:9px; font-weight:800; letter-spacing:0.1em; color:#FF4422; background:rgba(255,68,34,0.1); padding:2px 4px; border-radius:3px; }
+  .cell-empty { font-size:10px; color:var(--dim); }
   @media(max-width:600px) {
     .main { padding:12px; }
     .lb-row { height:auto; padding:8px 0; }
@@ -60,7 +95,54 @@
     <a href="/comp/leaderboard?category={{ cat }}" class="filter-btn {% if selected_cat==cat %}active{% endif %}">{{ cat }}</a>
     {% endfor %}
   </div>
-  <div class="section">
+  {% if selected_cat and detailed_rows %}
+  <!-- Per-event breakdown table (category selected) -->
+  <div class="results-table" id="results-table">
+    <div class="ev-table-header">
+      <div class="ev-head-rank"></div>
+      <div class="ev-head-name">Athlete</div>
+      <div class="ev-head-total">Total</div>
+      <div class="ev-head-events">
+        {% for ev in events_list %}
+        <div class="ev-head-event">{{ ev.name }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% for r in detailed_rows %}
+    {% set rnk = r.overall_rank %}
+    <div class="ev-table-row {% if rnk==1 %}rank-1{% elif rnk==2 %}rank-2{% elif rnk==3 %}rank-3{% endif %}">
+      <div class="ev-rank {% if rnk==1 %}r1{% elif rnk==2 %}r2{% elif rnk==3 %}r3{% endif %}">{{ rnk }}</div>
+      <div class="ev-name-col">{{ r.name }}</div>
+      <div class="ev-total-col">
+        <div class="ev-total-pts">{{ r.total_points | int if r.total_points == (r.total_points | int) else r.total_points }}</div>
+        <div class="ev-total-lbl">pts</div>
+      </div>
+      <div class="ev-events">
+        {% for ed in r.event_data %}
+        <div class="ev-event-cell">
+          {% if ed.result_type == 'dns' %}
+            <span class="cell-dns">DNS</span>
+          {% elif ed.result_type == 'dnf' %}
+            <span class="cell-dnf">DNF</span>
+          {% elif ed.raw_value is not none %}
+            <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}</span>
+            <span class="cell-raw">{{ ed.raw_value | round(2) }}</span>
+            {% if ed.rank %}<span class="cell-rank">#{{ ed.rank }}</span>{% endif %}
+          {% else %}
+            <span class="cell-empty">—</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% if not detailed_rows %}
+    <div class="empty">No results entered yet.</div>
+    {% endif %}
+  </div>
+  {% else %}
+  <!-- Overall view: simple list -->
+  <div class="section" id="results-table">
     {% if athletes %}
     {% for a in athletes %}
     {% set pos = loop.index %}
@@ -77,6 +159,86 @@
     <div class="empty">No results entered yet.</div>
     {% endif %}
   </div>
+  {% endif %}
 </div>
+<script>
+(function() {
+  var CAT = {{ selected_cat | tojson }};
+  if (!CAT) return;  // no SSE update for overall view
+  var lastVersion = null;
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtPts(v) { return v === Math.floor(v) ? Math.floor(v) : v; }
+  function fmtRaw(v) {
+    if (v === null || v === undefined) return '';
+    var n = parseFloat(v);
+    return isNaN(n) ? '' : (n % 1 === 0 ? n : n.toFixed(2).replace(/\.?0+$/, ''));
+  }
+
+  function renderTable(data) {
+    if (data.version === lastVersion) return;
+    lastVersion = data.version;
+    var tableEl = document.getElementById('results-table');
+    if (!tableEl) return;
+
+    var evHeads = data.events.map(function(e) {
+      return '<div class="ev-head-event">' + escHtml(e.name) + '</div>';
+    }).join('');
+    var header = '<div class="ev-table-header">' +
+      '<div class="ev-head-rank"></div>' +
+      '<div class="ev-head-name">Athlete</div>' +
+      '<div class="ev-head-total">Total</div>' +
+      '<div class="ev-head-events">' + evHeads + '</div>' +
+      '</div>';
+
+    var rows = data.rows.map(function(r) {
+      var rnk = r.overall_rank;
+      var rnkCls = rnk <= 3 ? 'rank-' + rnk : '';
+      var rankIconCls = rnk <= 3 ? 'r' + rnk : '';
+      var evCells = r.event_data.map(function(ed) {
+        var inner;
+        if (ed.result_type === 'dns') {
+          inner = '<span class="cell-dns">DNS</span>';
+        } else if (ed.result_type === 'dnf') {
+          inner = '<span class="cell-dnf">DNF</span>';
+        } else if (ed.raw_value !== null && ed.raw_value !== undefined) {
+          var topCls = ed.rank === 1 ? ' top' : '';
+          inner = '<span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + '</span>' +
+                  '<span class="cell-raw">' + fmtRaw(ed.raw_value) + '</span>' +
+                  (ed.rank ? '<span class="cell-rank">#' + ed.rank + '</span>' : '');
+        } else {
+          inner = '<span class="cell-empty">—</span>';
+        }
+        return '<div class="ev-event-cell">' + inner + '</div>';
+      }).join('');
+      return '<div class="ev-table-row ' + rnkCls + '">' +
+        '<div class="ev-rank ' + rankIconCls + '">' + rnk + '</div>' +
+        '<div class="ev-name-col">' + escHtml(r.name) + '</div>' +
+        '<div class="ev-total-col"><div class="ev-total-pts">' + fmtPts(r.total_points) + '</div><div class="ev-total-lbl">pts</div></div>' +
+        '<div class="ev-events">' + evCells + '</div>' +
+        '</div>';
+    }).join('');
+
+    tableEl.className = 'results-table';
+    tableEl.innerHTML = header + (rows || '<div class="empty">No results entered yet.</div>');
+  }
+
+  function fetchAndUpdate() {
+    fetch('/comp/api/leaderboard?category=' + encodeURIComponent(CAT) + '&detailed=1')
+      .then(function(r) { return r.json(); })
+      .then(renderTable)
+      .catch(function() {});
+  }
+
+  function connect() {
+    var es = new EventSource('/stream');
+    es.onmessage = function() { fetchAndUpdate(); };
+    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+  }
+  connect();
+})();
+</script>
 </body>
 </html>

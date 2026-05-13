@@ -1921,9 +1921,38 @@ def api_current_heat():
 
 @app.route("/comp/api/leaderboard")
 def api_leaderboard():
-    cat = request.args.get("category","")
-    resp = jsonify(get_leaderboard(category=cat if cat else None))
-    resp.headers["Access-Control-Allow-Origin"] = "*"; return resp
+    cat = request.args.get("category", "")
+    if request.args.get("detailed") == "1" and cat:
+        try:
+            rows, events = get_leaderboard_detailed(cat)
+        except Exception:
+            rows, events = [], []
+        data = {"version": _sse_mod._sse_version,
+                "events": [{"name": ev["name"], "id": ev["id"]} for ev in events],
+                "rows": rows}
+    else:
+        data = {"version": _sse_mod._sse_version,
+                "rows": get_leaderboard(category=cat if cat else None)}
+    resp = jsonify(data)
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+
+@app.route("/api/results/<path:category>")
+def api_results_category(category):
+    """Public JSON endpoint: per-event leaderboard with SSE version for DOM updates."""
+    try:
+        rows, events = get_leaderboard_detailed(category)
+    except Exception:
+        rows, events = [], []
+    resp = jsonify({
+        "version": _sse_mod._sse_version,
+        "category": category,
+        "events": [{"name": ev["name"], "id": ev["id"]} for ev in events],
+        "rows": rows,
+    })
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
 
 @app.route("/comp/api/event_points")
 def api_event_points():
