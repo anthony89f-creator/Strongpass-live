@@ -134,11 +134,20 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 /* EMPTY STATE */
 .empty-state { padding:60px 20px; text-align:center; color:var(--dim); font-size:16px; }
 
-/* MOBILE */
+/* MOBILE — horizontal scroll preserves event breakdown data */
+.results-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 @media(max-width:700px) {
-  .ath-events, .ev-head-events { display:none; }
-  .ath-name-col { width:auto; flex:1; }
-  .ev-head-name { flex:1; }
+  .main { padding:12px 0; }
+  .section-hdr { padding:14px 12px 10px; }
+  .events-header-inner, .athlete-row { min-width:480px; }
+  .ath-rank { width:32px; min-width:32px; font-size:14px; }
+  .ath-name-col { width:100px; min-width:100px; font-size:13px; padding:6px 8px; }
+  .ev-head-name { width:100px; }
+  .ath-total, .ev-head-total { width:52px; min-width:52px; padding:4px; }
+  .ath-total-pts { font-size:18px; }
+  .ath-event-cell, .ev-head-event { min-width:52px; padding:4px 2px; }
+  .cell-pts { font-size:12px; }
+  .cell-raw { font-size:9px; }
 }
 </style>
 </head>
@@ -167,6 +176,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 
   <!-- Event column headers -->
   <div class="section-hdr">{{ selected_category }}</div>
+  <div class="results-table">
   <div class="events-header-inner">
     <div class="ev-head-name">Athlete</div>
     <div class="ev-head-total">Total</div>
@@ -209,6 +219,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
     </div>
   </div>
   {% endfor %}
+  </div>
 
 {% elif category_order %}
   <div class="empty-state">No results yet for {{ selected_category }}.</div>
