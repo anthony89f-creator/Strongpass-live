@@ -44,6 +44,11 @@
   .event-name { font-size:16px; font-weight:800; text-transform:uppercase; }
   .event-row.current { border-color:rgba(245,200,66,0.3); background:rgba(245,200,66,0.05); }
   .event-row.current .event-name { color:var(--gold); }
+  @media(max-width:600px) {
+    .state-grid { grid-template-columns:1fr 1fr; }
+    .event-row { flex-wrap:wrap; gap:6px; }
+    .scoring-form { flex:0 0 100%; }
+  }
 </style>
 </head>
 <body>

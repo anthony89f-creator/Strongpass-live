@@ -72,6 +72,12 @@ html, body {
 .lane-name.next-name { color:rgba(255,255,255,0.55); }
 .lane-category { font-size:clamp(13px,1.5vw,18px); color:var(--dim2); font-family:'Barlow',sans-serif; margin-top:3px; text-transform:uppercase; letter-spacing:0.08em; }
 .lane-empty { font-size:clamp(16px,2vw,24px); color:var(--dim); font-style:italic; font-family:'Barlow',sans-serif; }
+@media(max-width:768px) {
+  html, body { height:auto; overflow:auto; }
+  .main { grid-template-columns:1fr; }
+  .panel:first-child { border-right:none; border-bottom:1px solid var(--border); min-height:40vh; }
+  .panel { min-height:40vh; }
+}
 </style>
 </head>
 <body>

@@ -66,6 +66,13 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   margin:0 auto;
 }
 @media(max-width:900px) { .main { grid-template-columns:1fr; } }
+@media(max-width:600px) {
+  .main { padding:10px 12px; }
+  .score-input { width:min(130px, 28vw); font-size:20px; padding:8px; }
+  .lane-row { padding:10px 12px; gap:8px; }
+  .lane-name { font-size:18px; }
+  .save-next-bar { grid-template-columns:1fr; }
+}
 
 /* ── LEFT COLUMN ── */
 .left-col { display:flex; flex-direction:column; gap:14px; }

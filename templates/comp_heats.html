@@ -30,6 +30,13 @@
   .btn { padding:8px 14px; border-radius:6px; border:none; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; display:inline-block; }
   .btn-primary { background:rgba(0,120,255,0.15); color:var(--blue); border:1px solid rgba(0,120,255,0.3); }
   .btn-gold { background:rgba(245,200,66,0.12); color:var(--gold); border:1px solid rgba(245,200,66,0.3); }
+  @media(max-width:600px) {
+    .main { padding:12px; }
+    .heat-row { flex-direction:column; }
+    .heat-label { width:100%; border-right:none; border-bottom:1px solid var(--border); padding:6px 14px; }
+    .heat-athletes { flex-wrap:wrap; }
+    .heat-cell { flex:0 0 50%; max-width:50%; min-width:0; }
+  }
 </style>
 </head>
 <body>

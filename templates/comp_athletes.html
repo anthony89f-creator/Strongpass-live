@@ -53,6 +53,14 @@
   .count-item.withdrawn-count span { color:var(--orange); }
   .count-item.injury-count span { color:var(--red); }
   .regen-notice { background:rgba(245,200,66,0.08); border:1px solid rgba(245,200,66,0.2); border-radius:8px; padding:10px 14px; font-size:12px; color:var(--gold); font-family:'Barlow',sans-serif; }
+  @media(max-width:600px) {
+    .main { padding:12px; }
+    .ath-row { flex-wrap:wrap; align-items:flex-start; }
+    .ath-info { flex:1 1 calc(100% - 100px); }
+    .btn-actions { flex:0 0 100%; justify-content:flex-start; margin-top:4px; }
+    .add-form { flex-direction:column; }
+    .add-form input[type=text] { width:100%; }
+  }
 </style>
 </head>
 <body>

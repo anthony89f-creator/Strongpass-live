@@ -37,6 +37,12 @@
   .event-select { display:flex; gap:6px; flex-wrap:wrap; }
   .ev-btn { padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; text-decoration:none; cursor:pointer; }
   .ev-btn.active { background:rgba(245,200,66,0.1); border-color:rgba(245,200,66,0.3); color:var(--gold); }
+  @media(max-width:600px) {
+    .main { padding:12px; }
+    .result-row { gap:8px; padding:10px 12px; }
+    .ath-name { font-size:16px; }
+    .score-input { width:min(120px, 28vw); font-size:20px; padding:8px 10px; }
+  }
 </style>
 </head>
 <body>
