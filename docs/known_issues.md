@@ -29,6 +29,10 @@ None currently active. TD-C1 (Gunicorn init bypass) was resolved in Phase 1.
 **Fix options:** (a) Add a separate judge token distinct from BETA_TOKEN, or (b) document accepted risk and rely on beta gate for now.  
 **Note:** Completely unauthenticated before beta gate. Currently protected by beta cookie only.
 
+### ~~H3-sub~~ — Timer ticks triggered full SSE payload rebuilds
+**Resolved in:** `5a1ff30`  
+`_results_version` counter now separates score changes from timer/state changes. SSE payload stripped from 136KB → 10KB. Timer ticks no longer invalidate the results cache or trigger frontend re-renders.
+
 ### H3 — `set_lanes` Swallows `regenerate_remaining_heats` Errors
 **Source:** TD-H3, STRESS_TEST recommendations item 1  
 **File:** `server.py` — `action_set_lanes`  

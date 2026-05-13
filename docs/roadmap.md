@@ -114,3 +114,4 @@ Video integration, VOD hosting, content delivery for competitions.
 | 2026-05-11 | Phase 1–4 deployed (Gunicorn fix, SSE, modularisation, perf) |
 | 2026-05-13 | Beta auth gate deployed; BETA_TOKEN + COMP_PASSWORD set |
 | 2026-05-13 | Phase 5 deployed: weight+reps scoring, mobile redesign, leaderboard architecture (14 files, runtime data preserved) |
+| 2026-05-13 | Phase 1-stability deployed: SSE isolation, 10KB payload, timer guard, weight_reps tiebreak (`5a1ff30`) |
