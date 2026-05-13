@@ -10,9 +10,20 @@ ExecStart=/opt/strongman/venv/bin/gunicorn -c gunicorn.conf.py server:app
 Restart=always
 RestartSec=5
 
-# Set COMP_PASSWORD to protect the admin interface
-# Set PROXY_ALLOWLIST to restrict the proxy endpoint (comma-separated domains)
+# ── Beta access gate ──────────────────────────────────────────────────────────
+# BETA_TOKEN: shared password for sitewide access. Unset or leave blank to
+#   disable the gate entirely (no deploy required — just restart).
+# SECRET_KEY: Flask session signing key. If unset, derived from BETA_TOKEN.
+#   Set explicitly if you want session cookies to survive a BETA_TOKEN rotation.
+Environment="BETA_TOKEN=changeme"
+Environment="SECRET_KEY="
+
+# ── Competition admin ──────────────────────────────────────────────────────────
+# COMP_PASSWORD: password for the /comp/* admin interface (on top of BETA_TOKEN).
 Environment="COMP_PASSWORD=changeme"
+
+# ── External API proxy ────────────────────────────────────────────────────────
+# PROXY_ALLOWLIST: comma-separated domains permitted for /proxy (blank = allow all)
 Environment="PROXY_ALLOWLIST="
 
 StandardOutput=journal

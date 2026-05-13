@@ -22,8 +22,13 @@ from app.utils import (
     _event_type_from_scoring, _filter_payload_to_active_lanes,
     _default_inactive_judge, _protect_lane_stopped_timers,
 )
+from app.beta_auth import register_beta_auth
 
 app = Flask(__name__, template_folder=TPL_DIR, static_folder=None)
+
+# Beta gate — registered first so it runs before all other before_request hooks.
+# Disable: unset BETA_TOKEN in strongman.service and restart (no deploy needed).
+register_beta_auth(app)
 
 CATEGORY_ORDER = list(DEFAULT_CATEGORY_ORDER)
 
