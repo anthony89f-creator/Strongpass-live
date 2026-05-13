@@ -221,6 +221,26 @@
           <input type="number" id="number-input" step="0.01" min="0" placeholder="0" inputmode="decimal" oninput="syncNumberInput()">
         </div>
       </div>
+      <!-- Weight + Reps (weight input + rep counter) -->
+      <div id="block-weight-reps" class="scoring-block" style="display:none">
+        <div class="number-row">
+          <label id="label-wr-weight">Weight (kg)</label>
+          <div class="number-input-wrap">
+            <input type="number" id="wr-weight-input" step="2.5" min="0" placeholder="0" inputmode="decimal"
+              style="width:120px;padding:12px;font-size:28px;font-weight:800;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Barlow Condensed',sans-serif"
+              oninput="syncWeightReps()">
+          </div>
+        </div>
+        <div class="rep-display" style="padding:6px 0 10px">
+          <div class="rep-num" id="wr-rep-num">0</div>
+          <div class="rep-label">Reps Completed</div>
+        </div>
+        <div class="rep-btns">
+          <button class="rep-btn rep-btn-minus" onclick="adjustWrRep(-1)"><span>−</span><span class="rep-btn-sub">Undo</span></button>
+          <button class="rep-btn rep-btn-plus" onclick="adjustWrRep(1)"><span>+</span><span class="rep-btn-sub">Rep</span></button>
+          <button class="rep-btn rep-btn-reset" onclick="resetWrRep()"><span style="font-size:20px">↺</span><span class="rep-btn-sub">Reset</span></button>
+        </div>
+      </div>
       <!-- Objects + Time (two inputs) -->
       <div id="block-objects-time" class="scoring-block" style="display:none">
         <div class="number-row">
@@ -306,6 +326,7 @@ function getScoringMode(metric, secondary) {
   const m = (metric || '').toLowerCase();
   const s = (secondary || '').toLowerCase();
   if (m === 'objects' && s === 'time') return 'objects_time';
+  if (m === 'weight' && s === 'reps') return 'weight_reps';
   if (m === 'reps') return 'reps';
   if (m === 'weight') return 'weight';
   if (m === 'distance') return 'distance';
@@ -336,6 +357,13 @@ function applyScoringMode(metric, secondary) {
     document.getElementById('label-objects').textContent = METRIC_LABELS.objects;
     document.getElementById('label-time-secondary').textContent = METRIC_LABELS.time_secondary;
     titleEl.textContent = METRIC_LABELS.objects + ' + ' + METRIC_LABELS.time_secondary;
+  } else if (mode === 'weight_reps') {
+    document.getElementById('block-weight-reps').style.display = 'block';
+    titleEl.textContent = 'Weight + Reps';
+    const wrInp = document.getElementById('wr-weight-input');
+    if (wrInp) wrInp.value = laneState.primaryValue;
+    const wrRep = document.getElementById('wr-rep-num');
+    if (wrRep) wrRep.textContent = laneState.secondaryValue === '' ? '0' : laneState.secondaryValue;
   } else {
     blockNumber.style.display = 'block';
     const label = mode === 'weight' ? METRIC_LABELS.weight : mode === 'distance' ? METRIC_LABELS.distance : METRIC_LABELS.objects;
@@ -354,6 +382,26 @@ function applyScoringMode(metric, secondary) {
   }
 }
 
+function syncWeightReps() {
+  laneState.primaryValue = document.getElementById('wr-weight-input').value;
+  push();
+}
+function adjustWrRep(delta) {
+  const next = Math.max(0, (parseInt(laneState.secondaryValue, 10) || 0) + delta);
+  laneState.secondaryValue = String(next);
+  const el = document.getElementById('wr-rep-num');
+  if (el) { el.textContent = next; el.style.transform = 'scale(1.15)'; setTimeout(() => el.style.transform = '', 120); }
+  document.getElementById('rep-status').textContent = next + ' rep' + (next !== 1 ? 's' : '');
+  push();
+}
+function resetWrRep() {
+  if (!confirm('Reset reps to 0?')) return;
+  laneState.secondaryValue = '0';
+  const el = document.getElementById('wr-rep-num');
+  if (el) el.textContent = 0;
+  document.getElementById('rep-status').textContent = '0 reps';
+  push();
+}
 function syncNumberInput() {
   const v = document.getElementById('number-input').value;
   laneState.primaryValue = v;
@@ -428,6 +476,10 @@ function applyServerState(data) {
     const timeInp = document.getElementById('time-input');
     if (objInp) objInp.value = laneState.primaryValue;
     if (timeInp) timeInp.value = laneState.secondaryValue;
+    const wrWeightInp = document.getElementById('wr-weight-input');
+    if (wrWeightInp) wrWeightInp.value = laneState.primaryValue;
+    const wrRepNum = document.getElementById('wr-rep-num');
+    if (wrRepNum) wrRepNum.textContent = laneState.secondaryValue === '' ? '0' : laneState.secondaryValue;
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     const timerEl = document.getElementById('timer-disp');
     if (timerEl) { timerEl.textContent = Math.floor(laneState.timerRemaining/60) + ':' + String(laneState.timerRemaining%60).padStart(2,'0'); timerEl.className = 'timer-num'; }

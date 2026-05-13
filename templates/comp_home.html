@@ -86,6 +86,7 @@
               <option value="time" {% if e[4] == "time" %}selected{% endif %}>Time</option>
               <option value="objects_time" {% if e[4] == "objects" and e[5] == "time" %}selected{% endif %}>Objects + Time</option>
               <option value="distance_time" {% if e[4] == "distance" and e[5] == "time" %}selected{% endif %}>Distance + Time</option>
+              <option value="weight_reps" {% if e[4] == "weight" and e[5] == "reps" %}selected{% endif %}>Weight + Reps</option>
             </select>
           </form>
 
@@ -126,7 +127,8 @@
       distance:       { primary_metric: "distance", secondary_metric: "", primary_direction: "higher", secondary_direction: "" },
       time:           { primary_metric: "time",     secondary_metric: "", primary_direction: "lower",  secondary_direction: "" },
       objects_time:   { primary_metric: "objects", secondary_metric: "time", primary_direction: "higher", secondary_direction: "lower" },
-      distance_time:  { primary_metric: "distance", secondary_metric: "time", primary_direction: "higher", secondary_direction: "lower" }
+      distance_time:  { primary_metric: "distance", secondary_metric: "time", primary_direction: "higher", secondary_direction: "lower" },
+      weight_reps:    { primary_metric: "weight",   secondary_metric: "reps", primary_direction: "higher", secondary_direction: "higher" }
     };
     var form = selectEl.form;
     var m = preset[selectEl.value] || preset.max_weight;

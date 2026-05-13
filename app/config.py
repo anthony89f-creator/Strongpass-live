@@ -24,7 +24,8 @@ EVENT_TYPES = {
     "weight":   {"label": "Weight",   "unit": "kg",   "higher": True,  "primary_metric": "weight",   "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
     "distance": {"label": "Distance", "unit": "m",    "higher": True,  "primary_metric": "distance", "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
     "time":     {"label": "Time",     "unit": "s",    "higher": False, "primary_metric": "time",     "secondary_metric": None,   "primary_direction": "lower",  "secondary_direction": None},
-    "object":   {"label": "Objects",  "unit": "objs", "higher": True,  "primary_metric": "objects",  "secondary_metric": "time", "primary_direction": "higher", "secondary_direction": "lower"},
+    "object":      {"label": "Objects",      "unit": "objs", "higher": True,  "primary_metric": "objects", "secondary_metric": "time", "primary_direction": "higher", "secondary_direction": "lower"},
+    "weight_reps": {"label": "Weight + Reps", "unit": "kg",   "higher": True,  "primary_metric": "weight",  "secondary_metric": "reps", "primary_direction": "higher", "secondary_direction": "higher"},
 }
 
 SCORING_PRESETS = {
@@ -33,7 +34,8 @@ SCORING_PRESETS = {
     "distance":      {"primary_metric": "distance", "secondary_metric": None,   "primary_direction": "higher", "secondary_direction": None},
     "time":          {"primary_metric": "time",     "secondary_metric": None,   "primary_direction": "lower",  "secondary_direction": None},
     "objects_time":  {"primary_metric": "objects",  "secondary_metric": "time", "primary_direction": "higher", "secondary_direction": "lower"},
-    "distance_time": {"primary_metric": "distance", "secondary_metric": "time", "primary_direction": "higher", "secondary_direction": "lower"},
+    "distance_time": {"primary_metric": "distance", "secondary_metric": "time",  "primary_direction": "higher", "secondary_direction": "lower"},
+    "weight_reps":   {"primary_metric": "weight",   "secondary_metric": "reps",  "primary_direction": "higher", "secondary_direction": "higher"},
 }
 
 DEFAULT_CATEGORY_ORDER = ["U80", "U90", "U105", "U120", "Womens", "Mens Open"]

@@ -39,6 +39,8 @@ def _event_direction_flags(event_row, event_type):
 
 def _event_type_from_scoring(primary_metric, secondary_metric):
     """Map primary/secondary metric to event_type so Run/Results pages show correct unit."""
+    if primary_metric == "weight" and secondary_metric == "reps":
+        return "weight_reps"
     if primary_metric == "weight" and not secondary_metric:
         return "weight"
     if primary_metric == "reps":

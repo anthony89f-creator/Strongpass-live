@@ -370,7 +370,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
                   {% endif %}
                   {% if event_secondary_metric %}
                   <div>
-                    <input type="number" step="0.01" min="0"
+                    <input type="number" step="{{ '1' if event_secondary_metric in ('reps', 'objects') else '0.01' }}" min="0"
                       class="score-input {% if tiebreaks[lane.athlete_name] is defined and tiebreaks[lane.athlete_name] != '' %}filled{% endif %}"
                       name="tiebreak_{{ lane.athlete_name }}"
                       value="{{ tiebreaks.get(lane.athlete_name, '') if tiebreaks.get(lane.athlete_name) is not none else '' }}"
