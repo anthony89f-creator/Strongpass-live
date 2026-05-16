@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 6 — timer tick freeze fix `dec4b37`)
+**Last updated:** 2026-05-16 (Phase 7 — SSE navigation race fix `89bb97b`)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -163,6 +163,13 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 ---
 
 ## Resolved (for reference)
+
+| SSE nav race | EventSource on comp_run/heats/callroom/leaderboard fired `location.reload()` mid-navigation, making Events tab appear broken | `89bb97b` (pagehide handlers close `_es` immediately when user clicks away) |
+| Duplicate Setup nav | comp_run.html had two nav links to `/comp/events` ("Setup" + "Events") | `89bb97b` (removed duplicate "Setup" link) |
+| comp_events 4× load_state | comp_events() called load_state() 4 times (cat_colors, comp_config, lane_count, broadcast_mode) | `89bb97b` (single load_state at top of handler) |
+| comp_leaderboard uncached | comp_leaderboard() called get_leaderboard_detailed() + get_leaderboard() (DB queries) on every page load | `89bb97b` (_get_cached_results() + _get_cached_standings() used instead) |
+
+
 
 | ID | Description | Fixed in |
 |----|-------------|----------|
