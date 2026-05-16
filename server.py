@@ -872,6 +872,7 @@ def get_broadcast_mode():
 
 def sync_comp_to_broadcast():
     """Push current competition state to broadcast state.json. Engine mode only. Single DB connection, single atomic write."""
+    _t0 = time.monotonic()
     # Read state once to derive broadcast_mode and lane_count — avoids two separate load_state() calls.
     _s = load_state()
     if _s.get("broadcast", {}).get("data_source_mode", _s.get("data_source_mode", "engine")) != "engine":
@@ -986,6 +987,9 @@ def sync_comp_to_broadcast():
         prev.update(patch)
         save_state(prev)
     _sse_notify()
+    _dt = (time.monotonic() - _t0) * 1000
+    if _dt > 200:
+        app.logger.warning("sync_comp_to_broadcast slow: %.0f ms", _dt)
 
 def _get_sse_payload(version):
     """Return cached SSE JSON string for this version — built once, shared across all clients."""
@@ -1195,8 +1199,14 @@ def _apply_judge_scores_to_raw_results(judge_payload=None):
     if results_changed:
         con.commit()
         _invalidate_results_cache()
-    con.close()
-    sync_comp_to_broadcast()
+        con.close()
+        sync_comp_to_broadcast()
+    else:
+        con.close()
+        # State was already written by update_state(); just push current state to SSE clients.
+        # Skipping sync_comp_to_broadcast() eliminates ~3 DB opens + 2 disk reads + 1 write
+        # per timer tick when no score has changed (the common case at ~4 Hz with 4 lanes).
+        _sse_notify()
 
 def _active_lane_count():
     """Number of active lanes from state['competition_config']['lanes'] (1-8). Used so only judgeL1..judgeL{N} are updated; inactive lanes are forced to timerRunning=False."""
@@ -1818,7 +1828,6 @@ def action_save_results_run():
 
     con.commit(); con.close()
     _invalidate_results_cache()
-    sync_comp_to_broadcast()
 
     mode = request.form.get("mode") or request.form.get("action","save_only")
     if mode == "save_next":
@@ -1829,7 +1838,8 @@ def action_save_results_run():
             idx = CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else -1
             if idx < len(CATEGORY_ORDER)-1:
                 set_comp_state(CATEGORY_ORDER[idx+1], event, 1)
-        sync_comp_to_broadcast()
+    # Single sync after all state mutations (covers both save_only and save_next).
+    sync_comp_to_broadcast()
 
     return redirect(request.referrer or "/comp/run")
 
