@@ -1271,7 +1271,12 @@ def update_state():
     with state_lock:
         current = load_state()
         _protect_lane_stopped_timers(payload, current)
-        merge_dict = {k: v for k, v in payload.items() if k != "resetAllTimers"}
+        # Exclude keys that are computed server-side and must never be overwritten by
+        # the frontend payload. 'categories' is built from DB by sync_comp_to_broadcast();
+        # sending it from control.html's local API-mode state would clobber it with [].
+        _UPDATE_EXCLUDE = frozenset({"resetAllTimers", "categories", "events", "results",
+                                     "lbStandings", "results_version", "restart_token"})
+        merge_dict = {k: v for k, v in payload.items() if k not in _UPDATE_EXCLUDE}
         current.update(merge_dict)
         for i in range(lane_count + 1, 9):
             key = "judgeL" + str(i)
