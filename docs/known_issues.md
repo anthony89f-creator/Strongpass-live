@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-13
+**Last updated:** 2026-05-16
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -32,6 +32,10 @@ None currently active. TD-C1 (Gunicorn init bypass) was resolved in Phase 1.
 ### ~~H3-sub~~ — Timer ticks triggered full SSE payload rebuilds
 **Resolved in:** `5a1ff30`  
 `_results_version` counter now separates score changes from timer/state changes. SSE payload stripped from 136KB → 10KB. Timer ticks no longer invalidate the results cache or trigger frontend re-renders.
+
+### ~~H3-heats-reload~~ — `comp_heats.html` infinite reload loop after Generate Heats
+**Resolved in:** `5e45c26`  
+`lastResultsVersion` initialised as `null` in JS; `null` coerces to `0` for numeric comparison, so any `results_version > 0` (true after the first `_invalidate_results_cache()` call — load test data, add athlete) caused `N <= null → N <= 0 → false → location.reload()`. Page reloaded, null again, infinite loop. Fix: seed `lastResultsVersion` from the first SSE message and return early (no reload) to establish a baseline. Subsequent higher versions still trigger reload as intended.
 
 ### H3 — `set_lanes` Swallows `regenerate_remaining_heats` Errors
 **Source:** TD-H3, STRESS_TEST recommendations item 1  
