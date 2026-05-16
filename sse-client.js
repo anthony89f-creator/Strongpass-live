@@ -49,13 +49,21 @@
     if (_es) { _es.close(); _es = null; }
   }
 
-  // Release the server-side gthread when this page is hidden (OBS scene switch,
-  // browser tab switch, or page navigation). Reconnects on pageshow (bfcache
-  // restore) or if the page becomes visible again.
-  window.addEventListener('pagehide', disconnect);
-  window.addEventListener('pageshow', function (e) {
-    // bfcache restore: page was cached, now shown again — reconnect
+  function reconnectAndSync() {
     if (!_es) connect();
+    fetch('/state.json?t=' + Date.now(), {cache: 'no-store'})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d) _dispatch(d); })
+      .catch(function () {});
+  }
+
+  // Release the server-side gthread when this page is hidden (OBS scene switch,
+  // browser tab switch, or page navigation). Reconnects and syncs missed state
+  // on pageshow (bfcache restore) or visibilitychange (OBS scene activation).
+  window.addEventListener('pagehide', disconnect);
+  window.addEventListener('pageshow', reconnectAndSync);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) reconnectAndSync();
   });
 
   connect();

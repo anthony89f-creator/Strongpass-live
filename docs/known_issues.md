@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 10 — Call Room DOM patching `04e9abe`)
+**Last updated:** 2026-05-16 (Phase 11 — Call Room cross-category preview, sse-client.js pageshow sync, H2H Drive URL fix)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -166,6 +166,9 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 
 | SSE nav race | EventSource on comp_run/heats/callroom/leaderboard fired `location.reload()` mid-navigation, making Events tab appear broken | `89bb97b` (pagehide handlers close `_es` immediately when user clicks away) |
 | Call Room live updates broken | pagehide closed SSE (Phase 7 fix) but no pageshow reconnect → tab-switching permanently killed the stream; no DOM update path without location.reload() | `04e9abe` (DOM patching via /comp/api/callroom JSON; pageshow reconnect + fetchAndPatch; no location.reload()) |
+| Call Room Up Next blank on final heat | Up Next panel showed blank when current category on last heat; no next-heat query within category returned data | Phase 11 (api_callroom + comp_callroom detect heat>=max_heat; query heat 1 of next CATEGORY_ORDER category; next_category field in API response; callroom JS buildNextLanes handles cross-category label) |
+| sse-client.js no state sync on pageshow | After OBS scene switch, pageshow reconnected SSE but didn't re-fetch /state.json — overlay showed stale state until next SSE event arrived | Phase 11 (reconnectAndSync() on pageshow + visibilitychange: reconnects SSE AND re-fetches /state.json) |
+| H2H Google Drive images not loading | h2h.html set backgroundImage to Drive share URL (…/file/d/ID/view) which browsers block as non-image; image showed nothing | Phase 11 (driveDirectUrl() in setPhoto() converts /d/ID/view → /uc?export=view&id=ID before setting CSS) |
 | gthread exhaustion | Gunicorn --threads 8; 15–20+ SSE consumers at live comp (4 judges, overlays, admin tabs, callroom) saturated all threads — every page load and action blocked | `3996969` (threads 8→32 in service file; sse-client.js pagehide disconnect; SSE active counter in /health) |
 | Backup blocking next_heat | create_backup() (shutil.copy2 of full DB) ran synchronously in action_next_heat — froze UI on every heat advance | `8cae0de` (moved to daemon thread via _async_backup) |
 | Excess DB connections per action | set_heat/next_heat/prev_heat/save_results_run each opened 2-4 DB connections; sync_comp_to_broadcast opened 4; _apply_judge_scores opened 3 — each connection runs 2 PRAGMAs | `8cae0de` (all consolidated: each action 1 connection, sync_c2b 1 connection, judge scores 1 connection) |

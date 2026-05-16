@@ -146,7 +146,8 @@ html, body {
     <div class="panel-header">
       <div class="panel-label next">↑ Up Next</div>
       <div class="panel-heat" id="panel-next-heat" style="color:rgba(255,255,255,0.4)">
-        {% if next_heat %}Heat {{ state.heat + 1 }} <span style="font-size:24px">/ {{ max_heat }}</span>
+        {% if next_category %}<span style="font-size:20px">{{ next_category }} · Heat 1</span>
+        {% elif next_heat %}Heat {{ state.heat + 1 }} <span style="font-size:24px">/ {{ max_heat }}</span>
         {% else %}<span style="font-size:24px">Last heat</span>{% endif %}
       </div>
     </div>
@@ -157,7 +158,7 @@ html, body {
           <div class="lane-num green" style="opacity:0.7">{{ loop.index }}</div>
           <div class="lane-info">
             <div class="lane-name next-name">{{ lane.athlete_name }}</div>
-            <div class="lane-category">{{ state.category }} · {{ event_name }}</div>
+            <div class="lane-category">{{ next_category if next_category else state.category }} · {{ event_name }}</div>
           </div>
         </div>
         {% endfor %}
@@ -171,7 +172,7 @@ html, body {
         {% for i in range(lane_count) %}
         <div class="lane-row">
           <div class="lane-num" style="color:var(--dim)">{{ loop.index }}</div>
-          <div class="lane-empty">Last heat of category</div>
+          <div class="lane-empty">Last heat of event</div>
         </div>
         {% endfor %}
       {% endif %}
@@ -214,12 +215,13 @@ html, body {
     return html;
   }
 
-  function buildNextLanes(lanes, laneCount, category, eventName) {
-    var html = '', catText = _esc(category) + ' · ' + _esc(eventName);
+  function buildNextLanes(lanes, laneCount, category, eventName, nextCategory) {
+    var displayCat = nextCategory || category;
+    var html = '', catText = _esc(displayCat) + ' · ' + _esc(eventName);
     if (!lanes || !lanes.length) {
       for (var k = 0; k < laneCount; k++) {
         html += '<div class="lane-row"><div class="lane-num" style="color:var(--dim)">' +
-          (k+1) + '</div><div class="lane-empty">Last heat of category</div></div>';
+          (k+1) + '</div><div class="lane-empty">Last heat of event</div></div>';
       }
       return html;
     }
@@ -245,13 +247,17 @@ html, body {
     document.getElementById('panel-now-heat').innerHTML =
       'Heat ' + d.heat + ' <span style="color:var(--dim2);font-size:28px">/ ' + d.max_heat + '</span>';
     var nextEl = document.getElementById('panel-next-heat');
-    nextEl.innerHTML = (d.next_heat && d.next_heat.length)
-      ? 'Heat ' + (d.heat + 1) + ' <span style="font-size:24px">/ ' + d.max_heat + '</span>'
-      : '<span style="font-size:24px">Last heat</span>';
+    if (d.next_category) {
+      nextEl.innerHTML = '<span style="font-size:20px">' + _esc(d.next_category) + ' · Heat 1</span>';
+    } else if (d.next_heat && d.next_heat.length) {
+      nextEl.innerHTML = 'Heat ' + (d.heat + 1) + ' <span style="font-size:24px">/ ' + d.max_heat + '</span>';
+    } else {
+      nextEl.innerHTML = '<span style="font-size:24px">Last heat</span>';
+    }
     document.getElementById('panel-now-lanes').innerHTML =
       buildCurrentLanes(d.current, _laneCount, d.category, d.event_name);
     document.getElementById('panel-next-lanes').innerHTML =
-      buildNextLanes(d.next_heat, _laneCount, d.category, d.event_name);
+      buildNextLanes(d.next_heat, _laneCount, d.category, d.event_name, d.next_category);
   }
 
   function fetchAndPatch() {

@@ -187,11 +187,18 @@ let state = {
   eventName:'ATLAS STONES', compName:'IRON CHALLENGE 2025'
 };
 
+function driveDirectUrl(url) {
+  if (!url) return url;
+  var m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? 'https://drive.google.com/uc?export=view&id=' + m[1] : url;
+}
+
 function setPhoto(id, noPhotoId, url, name) {
   const el = document.getElementById(id);
   const np = document.getElementById(noPhotoId);
-  if (url) {
-    el.style.backgroundImage = 'url(' + url + ')';
+  const resolved = driveDirectUrl(url);
+  if (resolved) {
+    el.style.backgroundImage = 'url(' + resolved + ')';
     np.style.display = 'none';
   } else {
     el.style.backgroundImage = 'none';

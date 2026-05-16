@@ -1421,15 +1421,24 @@ def comp_callroom():
     current = [dict(r) for r in con.execute(
         "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
         (category, heat)).fetchall()]
+    max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
     next_heat = [dict(r) for r in con.execute(
         "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
         (category, heat + 1)).fetchall()]
-    max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
+    next_category = None
+    if not next_heat and heat >= max_heat:
+        idx = CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else -1
+        if 0 <= idx < len(CATEGORY_ORDER) - 1:
+            next_category = CATEGORY_ORDER[idx + 1]
+            next_heat = [dict(r) for r in con.execute(
+                "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=1 ORDER BY lane",
+                (next_category,)).fetchall()]
     con.close()
     lane_count = get_lane_count()
     return render_template("comp_callroom.html", state=cs, current=current,
         next_heat=next_heat, event_name=event_name,
-        max_heat=max_heat, category_order=CATEGORY_ORDER, lane_count=lane_count)
+        max_heat=max_heat, category_order=CATEGORY_ORDER, lane_count=lane_count,
+        next_category=next_category)
 
 @app.route("/comp/api/callroom")
 def api_callroom():
@@ -1443,16 +1452,25 @@ def api_callroom():
     current = [dict(r) for r in con.execute(
         "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
         (category, heat)).fetchall()]
+    max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
     next_heat = [dict(r) for r in con.execute(
         "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
         (category, heat + 1)).fetchall()]
-    max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
+    next_category = None
+    if not next_heat and heat >= max_heat:
+        idx = CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else -1
+        if 0 <= idx < len(CATEGORY_ORDER) - 1:
+            next_category = CATEGORY_ORDER[idx + 1]
+            next_heat = [dict(r) for r in con.execute(
+                "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=1 ORDER BY lane",
+                (next_category,)).fetchall()]
     con.close()
     resp = jsonify({
         "category": category, "event": event, "heat": heat,
         "event_name": event_name, "max_heat": max_heat,
         "lane_count": get_lane_count(),
         "current": current, "next_heat": next_heat,
+        "next_category": next_category,
     })
     resp.headers["Cache-Control"] = "no-cache"
     return resp
