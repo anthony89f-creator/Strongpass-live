@@ -183,20 +183,23 @@ html, body {
 <script>
 // Reload on heat/event change — callroom shows next-heat data that needs a server render.
 // No fixed-interval fallback; SSE auto-reconnects so OBS browser sources stay stable.
+// pagehide closes the stream so it doesn't fire location.reload() mid-navigation.
 (function() {
   var _ev = {{ state.event | tojson }};
   var _ht = {{ state.heat  | tojson }};
+  var _es = null;
   function connect() {
-    var es = new EventSource('/stream');
-    es.onmessage = function(e) {
+    _es = new EventSource('/stream');
+    _es.onmessage = function(e) {
       try {
         var d = JSON.parse(e.data);
         if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
       } catch(ex) {}
     };
-    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+    _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
   }
   connect();
+  window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
 })();
 </script>
 </body>

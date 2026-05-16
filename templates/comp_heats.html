@@ -94,9 +94,10 @@
 (function() {
   var lastResultsVersion = null;
   var _lastRestartToken  = null;
+  var _es = null;
   function connect() {
-    var es = new EventSource('/stream');
-    es.onmessage = function(evt) {
+    _es = new EventSource('/stream');
+    _es.onmessage = function(evt) {
       try {
         var msg = JSON.parse(evt.data);
         // Detect server restart — reload immediately so heats reflect new server state
@@ -115,9 +116,10 @@
       } catch(e) {}
       location.reload();
     };
-    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+    _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
   }
   connect();
+  window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
 })();
 </script>
 </body>

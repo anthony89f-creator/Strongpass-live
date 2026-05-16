@@ -1317,6 +1317,7 @@ def comp_dashboard():
 @app.route("/comp/events")
 def comp_events():
     """Events/setup page (formerly comp_home)."""
+    _s = load_state()
     cs = get_comp_state()
     con = db()
     events = con.execute(
@@ -1326,15 +1327,16 @@ def comp_events():
     ).fetchall()
     stats = {cat: con.execute("SELECT COUNT(*) FROM athletes WHERE category=? AND status='active'",(cat,)).fetchone()[0] for cat in CATEGORY_ORDER}
     con.close()
-    cat_colors = _load_category_colors()
+    cat_colors = _load_category_colors(_s)
     categories = [{"name": c, "color": cat_colors.get(c) or CAT_COLORS.get(c, "#F5C842")} for c in CATEGORY_ORDER]
-    comp_config = get_comp_config()
-    lane_count = get_lane_count()
+    comp_config = _s.get("competition_config", {})
+    lane_count = comp_config.get("lanes", LANES)
+    broadcast_mode = _s.get("broadcast", {}).get("data_source_mode", _s.get("data_source_mode", "engine"))
     backup_status = request.args.get("backup")
     return render_template("comp_home.html", state=cs, events=events, stats=stats,
                            category_order=CATEGORY_ORDER, categories=categories,
                            event_types=EVENT_TYPES, scoring_presets=SCORING_PRESETS,
-                           broadcast_mode=get_broadcast_mode(), comp_config=comp_config, lane_count=lane_count,
+                           broadcast_mode=broadcast_mode, comp_config=comp_config, lane_count=lane_count,
                            backup_status=backup_status)
 
 @app.route("/comp/heats")
@@ -1418,19 +1420,18 @@ def comp_results():
 @app.route("/comp/leaderboard")
 def comp_leaderboard():
     cat = request.args.get("category","")
-    con = db()
-    all_events = con.execute("SELECT * FROM events ORDER BY event_number").fetchall()
-    con.close()
+    evs, results = _get_cached_results()
     if cat:
-        detailed_rows, events_list = get_leaderboard_detailed(cat)
+        raw = results.get(cat, [])
+        detailed_rows = [dict(r, overall_rank=i+1) for i, r in enumerate(raw)]
         return render_template("comp_leaderboard.html",
-            athletes=get_leaderboard(category=cat), detailed_rows=detailed_rows,
-            events_list=events_list, category_order=CATEGORY_ORDER, selected_cat=cat,
-            all_events=all_events, event_types=EVENT_TYPES)
+            athletes=_get_cached_standings(category=cat), detailed_rows=detailed_rows,
+            events_list=evs, category_order=CATEGORY_ORDER, selected_cat=cat,
+            all_events=[], event_types=EVENT_TYPES)
     return render_template("comp_leaderboard.html",
-        athletes=get_leaderboard(category=None), detailed_rows=None,
+        athletes=_get_cached_standings(category=None), detailed_rows=None,
         events_list=[], category_order=CATEGORY_ORDER, selected_cat=cat,
-        all_events=all_events, event_types=EVENT_TYPES)
+        all_events=[], event_types=EVENT_TYPES)
 
 @app.route("/comp/athletes")
 def comp_athletes():

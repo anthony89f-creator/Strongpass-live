@@ -249,8 +249,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   <img src="/logo.png" alt="Logo" class="topbar-logo" style="mix-blend-mode:lighten">
   <div class="topbar-badge">▶ Run Competition</div>
   <nav class="topbar-nav">
-    <a href="/comp/events">Setup</a>
-    <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run" style="color:var(--gold)">Run</a></span>
+    <span class="topbar-nav-group"><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run" style="color:var(--gold)">Run</a></span>
     <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
     <a href="/comp/callroom" target="_blank">Call Room ↗</a>
     <a href="/comp/leaderboard">Leaderboard</a>
@@ -563,20 +562,23 @@ document.addEventListener('keydown', e => {
 
 // Reload when heat or event advances from any source (judge panel, other admin tab).
 // Reloads only on heat/event change so in-progress score entries aren't disrupted.
+// pagehide closes the stream so it doesn't fire location.reload() mid-navigation.
 (function() {
   var _ev = {{ state.event | tojson }};
   var _ht = {{ state.heat  | tojson }};
+  var _es = null;
   function connect() {
-    var es = new EventSource('/stream');
-    es.onmessage = function(e) {
+    _es = new EventSource('/stream');
+    _es.onmessage = function(e) {
       try {
         var d = JSON.parse(e.data);
         if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
       } catch(ex) {}
     };
-    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+    _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
   }
   connect();
+  window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
 })();
 </script>
 

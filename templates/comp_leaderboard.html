@@ -236,9 +236,10 @@
       .catch(function() {});
   }
 
+  var _es = null;
   function connect() {
-    var es = new EventSource('/stream');
-    es.onmessage = function(evt) {
+    _es = new EventSource('/stream');
+    _es.onmessage = function(evt) {
       try {
         var msg = JSON.parse(evt.data);
         // Detect server restart — reset version tracking so stale gate doesn't block refresh
@@ -257,9 +258,10 @@
       } catch(e) {}
       fetchAndUpdate();
     };
-    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+    _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
   }
   connect();
+  window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
 })();
 </script>
 </body>
