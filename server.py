@@ -1275,13 +1275,15 @@ def update_state():
         # the frontend payload. 'categories' is built from DB by sync_comp_to_broadcast();
         # sending it from control.html's local API-mode state would clobber it with [].
         _UPDATE_EXCLUDE = frozenset({"resetAllTimers", "categories", "events", "results",
-                                     "lbStandings", "results_version", "restart_token"})
+                                     "lbStandings", "results_version", "restart_token",
+                                     "scorebug"})
         merge_dict = {k: v for k, v in payload.items() if k not in _UPDATE_EXCLUDE}
         current.update(merge_dict)
         for i in range(lane_count + 1, 9):
             key = "judgeL" + str(i)
             current[key] = _default_inactive_judge().copy()
         save_state(current)
+    _sse_notify()   # push overlay state changes immediately; _apply_judge_scores may also notify
     _apply_judge_scores_to_raw_results(payload)
     resp = jsonify({"ok": True})
     resp.headers["Access-Control-Allow-Origin"] = "*"

@@ -248,10 +248,6 @@
       <div class="section-header"><span class="section-title">Overlay Visibility</span></div>
       <div class="section-body">
         <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Scorebug</div><div class="overlay-sub">Bottom ticker · Live standings</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-scorebug" onchange="toggleOverlay('scorebug',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-scorebug" style="color:var(--dim)">OFF</div></div>
-        </div>
-        <div class="overlay-row">
           <div class="overlay-row-left"><div><div class="overlay-label">Leaderboard</div><div class="overlay-sub">Top 10 · Right panel</div></div></div>
           <div><label class="toggle"><input type="checkbox" id="tog-leaderboard" onchange="toggleOverlay('leaderboard',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-leaderboard" style="color:var(--dim)">OFF</div></div>
         </div>
@@ -307,7 +303,6 @@
       <div class="section-body">
         <div class="btn-row">
           <button class="btn btn-outline" onclick="hideAll()">Hide All</button>
-          <button class="btn btn-outline" onclick="showScoreOnly()">Score Only</button>
           <button class="btn btn-outline" onclick="showAll()">Show All</button>
         </div>
       </div>
@@ -506,7 +501,6 @@
           Add each as a <strong>Browser Source</strong> in OBS. Width: <strong>1920</strong>, Height: <strong>1080</strong>. Enable <em>Shutdown source when not visible</em>.
         </p>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <div class="url-row"><span class="url-label">Scorebug</span><input class="url-input" type="text" readonly id="url-scorebug"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-scorebug')">Copy</button></div>
           <div class="url-row"><span class="url-label">Leaderboard</span><input class="url-input" type="text" readonly id="url-leaderboard"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-leaderboard')">Copy</button></div>
           <div class="url-row"><span class="url-label">Nameplates</span><input class="url-input" type="text" readonly id="url-lowerthird"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-lowerthird')">Copy</button></div>
           <div class="url-row"><span class="url-label">Event Winner</span><input class="url-input" type="text" readonly id="url-champion"><button class="btn btn-outline btn-sm" onclick="copyUrl('url-champion')">Copy</button></div>
@@ -675,7 +669,7 @@
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let state = {
-  scorebug:false, leaderboard:false, lowerThirdVisible:false, eventBarVisible:false, champion:false,
+  leaderboard:false, lowerThirdVisible:false, eventBarVisible:false, champion:false,
   h2h:false, lineup:false,
   h2hLeft:  {name:'', origin:'', category:'', photoUrl:''},
   h2hRight: {name:'', origin:'', category:'', photoUrl:''},
@@ -807,9 +801,8 @@ function clearManual() {
   updateToggleLabel('manualVisible', false);
   pushUpdate();
 }
-function hideAll()      { ['scorebug','leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>{state[k]=false;updateToggleLabel(k,false);}); pushUpdate(); }
-function showScoreOnly(){ hideAll(); state.scorebug=true; updateToggleLabel('scorebug',true); pushUpdate(); }
-function showAll()      { ['scorebug','leaderboard','lowerThirdVisible','eventBarVisible'].forEach(k=>{state[k]=true;updateToggleLabel(k,true);}); state.champion=false; state.h2h=false; state.lineup=false; updateToggleLabel('champion',false); pushUpdate(); }
+function hideAll()      { ['leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>{state[k]=false;updateToggleLabel(k,false);}); pushUpdate(); }
+function showAll()      { ['leaderboard','lowerThirdVisible','eventBarVisible'].forEach(k=>{state[k]=true;updateToggleLabel(k,true);}); state.champion=false; state.h2h=false; state.lineup=false; updateToggleLabel('champion',false); pushUpdate(); }
 function showChampion() { state.champion=true;  updateToggleLabel('champion',true);  pushUpdate(); }
 function hideChampion() { state.champion=false; updateToggleLabel('champion',false); pushUpdate(); }
 function showH2H()      { state.h2h=true;  updateToggleLabel('h2h',true);  syncH2HInputs(); pushUpdate(); }
@@ -1275,7 +1268,6 @@ function syncEventName() {
 function copyUrl(id) { const e=document.getElementById(id); if(e) navigator.clipboard.writeText(e.value).then(()=>showStatus('Copied!',true)); }
 function populateObsUrls() {
   const base = location.origin;
-  document.getElementById('url-scorebug').value      = base+'/scorebug.html';
   document.getElementById('url-leaderboard').value   = base+'/leaderboard.html';
   document.getElementById('url-lowerthird').value    = base+'/lowerthird.html';
   document.getElementById('url-manual').value        = base+'/manual_lowerthird.html';
@@ -1320,7 +1312,7 @@ function initInputs() {
   set('champComp',    state.champComp);
   set('laneCount',    state.laneCount);
   set('lineupDuration', state.lineupDuration||5);
-  ['scorebug','leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>updateToggleLabel(k,state[k]));
+  ['leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>updateToggleLabel(k,state[k]));
   updateToggleLabel('manualVisible', !!state.manualVisible);
   if (state.manualLine1) set('manualLine1', state.manualLine1);
   if (state.manualLine2) set('manualLine2', state.manualLine2);
