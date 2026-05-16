@@ -1845,14 +1845,22 @@ def action_save_results_run():
 
 @app.route("/comp/run")
 def comp_run():
+    # Load state once — reused for colors, broadcast_mode, and live-status check below
+    _run_state = load_state()
     cs = get_comp_state()
     category, event, heat = cs["category"], cs["event"], cs["heat"]
     lanes = get_heat_lanes(category, heat)
+
+    # Lightweight heats-exist check (single COUNT query, not a full table scan)
+    con_chk = db()
+    _any_heats = con_chk.execute("SELECT COUNT(*) FROM heats LIMIT 1").fetchone()[0] > 0
+    con_chk.close()
+
     # If no heats at all, auto-generate when we have athletes and events (guided workflow)
-    if not get_all_heats():
+    if not _any_heats:
         con = db()
         has_athletes = con.execute("SELECT COUNT(*) FROM athletes WHERE status='active'").fetchone()[0] > 0
-        has_events = con.execute("SELECT COUNT(*) FROM events").fetchone()[0] > 0
+        has_events   = con.execute("SELECT COUNT(*) FROM events").fetchone()[0] > 0
         con.close()
         if has_athletes and has_events:
             generate_heats()
@@ -1862,6 +1870,7 @@ def comp_run():
             cs = get_comp_state()
             category, event, heat = cs["category"], cs["event"], cs["heat"]
             lanes = get_heat_lanes(category, heat)
+            _any_heats = True
     elif category and not lanes:
         con = db()
         has_athletes = con.execute("SELECT COUNT(*) FROM athletes WHERE category=? AND status='active'", (category,)).fetchone()[0] > 0
@@ -1871,13 +1880,14 @@ def comp_run():
             lanes = get_heat_lanes(category, heat)
             sync_comp_to_broadcast()
     # Heats exist but state has empty/wrong category (e.g. after Clear all) — show first category, heat 1
-    if get_all_heats() and not lanes and CATEGORY_ORDER:
+    if _any_heats and not lanes and CATEGORY_ORDER:
         if not category or category not in CATEGORY_ORDER:
             set_comp_state(CATEGORY_ORDER[0], 1, 1)
             sync_comp_to_broadcast()
             cs = get_comp_state()
             category, event, heat = cs["category"], cs["event"], cs["heat"]
             lanes = get_heat_lanes(category, heat)
+
     con = db()
     event_row  = con.execute(
         "SELECT id, name, event_type, primary_metric, secondary_metric FROM events WHERE event_number=?",
@@ -1909,20 +1919,17 @@ def comp_run():
         tiebreaks[l["athlete_name"]]    = raw["tiebreak"]    if raw else ""
         result_types[l["athlete_name"]] = (raw["result_type"] if raw else "score") or "score"
 
-    max_heat    = get_max_heat(category)
+    max_heat     = get_max_heat(category)
     is_last_heat = (heat >= max_heat)
-    next_lanes  = get_heat_lanes(category, heat+1)
+    next_lanes   = get_heat_lanes(category, heat+1)
 
     # Next category (when moving past last heat)
-    cat_idx      = CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else -1
+    cat_idx       = CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else -1
     next_category = CATEGORY_ORDER[cat_idx+1] if cat_idx >= 0 and cat_idx < len(CATEGORY_ORDER)-1 else None
 
-    # Leaderboard — filter by lb_cat query param
-    lb_cat = request.args.get("lb_cat", category)
-    if lb_cat == "all":
-        leaderboard = get_leaderboard(category=None)
-    else:
-        leaderboard = get_leaderboard(category=lb_cat)
+    # Leaderboard — uses shared results cache (populated by sync_comp_to_broadcast on last score save)
+    lb_cat     = request.args.get("lb_cat", category)
+    leaderboard = _get_cached_standings(category=None if lb_cat == "all" else lb_cat)
 
     # Event winner — only when every active (non-withdrawn) competitor has a result for this event
     winner = None
@@ -1941,8 +1948,14 @@ def comp_run():
         if total_active > 0 and results_entered >= total_active and leaderboard:
             winner = leaderboard[0]
 
-    if get_all_heats():
+    # Mark competition live — skip state write if already set (avoids state_lock on every page load)
+    if _any_heats and _run_state.get("competition_status") != "live":
         set_competition_status("live")
+
+    # Derive colors and broadcast_mode from the already-loaded state snapshot
+    _cat_colors    = _load_category_colors(_run_state)
+    _broadcast_mode = _run_state.get("broadcast", {}).get("data_source_mode",
+                                                          _run_state.get("data_source_mode", "engine"))
 
     return render_template("comp_run.html",
         state=cs,
@@ -1966,9 +1979,9 @@ def comp_run():
         is_last_heat=is_last_heat,
         winner=winner,
         lb_cat=lb_cat,
-        cat_colors={**CAT_COLORS, **_load_category_colors()},
+        cat_colors={**CAT_COLORS, **_cat_colors},
         result_types=result_types,
-        broadcast_mode=get_broadcast_mode())
+        broadcast_mode=_broadcast_mode)
 
 @app.route("/comp/action/jump_to", methods=["POST"])
 def action_jump_to():
