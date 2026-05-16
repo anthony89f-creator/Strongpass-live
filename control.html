@@ -1223,11 +1223,31 @@ const _collectFromInputs = collectFromInputs;
 collectFromInputs = function() { _collectFromInputs(); collectH2HAndLineup(); };
 
 // ─── LIVE SYNC FROM COMP ENGINE ──────────────────────────────────────────────
+// Hash tracking — skip expensive DOM rebuilds when underlying data hasn't changed.
+// During active competition, timer ticks fire SSE ~1/s but don't change lanes,
+// athletes, or event fields — so those renders are skipped on every timer tick.
+var _syncHashes = { lanes: null, athletes: null, event: null, champ: null };
+
 async function syncFromCompEngine() {
   try {
     const r = await fetch('/state.json?t=' + Date.now());
     if (!r.ok) return;
     const live = await r.json();
+
+    // Compute fingerprints before mutating state
+    const lanesKey    = JSON.stringify(live.lanes);
+    const athletesKey = JSON.stringify(live.athletes && live.athletes.map(
+      a => a.name + '|' + (a.category||'') + '|' + (a.score !== undefined ? a.score : '')
+    ));
+    const eventKey    = (live.eventName||'') + '|' + (live.eventNum||'') + '|' +
+                        (live.eventSub||'')  + '|' + (live.compCategory||'');
+    const champKey    = JSON.stringify([live.champName, live.champDetail, live.champScore,
+                                        live.champScoreLabel, live.champEyebrow, live.champComp]);
+
+    const lanesChanged    = lanesKey    !== _syncHashes.lanes;
+    const athletesChanged = athletesKey !== _syncHashes.athletes;
+    const eventChanged    = eventKey    !== _syncHashes.event;
+    const champChanged    = champKey    !== _syncHashes.champ;
 
     // Sync lanes from comp engine if available
     if (live.lanes && live.lanes.length) {
@@ -1264,16 +1284,19 @@ async function syncFromCompEngine() {
     if (live.champEyebrow)    state.champEyebrow    = live.champEyebrow;
     if (live.champComp)       state.champComp       = live.champComp;
 
-    // Re-render UI with live data
-    initInputs();
-    renderAthleteTable();
-    renderLaneConfig();
-    renderCategoryList();
-    renderH2HCategorySelects();
-    renderLineupCatButtons();
+    // Commit hashes
+    if (lanesChanged)    _syncHashes.lanes    = lanesKey;
+    if (athletesChanged) _syncHashes.athletes = athletesKey;
+    if (eventChanged)    _syncHashes.event    = eventKey;
+    if (champChanged)    _syncHashes.champ    = champKey;
 
-    // Update event winner preview banner if data has changed
-    if (live.champName) {
+    // Selective re-render — avoids full DOM rebuild on every timer tick
+    if (lanesChanged)              renderLaneConfig();
+    if (athletesChanged)           { renderAthleteTable(); renderH2HCategorySelects(); }
+    if (eventChanged || champChanged) initInputs();
+
+    // Update event winner preview banner only when champ data changes
+    if (champChanged && live.champName) {
       const preview = document.getElementById('winner-preview');
       const pName   = document.getElementById('winner-preview-name');
       const pDetail = document.getElementById('winner-preview-detail');
@@ -1284,7 +1307,9 @@ async function syncFromCompEngine() {
       }
     }
 
-    showStatus('✅ Synced from Competition Engine', true);
+    if (lanesChanged || athletesChanged || eventChanged || champChanged) {
+      showStatus('✅ Synced from Competition Engine', true);
+    }
   } catch(e) {
     console.warn('Sync failed:', e);
   }

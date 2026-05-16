@@ -36,6 +36,11 @@ CATEGORY_ORDER = list(DEFAULT_CATEGORY_ORDER)
 # /state.json so clients can detect a server restart and reset their version tracking.
 _RESTART_TOKEN = int(time.time())
 
+# SSE payload cache — built once per _sse_version, shared across all connected clients.
+# Eliminates N disk reads + N json.dumps() calls per event when N clients are connected.
+_sse_payload_cache = {"version": -1, "payload": ""}
+_sse_payload_lock  = threading.Lock()
+
 state_lock = threading.Lock()
 
 # ─── RESULTS CACHE ────────────────────────────────────────────────────────────
@@ -801,6 +806,21 @@ def sync_comp_to_broadcast():
         save_state(prev)
     _sse_notify()
 
+def _get_sse_payload(version):
+    """Return cached SSE JSON string for this version — built once, shared across all clients."""
+    with _sse_payload_lock:
+        if _sse_payload_cache["version"] == version:
+            return _sse_payload_cache["payload"]
+        data = load_state()
+        evs, _res = _get_cached_results()
+        data["events"] = evs
+        data["results_version"] = _sse_mod._results_version
+        data["restart_token"] = _RESTART_TOKEN
+        payload = json.dumps(data)
+        _sse_payload_cache["version"] = version
+        _sse_payload_cache["payload"] = payload
+        return payload
+
 # ─── SSE STREAM ENDPOINT ──────────────────────────────────────────────────────
 @app.route("/stream")
 def stream():
@@ -813,14 +833,9 @@ def stream():
                 changed = _sse_condition.wait_for(lambda: _sse_mod._sse_version != seen_version, timeout=30)
                 seen_version = _sse_mod._sse_version
             if changed:
-                data = load_state()
-                evs, _res = _get_cached_results()
-                data["events"] = evs
-                data["results_version"] = _sse_mod._results_version
-                data["restart_token"] = _RESTART_TOKEN
-                # results blob omitted from SSE stream (126 KB) — consumers fetch
-                # /state.json or the API endpoints when results_version changes
-                yield f"data: {json.dumps(data)}\n\n"
+                # results blob omitted from SSE stream (~126 KB) — consumers fetch
+                # /state.json or the API endpoints when results_version advances
+                yield f"data: {_get_sse_payload(seen_version)}\n\n"
             else:
                 yield ": keepalive\n\n"
     resp = Response(generate(), mimetype="text/event-stream")
@@ -869,6 +884,19 @@ def state_json():
     resp = app.response_class(response=json.dumps(data), mimetype="application/json")
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+@app.route("/health")
+def health():
+    try:
+        con = db()
+        con.execute("SELECT 1").fetchone()
+        con.close()
+        db_ok = "ok"
+    except Exception:
+        db_ok = "error"
+    resp = jsonify({"status": "ok", "db": db_ok, "restart_token": _RESTART_TOKEN})
+    resp.headers["Cache-Control"] = "no-cache"
     return resp
 
 def _apply_judge_scores_to_raw_results(judge_payload=None):
@@ -1260,8 +1288,8 @@ def action_set_lanes():
         save_state(s)
     try:
         regenerate_remaining_heats()
-    except Exception:
-        pass
+    except Exception as exc:
+        app.logger.error("set_lanes: regenerate_remaining_heats failed: %s", exc, exc_info=True)
     sync_comp_to_broadcast()
     return redirect(request.referrer or "/comp/events")
 

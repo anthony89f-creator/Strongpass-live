@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 1 stabilization complete)
+**Last updated:** 2026-05-16 (Phase 2 optimization complete)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -53,11 +53,9 @@ Replaced `location.reload()` with full DOM-patch on every SSE push. Event name, 
 **Resolved in:** `a96ea86`  
 Removed `setInterval(() => location.reload(), 30000)` fallback. Added proper SSE reconnect with 5 s backoff. Heat-change reload preserved (callroom shows next-heat data that requires a server render).
 
-### H3 — `set_lanes` Swallows `regenerate_remaining_heats` Errors
-**Source:** TD-H3, STRESS_TEST recommendations item 1  
-**File:** `server.py` — `action_set_lanes`  
-**Impact:** Heat regeneration failure is invisible to the operator.  
-**Fix:** Log the exception; return a visible flash message or error response.
+### ~~H3~~ — `set_lanes` Swallows `regenerate_remaining_heats` Errors
+**Resolved in:** Phase 2  
+`except Exception: pass` replaced with `app.logger.error(...)` — failure now appears in Gunicorn logs. A user-visible flash message would require Flask flash infrastructure (not yet added; acceptable for now).
 
 ### H4 — New DB Connection Opened Per Operation
 **Source:** TD-H4, STRESS_TEST recommendations item 6  
@@ -113,16 +111,13 @@ Replaced positional array with named object matching `app/config.py` CAT_COLORS.
 **Resolved in:** `a96ea86`  
 Deleted. Zero imports confirmed across all HTML files.
 
-### M6 — No `/health` Endpoint
-**Source:** TD-L4  
-**Impact:** No way for uptime monitors or load balancers to check app health programmatically.  
-**Fix:** Add `GET /health` returning `{"status":"ok","db":"ok"}`.
+### ~~M6~~ — No `/health` Endpoint
+**Resolved in:** Phase 2  
+`GET /health` added — returns `{"status":"ok","db":"ok","restart_token":N}`. Performs live `SELECT 1` against SQLite; returns `"db":"error"` if it fails.
 
-### M7 — `comp/api/event_points` Missing Input Validation
-**Source:** STRESS_TEST recommendations item 4  
-**File:** `server.py` — `api_event_points()`  
-**Impact:** `int(event_id)` without try/except — invalid or missing `event_id` returns 500.  
-**Fix:** Use `_safe_int()` and return 400 for bad input.
+### ~~M7~~ — `comp/api/event_points` Missing Input Validation
+**Resolved in:** Phase 2 audit  
+`_safe_int()` was already in use at the call site (line ~2010). The `int()` bare call noted in TD never reached production — confirmed fixed.
 
 ---
 
@@ -146,11 +141,9 @@ Deleted. Zero imports confirmed across all HTML files.
 **Impact:** `set_lanes` caps at 4; `_protect_lane_stopped_timers` iterates up to 8; `_default_inactive_judge` sets up to `judgeL8`. The cap is inconsistent.  
 **Fix:** Define `MAX_LANES = 8` in config and apply consistently.
 
-### L4 — `ws-client.js` Still Exists in Root
-**Source:** TD-M4 (partially resolved)  
-**File:** `ws-client.js`  
-**Impact:** All 8 overlay files were migrated to `sse-client.js` in Phase 2. The old file is no longer imported by any HTML file but still exists on disk.  
-**Fix:** Delete `ws-client.js`. Verify no remaining references first: `grep -r "ws-client" *.html templates/`.
+### ~~L4~~ — `ws-client.js` Still Exists in Root
+**Resolved in:** Phase 2 audit  
+File confirmed deleted from disk — no longer present at `/opt/strongpass/current/ws-client.js`. Zero references across all HTML files verified.
 
 ### L5 — No `.env` or Environment Variable Documentation
 **Source:** TD-L3  
@@ -190,3 +183,9 @@ Deleted. Zero imports confirmed across all HTML files.
 | load_state crash | Corrupt/missing state.json caused 500 | Stress test pass |
 | /update DoS | No body size limit | Stress test pass (512KB cap) |
 | Gunicorn boot | `sqlite3.Row` had no `.get()` | Simulation pass |
+| H3 | `set_lanes` swallows regenerate errors | Phase 2 |
+| M6 | No `/health` endpoint | Phase 2 |
+| M7 | `api_event_points` missing input validation | Phase 2 audit |
+| L4 | `ws-client.js` still on disk | Phase 2 audit |
+| SSE N×load | N clients × N disk reads per SSE event | Phase 2 (SSE payload cache) |
+| control.html DOM churn | Full athlete/lane rebuild on every timer tick | Phase 2 (hash dirty check) |

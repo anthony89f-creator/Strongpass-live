@@ -1,7 +1,6 @@
 # Project Status — StrongPass Competition OS
-**Last updated:** 2026-05-13  
-**Status:** Beta — live, protected, pre-production  
-**Last updated:** 2026-05-13 (post phase5 deployment verification)
+**Last updated:** 2026-05-16 (Phase 2 optimization complete)  
+**Status:** Beta — live, protected, pre-production
 
 ---
 
@@ -79,6 +78,25 @@ Added `weight_reps` as a first-class scoring type (heavier weight wins, more rep
 ### Phase 5 (leaderboard) — Architecture Redesign
 **Commit:** `ab093ec`  
 `comp_results_public.html`: SSE-driven DOM re-render via `/api/results/<cat>` replaces `location.reload()` — no flicker for spectators. `comp_leaderboard.html`: full per-event breakdown table (was name+total only, fixes M5), SSE live updates. `comp_heats.html`: 10s polling replaced with SSE-triggered reload. New public endpoint `/api/results/<category>` and updated `/comp/api/leaderboard` (version + optional detailed breakdown).
+
+### Phase 1 Stabilization — Real-Time Reliability
+**Commit:** `a96ea86` and related  
+- Eliminated all remaining `location.reload()` and polling patterns
+- `comp_arena.html`: full DOM-patch via SSE (OBS-safe, zero blank frames)
+- `comp_callroom.html`: removed 30s periodic reload, added proper SSE reconnect
+- `comp_run.html`: added SSE listener, reloads on heat/event change only
+- `comp_heats.html`: fixed null-coercion infinite reload loop (null-seed pattern)
+- `comp_leaderboard.html`, `comp_results_public.html`, `results.html`: null-seed + restart_token patterns
+- `control.html`: replaced 5s polling with SSE-debounced sync (80ms debounce); fixed category color mapping
+- Added `_RESTART_TOKEN` (epoch at startup) injected into all SSE payloads + `/state.json`; clients detect restart and reset version counters
+- Deleted `ws-client.js` (zero remaining imports confirmed)
+
+### Phase 2 Optimization — SSE Efficiency + Control Stability
+**Commit:** Phase 2 (2026-05-16)  
+- **SSE payload cache**: `_get_sse_payload(version)` — payload built once per `_sse_version`, shared across all connected clients. Eliminates N disk reads + N `json.dumps()` per event when N clients connected.
+- **control.html hash-based dirty checking**: `_syncHashes` tracks lanes, athletes, event, champ fingerprints. `renderLaneConfig()`, `renderAthleteTable()`, `renderH2HCategorySelects()`, `initInputs()` only called when their underlying data changes. Full DOM rebuild no longer fires on every timer tick (~1/s during competition).
+- **`/health` endpoint**: `GET /health` → `{"status":"ok","db":"ok","restart_token":N}` — performs live SQLite `SELECT 1`; for uptime monitors and load balancers.
+- **H3 set_lanes logging**: `except Exception: pass` → `app.logger.error(...)` — heat regeneration failures now visible in Gunicorn logs.
 
 ### Security — Beta Auth Gate
 **Commits:** `1f87961`, `1329897`  
