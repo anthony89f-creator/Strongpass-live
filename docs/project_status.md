@@ -1,5 +1,5 @@
 # Project Status — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 4 broadcast director layer complete)  
+**Last updated:** 2026-05-16 (Phase 5: color persistence, cached standings, director freeze controls)  
 **Status:** Beta — live, protected, pre-production
 
 ---
@@ -38,7 +38,7 @@
 | Root HTML files | 14 broadcast/overlay HTML files (raw-served) |
 
 **server.py line count trend:**  
-2,175 (pre-Phase 3) → 2,036 (post-Phase 3 extraction) → 2,036 (stable, no further extractions yet)
+2,175 (pre-Phase 3) → 2,036 (post-Phase 3 extraction) → ~2,130 (Phase 5: color helpers + cached standings)
 
 ---
 
@@ -98,7 +98,31 @@ Added `weight_reps` as a first-class scoring type (heavier weight wins, more rep
 - **`/health` endpoint**: `GET /health` → `{"status":"ok","db":"ok","restart_token":N}` — performs live SQLite `SELECT 1`; for uptime monitors and load balancers.
 - **H3 set_lanes logging**: `except Exception: pass` → `app.logger.error(...)` — heat regeneration failures now visible in Gunicorn logs.
 
-### Category Color Persistence
+### Phase 5 — Broadcast Director Controls + Performance
+**Commits:** `f45fb42`, `963f9c5`, `2711492` (2026-05-16)
+
+**Category Color Persistence:**
+- `state.json["category_colors"]` = canonical `{name: hex}` store
+- `_load_category_colors()` / `_set_category_color()` helpers
+- `action_add_category()` saves color; new `/comp/action/set_category_color` endpoint
+- All color consumers (sync, templates, overlays) read from canonical store
+- `comp_home.html` dot replaced with inline `<input type="color">` picker (auto-submits)
+
+**Multi-Category Cached Standings:**
+- `_get_cached_standings()` derives leaderboard from shared `_results_cache` — no per-tick DB queries
+- `_build_lb_standings()` pre-computes all categories simultaneously
+- `lbStandings` dict pre-stored in state.json; stripped from SSE; available via `/state.json`
+- `/director/lb` uses cache lookup — instant response, no DB query
+
+**Director Freeze + Display Controls:**
+- `lbFrozen` — overlay holds snapshot while scoring continues; FROZEN badge in footer
+- `lbDisplayCount` — 5/8/10/15 rows selector in control.html
+- Mini preview panel — top 5 lbAthletes visible to director without opening overlay
+- All director state syncs across concurrent operators via SSE
+
+---
+
+### Category Color Persistence (detail)
 **Commit:** `f45fb42` (2026-05-16)
 
 Category colors were previously lost on restart and ignored on new category creation. Fix introduces `state.json["category_colors"]` as the canonical `{name: hex}` store.

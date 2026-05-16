@@ -83,10 +83,13 @@
   "── CATEGORY COLOR STORE (set by /comp/action/set_category_color, persists independently) ──": {},
   "category_colors":    {"U90": "#F5C842", "U80": "#CC0044"},
 
-  "── DIRECTOR OVERRIDE FIELDS (set by /director/lb, persist independently) ──": {},
+  "── DIRECTOR OVERRIDE FIELDS (set by /director/lb + /update, persist independently) ──": {},
   "lbCategory":         "U80",
   "lbCategoryOverride": true,
   "lbAthletes":         [{"name":"...","score":"...","category":"U80"}],
+  "lbFrozen":           false,
+  "lbDisplayCount":     10,
+  "lbStandings":        {"U80": [...], "U90": [...], "all": [...]},
 
   "── BROADCAST CONTROL FIELDS (set by /update via control.html) ──": {},
   "scorebug":           false,
@@ -194,7 +197,7 @@ Director clicks "↺ Auto" in control.html
 
 | Overlay | Mode | Follows | Can Override |
 |---------|------|---------|--------------|
-| `leaderboard.html` | AUTO or MANUAL | `lbAthletes` (comp category or director pin) | ✅ via `/director/lb` |
+| `leaderboard.html` | AUTO or MANUAL or FROZEN | `lbAthletes` (comp category or director pin; snapshot when frozen) | ✅ via `/director/lb`; ❄ Freeze via `/update` |
 | `lowerthird.html` | AUTO | `lanes` (live heat) | ❌ (manual_lowerthird.html for manual) |
 | `scorebug.html` | AUTO | `athletes` (scoring category) | ❌ |
 | `champion.html` | MANUAL | `champName/Score/etc` | ✅ via `/update` from control.html |
@@ -243,6 +246,11 @@ Every overlay file uses a hash fingerprint to skip DOM operations when data hasn
 
 ### Results Cache
 `_get_cached_results()` — SQLite leaderboard recomputed only when `_results_dirty = True`. Timer ticks that write an unchanged score value do NOT invalidate the cache.
+
+### Cached Standings
+`_get_cached_standings(category)` — derives leaderboard athletes directly from `_results_cache`. Replaces `get_leaderboard()` in the hot path. No extra DB queries on timer ticks.
+
+`_build_lb_standings()` — pre-computes all categories' standings at once. Result stored as `state.json["lbStandings"]`. Used by `/director/lb` for instant category-switch responses (dict lookup instead of DB query). Stripped from SSE stream; available via `/state.json`.
 
 ### Debouncing
 - `_debouncedSync` in control.html: 80ms — absorbs rapid SSE bursts

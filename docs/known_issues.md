@@ -194,6 +194,8 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 | lb category dropdown | showed only current-heat category (not all categories) | Phase 3 (reads `live.categories`) |
 | category color reversion | colors reverted to hardcoded fallbacks on SSE update | Phase 3 (preserves stored color in `sync_comp_to_broadcast`) |
 | category color no persistence | colors lost on restart; new categories ignored color picker | `f45fb42` (`category_colors` dict in state.json; `set_category_color` endpoint; inline color picker) |
+| lb standings DB query per tick | `sync_comp_to_broadcast()` ran `get_leaderboard()` (DB query) on every timer tick | `2711492` (`_get_cached_standings()` reads from shared `_results_cache` — no per-tick DB query) |
+| director lb switch DB latency | `/director/lb` ran `get_leaderboard()` for each switch | `2711492` (`lbStandings` pre-computed; `/director/lb` uses dict lookup) |
 | comp auth Basic Auth | browser dialog, no separate operator session | Phase 3 (session-based `/comp/login`) |
 | lb coupled to scoring operator | leaderboard overlay followed scoring operator's active tab | Phase 4 (`lbAthletes` + `lbCategoryOverride` + `/director/lb`) |
 | lbCategory overwritten on sync | director's category selection reset by every syncFromCompEngine() | Phase 4 (guard: `!state.lbCategoryOverride`) |
