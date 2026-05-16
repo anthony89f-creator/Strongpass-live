@@ -190,7 +190,7 @@ let state = {
 function driveDirectUrl(url) {
   if (!url) return url;
   var m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return m ? 'https://drive.google.com/uc?export=view&id=' + m[1] : url;
+  return m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1920' : url;
 }
 
 function setPhoto(id, noPhotoId, url, name) {
@@ -198,7 +198,7 @@ function setPhoto(id, noPhotoId, url, name) {
   const np = document.getElementById(noPhotoId);
   const resolved = driveDirectUrl(url);
   if (resolved) {
-    el.style.backgroundImage = 'url(' + resolved + ')';
+    el.style.backgroundImage = 'url("' + resolved + '")';
     np.style.display = 'none';
   } else {
     el.style.backgroundImage = 'none';

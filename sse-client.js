@@ -61,7 +61,9 @@
   // browser tab switch, or page navigation). Reconnects and syncs missed state
   // on pageshow (bfcache restore) or visibilitychange (OBS scene activation).
   window.addEventListener('pagehide', disconnect);
-  window.addEventListener('pageshow', reconnectAndSync);
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) reconnectAndSync();
+  });
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) reconnectAndSync();
   });
