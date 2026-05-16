@@ -155,6 +155,31 @@ def _restore_category_order():
         CATEGORY_ORDER.clear()
         CATEGORY_ORDER.extend(saved)
 
+def _load_category_colors(s=None):
+    """Return {name: hex_color} from state.json category_colors dict."""
+    if s is None:
+        s = load_state()
+    stored = s.get("category_colors")
+    if stored and isinstance(stored, dict):
+        return dict(stored)
+    # backward compat: rebuild from legacy categories array if present
+    colors = {}
+    for c in s.get("categories", []):
+        if isinstance(c, dict) and c.get("name") and c.get("color"):
+            colors[c["name"]] = c["color"]
+    return colors
+
+def _set_category_color(name, color):
+    """Persist a custom color for a category in state.json category_colors."""
+    with state_lock:
+        s = load_state()
+        colors = s.get("category_colors")
+        if not isinstance(colors, dict):
+            colors = {}
+        colors[name] = color
+        s["category_colors"] = colors
+        save_state(s)
+
 # ─── COMP AUTH ────────────────────────────────────────────────────────────────
 # Session-based auth for operator routes. Separate from the beta gate (which wraps
 # the entire site). COMP_PASSWORD env var required; unset = open access.
@@ -844,13 +869,12 @@ def sync_comp_to_broadcast():
     # Category list for overlay (only categories that have athletes).
     # Prefer any custom color already stored in state.json by the broadcast director;
     # fall back to CAT_COLORS config defaults, then to gold (#F5C842).
-    _stored_cats = {c["name"]: c for c in _s.get("categories", []) if isinstance(c, dict) and c.get("name")}
+    _cat_colors = _load_category_colors(_s)
     cats = []
     for cat in CATEGORY_ORDER:
         n = con.execute("SELECT COUNT(*) FROM athletes WHERE category=? AND status='active'", (cat,)).fetchone()[0]
         if n > 0:
-            stored_color = _stored_cats.get(cat, {}).get("color")
-            color = stored_color or CAT_COLORS.get(cat, "#F5C842")
+            color = _cat_colors.get(cat) or CAT_COLORS.get(cat, "#F5C842")
             cats.append({"name": cat, "color": color, "athleteCount": n})
     con.close()
 
@@ -1255,7 +1279,8 @@ def comp_events():
     ).fetchall()
     stats = {cat: con.execute("SELECT COUNT(*) FROM athletes WHERE category=? AND status='active'",(cat,)).fetchone()[0] for cat in CATEGORY_ORDER}
     con.close()
-    categories = [{"name": c, "color": CAT_COLORS.get(c, "#F5C842")} for c in CATEGORY_ORDER]
+    cat_colors = _load_category_colors()
+    categories = [{"name": c, "color": cat_colors.get(c) or CAT_COLORS.get(c, "#F5C842")} for c in CATEGORY_ORDER]
     comp_config = get_comp_config()
     lane_count = get_lane_count()
     backup_status = request.args.get("backup")
@@ -1672,11 +1697,22 @@ def action_edit_event():
 
 @app.route("/comp/action/add_category", methods=["POST"])
 def action_add_category():
-    name = request.form.get("name","").strip()
+    name  = request.form.get("name","").strip()
+    color = request.form.get("color","").strip() or "#F5C842"
     if name and name not in CATEGORY_ORDER:
         CATEGORY_ORDER.append(name)
         _persist_category_order()
+        _set_category_color(name, color)
     return redirect("/comp/events?focus=add_category")
+
+@app.route("/comp/action/set_category_color", methods=["POST"])
+def action_set_category_color():
+    name  = request.form.get("name","").strip()
+    color = request.form.get("color","").strip()
+    if name and color and name in CATEGORY_ORDER:
+        _set_category_color(name, color)
+        sync_comp_to_broadcast()
+    return redirect(request.referrer or "/comp/events")
 
 @app.route("/comp/action/reorder_category", methods=["POST"])
 def action_reorder_category():

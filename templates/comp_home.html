@@ -155,7 +155,12 @@
       <div class="events-list">
         {% for cat in categories %}
         <div class="event-row {% if cat.name == state.category %}current{% endif %}" style="display:flex;align-items:center;gap:10px">
-          <span style="width:12px;height:12px;border-radius:50%;background:{{ cat.color }};flex-shrink:0;display:inline-block"></span>
+          <form action="/comp/action/set_category_color" method="post" style="display:contents" title="Change colour">
+            <input type="hidden" name="name" value="{{ cat.name }}">
+            <input type="color" name="color" value="{{ cat.color }}" title="Change colour"
+              onchange="this.form.submit()"
+              style="width:22px;height:22px;border:1px solid rgba(255,255,255,0.12);border-radius:50%;background:{{ cat.color }};cursor:pointer;padding:0;flex-shrink:0;outline:none">
+          </form>
           <span class="event-name" style="flex:1">{{ cat.name }}</span>
           <span style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif">{{ stats.get(cat.name, 0) }} athletes</span>
           {% if cat.name == state.category %}
