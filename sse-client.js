@@ -1,6 +1,7 @@
 // sse-client.js — Server-Sent Events client, drop-in replacement for ws-client.js.
 // Contract: calls window.onStateUpdate(data) on every state push.
 // Reconnects automatically with exponential backoff (1s → 2s → 4s → 30s max).
+// pagehide closes the connection so OBS scene-switching frees the server thread.
 (function () {
   'use strict';
 
@@ -8,6 +9,7 @@
   var RETRY_MAX  = 30000;
   var _retryMs   = RETRY_BASE;
   var _es        = null;
+  var _retryTimer = null;
 
   function _dispatch(data) {
     if (typeof window.onStateUpdate === 'function') {
@@ -37,10 +39,24 @@
     _es.onerror = function () {
       _es.close();
       _es = null;
-      setTimeout(connect, _retryMs);
+      _retryTimer = setTimeout(connect, _retryMs);
       _retryMs = Math.min(_retryMs * 2, RETRY_MAX);
     };
   }
+
+  function disconnect() {
+    if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
+    if (_es) { _es.close(); _es = null; }
+  }
+
+  // Release the server-side gthread when this page is hidden (OBS scene switch,
+  // browser tab switch, or page navigation). Reconnects on pageshow (bfcache
+  // restore) or if the page becomes visible again.
+  window.addEventListener('pagehide', disconnect);
+  window.addEventListener('pageshow', function (e) {
+    // bfcache restore: page was cached, now shown again — reconnect
+    if (!_es) connect();
+  });
 
   connect();
 }());

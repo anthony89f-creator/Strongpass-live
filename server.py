@@ -1028,22 +1028,39 @@ def _get_sse_payload(version):
         return payload
 
 # ─── SSE STREAM ENDPOINT ──────────────────────────────────────────────────────
+_sse_active = 0          # count of active SSE generator threads
+_sse_active_lock = threading.Lock()
+
 @app.route("/stream")
 def stream():
     """Server-Sent Events endpoint. Clients receive state pushes on every change instead of polling.
-    Compatible with gunicorn --worker-class=gthread (single worker, multiple threads)."""
+    Compatible with gunicorn --worker-class=gthread (single worker, multiple threads).
+    Warn when active connections approach the thread pool limit."""
+    global _sse_active
+    with _sse_active_lock:
+        _sse_active += 1
+        _cur = _sse_active
+    if _cur >= 24:
+        app.logger.warning("SSE active=%d — approaching thread limit (32); consider adding threads or reducing open overlays", _cur)
+    app.logger.debug("SSE connect: active=%d", _cur)
     def generate():
-        seen_version = -1
-        while True:
-            with _sse_condition:
-                changed = _sse_condition.wait_for(lambda: _sse_mod._sse_version != seen_version, timeout=30)
-                seen_version = _sse_mod._sse_version
-            if changed:
-                # results blob omitted from SSE stream (~126 KB) — consumers fetch
-                # /state.json or the API endpoints when results_version advances
-                yield f"data: {_get_sse_payload(seen_version)}\n\n"
-            else:
-                yield ": keepalive\n\n"
+        try:
+            seen_version = -1
+            while True:
+                with _sse_condition:
+                    changed = _sse_condition.wait_for(lambda: _sse_mod._sse_version != seen_version, timeout=30)
+                    seen_version = _sse_mod._sse_version
+                if changed:
+                    # results blob omitted from SSE stream (~126 KB) — consumers fetch
+                    # /state.json or the API endpoints when results_version advances
+                    yield f"data: {_get_sse_payload(seen_version)}\n\n"
+                else:
+                    yield ": keepalive\n\n"
+        finally:
+            global _sse_active
+            with _sse_active_lock:
+                _sse_active -= 1
+            app.logger.debug("SSE disconnect: active=%d", _sse_active)
     resp = Response(generate(), mimetype="text/event-stream")
     resp.headers["Cache-Control"]     = "no-cache"
     resp.headers["X-Accel-Buffering"] = "no"
@@ -1101,7 +1118,8 @@ def health():
         db_ok = "ok"
     except Exception:
         db_ok = "error"
-    resp = jsonify({"status": "ok", "db": db_ok, "restart_token": _RESTART_TOKEN})
+    resp = jsonify({"status": "ok", "db": db_ok, "restart_token": _RESTART_TOKEN,
+                    "sse_active": _sse_active, "threads": 32})
     resp.headers["Cache-Control"] = "no-cache"
     return resp
 
