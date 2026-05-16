@@ -562,23 +562,36 @@ document.addEventListener('keydown', e => {
 
 // Reload when heat or event advances from any source (judge panel, other admin tab).
 // Reloads only on heat/event change so in-progress score entries aren't disrupted.
-// pagehide closes the stream so it doesn't fire location.reload() mid-navigation.
+// pagehide closes SSE so it doesn't fire location.reload() mid-navigation.
+// pageshow/visibilitychange reconnect after tab switch or OBS scene switch.
 (function() {
   var _ev = {{ state.event | tojson }};
   var _ht = {{ state.heat  | tojson }};
   var _es = null;
+  function checkState(d) {
+    if (d && (d.compEvent !== _ev || d.compHeat !== _ht)) location.reload();
+  }
+  function syncState() {
+    fetch('/state.json?t=' + Date.now(), {cache: 'no-store'})
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { checkState(d); })
+      .catch(function() {});
+  }
   function connect() {
     _es = new EventSource('/stream');
     _es.onmessage = function(e) {
-      try {
-        var d = JSON.parse(e.data);
-        if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
-      } catch(ex) {}
+      try { checkState(JSON.parse(e.data)); } catch(ex) {}
     };
-    _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
+    _es.onerror = function() { _es.close(); _es = null; setTimeout(connect, 5000); };
   }
   connect();
   window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) { if (!_es) connect(); syncState(); }
+  });
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) { if (!_es) connect(); syncState(); }
+  });
 })();
 </script>
 
