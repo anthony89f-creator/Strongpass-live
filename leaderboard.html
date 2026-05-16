@@ -195,6 +195,8 @@ function render() {
   if (want && !_lbWasVisible) {
     lb.classList.add('visible');
     _lbWasVisible = true;
+    clearTimeout(_animTimer);
+    _animTimer = setTimeout(() => document.querySelectorAll('.lb-row').forEach(r => r.classList.add('in')), 50);
   } else if (!want && _lbWasVisible) {
     lb.classList.remove('visible');
     document.querySelectorAll('.lb-row').forEach(r => r.classList.remove('in'));
