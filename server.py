@@ -1919,7 +1919,7 @@ def comp_run():
         is_last_heat=is_last_heat,
         winner=winner,
         lb_cat=lb_cat,
-        cat_colors=CAT_COLORS,
+        cat_colors={**CAT_COLORS, **_load_category_colors()},
         result_types=result_types,
         broadcast_mode=get_broadcast_mode())
 
@@ -2147,7 +2147,7 @@ def public_results(category):
         rows = []
     return render_template("comp_results_public.html",
         events=events, rows=rows, selected_category=category,
-        category_order=CATEGORY_ORDER, cat_colors=CAT_COLORS,
+        category_order=CATEGORY_ORDER, cat_colors={**CAT_COLORS, **_load_category_colors()},
         total_events=len(events))
 
 # ─── JSON API ─────────────────────────────────────────────────────────────────
