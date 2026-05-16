@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 8 — action-path DB consolidation `8cae0de`)
+**Last updated:** 2026-05-16 (Phase 9 — gthread exhaustion fix `3996969`)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -165,6 +165,7 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 ## Resolved (for reference)
 
 | SSE nav race | EventSource on comp_run/heats/callroom/leaderboard fired `location.reload()` mid-navigation, making Events tab appear broken | `89bb97b` (pagehide handlers close `_es` immediately when user clicks away) |
+| gthread exhaustion | Gunicorn --threads 8; 15–20+ SSE consumers at live comp (4 judges, overlays, admin tabs, callroom) saturated all threads — every page load and action blocked | `3996969` (threads 8→32 in service file; sse-client.js pagehide disconnect; SSE active counter in /health) |
 | Backup blocking next_heat | create_backup() (shutil.copy2 of full DB) ran synchronously in action_next_heat — froze UI on every heat advance | `8cae0de` (moved to daemon thread via _async_backup) |
 | Excess DB connections per action | set_heat/next_heat/prev_heat/save_results_run each opened 2-4 DB connections; sync_comp_to_broadcast opened 4; _apply_judge_scores opened 3 — each connection runs 2 PRAGMAs | `8cae0de` (all consolidated: each action 1 connection, sync_c2b 1 connection, judge scores 1 connection) |
 | generate_heats load_state in loop | get_lane_count() → load_state() called once per category in generate_heats/generate_heats_for_next_event inner loops | `8cae0de` (hoisted to single call before loop) |
