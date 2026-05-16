@@ -95,8 +95,11 @@
     es.onmessage = function(evt) {
       try {
         var msg = JSON.parse(evt.data);
-        // Reload only when heats/results data changed, not on timer ticks
+        // Reload only when heats/results data changed, not on timer ticks.
+        // Seed lastResultsVersion on first message (null coerces to 0, which would
+        // make any results_version > 0 bypass the gate and trigger a reload loop).
         if (msg.results_version !== undefined) {
+          if (lastResultsVersion === null) { lastResultsVersion = msg.results_version; return; }
           if (msg.results_version <= lastResultsVersion) return;
           lastResultsVersion = msg.results_version;
         }
