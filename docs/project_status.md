@@ -98,6 +98,24 @@ Added `weight_reps` as a first-class scoring type (heavier weight wins, more rep
 - **`/health` endpoint**: `GET /health` → `{"status":"ok","db":"ok","restart_token":N}` — performs live SQLite `SELECT 1`; for uptime monitors and load balancers.
 - **H3 set_lanes logging**: `except Exception: pass` → `app.logger.error(...)` — heat regeneration failures now visible in Gunicorn logs.
 
+### Category Color Persistence
+**Commit:** `f45fb42` (2026-05-16)
+
+Category colors were previously lost on restart and ignored on new category creation. Fix introduces `state.json["category_colors"]` as the canonical `{name: hex}` store.
+
+**Changes:**
+- `_load_category_colors(s=None)` helper reads from `category_colors`, falls back to legacy `categories` array, then `CAT_COLORS` config
+- `_set_category_color(name, color)` writes to `category_colors` dict atomically
+- `action_add_category()` now reads the `color` form field and saves it
+- New `/comp/action/set_category_color` POST endpoint — updates color and triggers SSE
+- `sync_comp_to_broadcast()` uses `_load_category_colors()` instead of hardcoded `CAT_COLORS`
+- comp_home route uses `_load_category_colors()` for template rendering
+- `comp_home.html`: static colored dot replaced with inline `<input type="color">` form; `onchange` submits immediately — no extra button
+
+Colors now survive: server restarts, SSE syncs, category reorder, new category creation, clear_all (category_colors persists separately from athletes/events).
+
+---
+
 ### Phase 4 — Broadcast Director Layer (Architecture Refactor)
 **Commit:** `641aafb` (2026-05-16)
 

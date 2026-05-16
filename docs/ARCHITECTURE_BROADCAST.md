@@ -80,6 +80,9 @@
   "champEyebrow":    "ATLAS STONES",
   "champComp":       "U90 CATEGORY",
 
+  "── CATEGORY COLOR STORE (set by /comp/action/set_category_color, persists independently) ──": {},
+  "category_colors":    {"U90": "#F5C842", "U80": "#CC0044"},
+
   "── DIRECTOR OVERRIDE FIELDS (set by /director/lb, persist independently) ──": {},
   "lbCategory":         "U80",
   "lbCategoryOverride": true,

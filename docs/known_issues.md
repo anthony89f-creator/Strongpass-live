@@ -193,6 +193,7 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 | lineup.html fade storm | showCategory() fade-out/in fired on every SSE tick | Phase 3 (`_lastCatKey`) |
 | lb category dropdown | showed only current-heat category (not all categories) | Phase 3 (reads `live.categories`) |
 | category color reversion | colors reverted to hardcoded fallbacks on SSE update | Phase 3 (preserves stored color in `sync_comp_to_broadcast`) |
+| category color no persistence | colors lost on restart; new categories ignored color picker | `f45fb42` (`category_colors` dict in state.json; `set_category_color` endpoint; inline color picker) |
 | comp auth Basic Auth | browser dialog, no separate operator session | Phase 3 (session-based `/comp/login`) |
 | lb coupled to scoring operator | leaderboard overlay followed scoring operator's active tab | Phase 4 (`lbAthletes` + `lbCategoryOverride` + `/director/lb`) |
 | lbCategory overwritten on sync | director's category selection reset by every syncFromCompEngine() | Phase 4 (guard: `!state.lbCategoryOverride`) |
