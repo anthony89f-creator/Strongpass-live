@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 7 — SSE navigation race fix `89bb97b`)
+**Last updated:** 2026-05-16 (Phase 8 — action-path DB consolidation `8cae0de`)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -165,6 +165,9 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 ## Resolved (for reference)
 
 | SSE nav race | EventSource on comp_run/heats/callroom/leaderboard fired `location.reload()` mid-navigation, making Events tab appear broken | `89bb97b` (pagehide handlers close `_es` immediately when user clicks away) |
+| Backup blocking next_heat | create_backup() (shutil.copy2 of full DB) ran synchronously in action_next_heat — froze UI on every heat advance | `8cae0de` (moved to daemon thread via _async_backup) |
+| Excess DB connections per action | set_heat/next_heat/prev_heat/save_results_run each opened 2-4 DB connections; sync_comp_to_broadcast opened 4; _apply_judge_scores opened 3 — each connection runs 2 PRAGMAs | `8cae0de` (all consolidated: each action 1 connection, sync_c2b 1 connection, judge scores 1 connection) |
+| generate_heats load_state in loop | get_lane_count() → load_state() called once per category in generate_heats/generate_heats_for_next_event inner loops | `8cae0de` (hoisted to single call before loop) |
 | Duplicate Setup nav | comp_run.html had two nav links to `/comp/events` ("Setup" + "Events") | `89bb97b` (removed duplicate "Setup" link) |
 | comp_events 4× load_state | comp_events() called load_state() 4 times (cat_colors, comp_config, lane_count, broadcast_mode) | `89bb97b` (single load_state at top of handler) |
 | comp_leaderboard uncached | comp_leaderboard() called get_leaderboard_detailed() + get_leaderboard() (DB queries) on every page load | `89bb97b` (_get_cached_results() + _get_cached_standings() used instead) |
