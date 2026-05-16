@@ -756,6 +756,7 @@ def get_athletes_ordered_for_event(category, next_event_number, total_events):
 def generate_heats():
     """Full regeneration — event 1 only. Locks starting athlete counts. Registration order."""
     lock_category_start_counts()
+    lane_count = get_lane_count()  # read once — avoids load_state() per category iteration
     con = db(); cur = con.cursor()
     cur.execute("DELETE FROM heats")
     for category in CATEGORY_ORDER:
@@ -764,7 +765,7 @@ def generate_heats():
         ).fetchall()]
         if not athletes:
             continue
-        for h, group in enumerate(balanced_heats(athletes, get_lane_count()), 1):
+        for h, group in enumerate(balanced_heats(athletes, lane_count), 1):
             for lane, name in enumerate(group, 1):
                 cur.execute("INSERT INTO heats(event_id,category,heat_number,lane,athlete_name) VALUES(?,?,?,?,?)",
                             (1, category, h, lane, name))
@@ -777,6 +778,7 @@ def generate_heats_for_next_event(next_event_number):
     - Events 2 → second-last: previous event rank (worst first).
     - Final event: overall standings (lowest points first).
     """
+    lane_count = get_lane_count()  # read once — avoids load_state() per category iteration
     con = db()
     total_events = con.execute("SELECT COUNT(*) FROM events").fetchone()[0] or 1
     ev_row = con.execute("SELECT id FROM events WHERE event_number=?", (next_event_number,)).fetchone()
@@ -787,7 +789,7 @@ def generate_heats_for_next_event(next_event_number):
         athletes = get_athletes_ordered_for_event(category, next_event_number, total_events)
         if not athletes:
             continue
-        for h, group in enumerate(balanced_heats(athletes, get_lane_count()), 1):
+        for h, group in enumerate(balanced_heats(athletes, lane_count), 1):
             for lane, name in enumerate(group, 1):
                 cur.execute("INSERT INTO heats(event_id,category,heat_number,lane,athlete_name) VALUES(?,?,?,?,?)",
                             (event_id, category, h, lane, name))
@@ -878,12 +880,19 @@ def sync_comp_to_broadcast():
     if _s.get("broadcast", {}).get("data_source_mode", _s.get("data_source_mode", "engine")) != "engine":
         return
     lane_count = _s.get("competition_config", {}).get("lanes", LANES)
-    cs = get_comp_state()
-    category, event, heat = cs["category"], cs["event"], cs["heat"]
-    heat_lanes = get_heat_lanes(category, heat)
 
-    # One connection for all DB reads in this function
+    # Single DB connection for all reads: competition_state, heats, events, counts, raw_results.
+    # Previously used 4 separate connections (get_comp_state, get_heat_lanes, main block,
+    # get_raw_results_batch) with 2 PRAGMAs each — now 1 connection, 2 PRAGMAs total.
+    _t_db = time.monotonic()
     con = db()
+    cs_row = con.execute("SELECT category, event, heat FROM competition_state").fetchone()
+    cs = dict(cs_row) if cs_row else {"category": "", "event": 1, "heat": 1}
+    category, event, heat = cs["category"], cs["event"], cs["heat"]
+    heat_lanes = [dict(r) for r in con.execute(
+        "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
+        (category, heat)
+    ).fetchall()]
     ev_row = con.execute(
         "SELECT id, name, event_type, primary_metric, secondary_metric FROM events WHERE event_number=?", (event,)
     ).fetchone()
@@ -913,11 +922,21 @@ def sync_comp_to_broadcast():
         if n > 0:
             color = _cat_colors.get(cat) or CAT_COLORS.get(cat, "#F5C842")
             cats.append({"name": cat, "color": color, "athleteCount": n})
-    con.close()
-
-    # Raw results for current heat lanes (separate helper uses its own connection)
+    # Inline raw_results batch — same connection, avoids a 4th open/close cycle
     lane_names = [hl["athlete_name"] for hl in heat_lanes] if heat_lanes else []
-    raw_batch  = get_raw_results_batch(event_id, lane_names) if event_id and lane_names else {}
+    raw_batch = {}
+    if event_id and lane_names:
+        placeholders = ",".join("?" * len(lane_names))
+        for r in con.execute(
+            "SELECT a.name, rr.raw_value, rr.tiebreak, rr.result_type FROM raw_results rr "
+            "JOIN athletes a ON a.id=rr.athlete_id "
+            "WHERE rr.event_id=? AND a.name IN (" + placeholders + ")",
+            (event_id,) + tuple(lane_names)
+        ).fetchall():
+            raw_batch[r["name"]] = {"raw_value": r["raw_value"], "tiebreak": r["tiebreak"],
+                                    "result_type": r["result_type"] or "score"}
+    con.close()
+    app.logger.debug("sync_c2b db: %.0fms", (time.monotonic() - _t_db) * 1000)
     broadcast_lanes = []
     for i in range(lane_count):
         if i < len(heat_lanes):
@@ -988,7 +1007,8 @@ def sync_comp_to_broadcast():
         save_state(prev)
     _sse_notify()
     _dt = (time.monotonic() - _t0) * 1000
-    if _dt > 200:
+    app.logger.debug("sync_c2b: %.0fms", _dt)
+    if _dt > 100:
         app.logger.warning("sync_comp_to_broadcast slow: %.0f ms", _dt)
 
 def _get_sse_payload(version):
@@ -1087,19 +1107,26 @@ def health():
 
 def _apply_judge_scores_to_raw_results(judge_payload=None):
     """Write judge panel scores to raw_results (engine mode only).
-    Uses one DB connection for all lanes. Skips writes when value is unchanged;
+    Single DB connection for all reads + writes. Skips writes when value is unchanged;
     only invalidates the results cache when a value actually changes."""
     # Read state once to derive broadcast_mode and lane_count — avoids two separate load_state() calls.
     _s = load_state()
     if _s.get("broadcast", {}).get("data_source_mode", _s.get("data_source_mode", "engine")) != "engine":
         return
-    cs = get_comp_state()
-    category, event, heat = cs["category"], cs["event"], cs["heat"]
-    heat_lanes = get_heat_lanes(category, heat)
-    if not heat_lanes:
-        return
 
+    # Single connection for competition_state + heats + events + raw_results reads/writes.
+    # Previously opened 3 separate connections (get_comp_state, get_heat_lanes, main block).
     con = db()
+    cs_row = con.execute("SELECT category, event, heat FROM competition_state").fetchone()
+    if not cs_row:
+        con.close(); return
+    category, event, heat = cs_row["category"], cs_row["event"], cs_row["heat"]
+    heat_lanes = [dict(r) for r in con.execute(
+        "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
+        (category, heat)
+    ).fetchall()]
+    if not heat_lanes:
+        con.close(); return
     ev_row = con.execute(
         "SELECT id, primary_metric, secondary_metric FROM events WHERE event_number=?", (event,)
     ).fetchone()
@@ -1452,26 +1479,50 @@ def get_all_heats():
 # ─── ACTIONS ──────────────────────────────────────────────────────────────────
 @app.route("/comp/action/next_heat", methods=["POST"])
 def action_next_heat():
-    cs = get_comp_state()
-    category, event, heat = cs["category"], cs["event"], cs["heat"]
-    if heat < get_max_heat(category):
-        set_comp_state(category, event, heat+1)
+    _t0 = time.monotonic()
+    con = db()
+    cs_row = con.execute("SELECT category, event, heat FROM competition_state").fetchone()
+    if not cs_row:
+        con.close()
+        return redirect(request.referrer or "/comp/callroom")
+    category, event, heat = cs_row["category"], cs_row["event"], cs_row["heat"]
+    max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
+    if heat < max_heat:
+        new_cat, new_heat = category, heat + 1
     else:
         idx = CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else -1
-        if idx < len(CATEGORY_ORDER)-1: set_comp_state(CATEGORY_ORDER[idx+1], event, 1)
-    try: create_backup()
-    except Exception: pass
+        if idx < len(CATEGORY_ORDER) - 1:
+            new_cat, new_heat = CATEGORY_ORDER[idx + 1], 1
+        else:
+            con.close()
+            sync_comp_to_broadcast()
+            return redirect(request.referrer or "/comp/callroom")
+    con.execute("DELETE FROM competition_state")
+    con.execute("INSERT INTO competition_state(category,event,heat) VALUES(?,?,?)", (new_cat, event, new_heat))
+    con.commit(); con.close()
+    threading.Thread(target=_async_backup, daemon=True).start()
+    _t1 = time.monotonic()
     sync_comp_to_broadcast()
+    app.logger.info("next_heat -> %s h%d: db=%.0fms total=%.0fms", new_cat, new_heat, (_t1-_t0)*1000, (time.monotonic()-_t0)*1000)
     return redirect(request.referrer or "/comp/callroom")
 
 @app.route("/comp/action/prev_heat", methods=["POST"])
 def action_prev_heat():
+    _t0 = time.monotonic()
     cs = get_comp_state()
-    if cs["heat"] > 1: set_comp_state(cs["category"], cs["event"], cs["heat"]-1); sync_comp_to_broadcast()
+    if cs["heat"] > 1:
+        con = db()
+        con.execute("DELETE FROM competition_state")
+        con.execute("INSERT INTO competition_state(category,event,heat) VALUES(?,?,?)",
+                    (cs["category"], cs["event"], cs["heat"] - 1))
+        con.commit(); con.close()
+        sync_comp_to_broadcast()
+        app.logger.info("prev_heat -> h%d: total=%.0fms", cs["heat"] - 1, (time.monotonic()-_t0)*1000)
     return redirect(request.referrer or "/comp/callroom")
 
 @app.route("/comp/action/set_heat", methods=["GET", "POST"])
 def action_set_heat():
+    _t0 = time.monotonic()
     if request.method == "GET":
         event = _safe_int(request.args.get("event"), 1, 1, 999)
         heat = _safe_int(request.args.get("heat"), 1, 1, 9999)
@@ -1480,8 +1531,13 @@ def action_set_heat():
         event = _safe_int(request.form.get("event"), 1, 1, 999)
         heat = _safe_int(request.form.get("heat"), 1, 1, 9999)
         category = request.form.get("category", CATEGORY_ORDER[0] if CATEGORY_ORDER else "")
-    set_comp_state(category, event, heat)
+    con = db()
+    con.execute("DELETE FROM competition_state")
+    con.execute("INSERT INTO competition_state(category,event,heat) VALUES(?,?,?)", (category, event, heat))
+    con.commit(); con.close()
+    _t1 = time.monotonic()
     sync_comp_to_broadcast()
+    app.logger.info("set_heat -> %s e%d h%d: db=%.0fms total=%.0fms", category, event, heat, (_t1-_t0)*1000, (time.monotonic()-_t0)*1000)
     return redirect(request.referrer or "/comp/results")
 
 def create_backup():
@@ -1497,6 +1553,13 @@ def create_backup():
         return True, f"Backup saved as backup_{ts}_*"
     except Exception as e:
         return False, str(e)
+
+def _async_backup():
+    """Run create_backup() in a daemon thread so it never blocks the request cycle."""
+    try:
+        create_backup()
+    except Exception as e:
+        app.logger.error("async backup failed: %s", e)
 
 @app.route("/comp/action/backup", methods=["POST"])
 def action_backup():
@@ -1791,8 +1854,10 @@ def action_delete_category():
 @app.route("/comp/action/save_results_run", methods=["POST"])
 def action_save_results_run():
     """Same as save_results but called from the run page — supports save_next and save_only modes."""
+    _t0 = time.monotonic()
     cs = get_comp_state()
     event_num = cs["event"]
+    category, event, heat = cs["category"], cs["event"], cs["heat"]
     con = db(); cur = con.cursor()
 
     event_row = con.execute("SELECT id FROM events WHERE event_number=?", (event_num,)).fetchone()
@@ -1827,21 +1892,26 @@ def action_save_results_run():
             ON CONFLICT(athlete_id, event_id) DO UPDATE SET raw_value=excluded.raw_value, tiebreak=excluded.tiebreak, result_type='score'
         """, (athlete["id"], event_id, raw_value, tiebreak))
 
-    con.commit(); con.close()
-    _invalidate_results_cache()
+    con.commit()
 
-    mode = request.form.get("mode") or request.form.get("action","save_only")
+    mode = request.form.get("mode") or request.form.get("action", "save_only")
     if mode == "save_next":
-        category, event, heat = cs["category"], cs["event"], cs["heat"]
-        if heat < get_max_heat(category):
-            set_comp_state(category, event, heat+1)
+        max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
+        if heat < max_heat:
+            new_cat, new_heat = category, heat + 1
         else:
             idx = CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else -1
-            if idx < len(CATEGORY_ORDER)-1:
-                set_comp_state(CATEGORY_ORDER[idx+1], event, 1)
-    # Single sync after all state mutations (covers both save_only and save_next).
-    sync_comp_to_broadcast()
+            new_cat = CATEGORY_ORDER[idx + 1] if idx < len(CATEGORY_ORDER) - 1 else category
+            new_heat = 1 if new_cat != category else heat
+        con.execute("DELETE FROM competition_state")
+        con.execute("INSERT INTO competition_state(category,event,heat) VALUES(?,?,?)", (new_cat, event, new_heat))
+        con.commit()
+    con.close()
+    _invalidate_results_cache()
 
+    _t1 = time.monotonic()
+    sync_comp_to_broadcast()
+    app.logger.info("save_results_run(%s): db=%.0fms total=%.0fms", mode, (_t1-_t0)*1000, (time.monotonic()-_t0)*1000)
     return redirect(request.referrer or "/comp/run")
 
 @app.route("/comp/run")
