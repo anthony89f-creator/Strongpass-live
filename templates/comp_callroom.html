@@ -90,15 +90,15 @@ html, body {
   <div class="header-state">
     <div class="hs-item">
       <div class="hs-label">Category</div>
-      <div class="hs-val">{{ state.category }}</div>
+      <div class="hs-val" id="hs-category">{{ state.category }}</div>
     </div>
     <div class="hs-item">
       <div class="hs-label">Event</div>
-      <div class="hs-val">{{ event_name }}</div>
+      <div class="hs-val" id="hs-event">{{ event_name }}</div>
     </div>
     <div class="hs-item">
       <div class="hs-label">Heat</div>
-      <div class="hs-val">{{ state.heat }} <span style="font-size:16px;color:var(--dim2)">/ {{ max_heat }}</span></div>
+      <div class="hs-val" id="hs-heat">{{ state.heat }} <span style="font-size:16px;color:var(--dim2)">/ {{ max_heat }}</span></div>
     </div>
   </div>
   <div class="live-badge">
@@ -112,9 +112,9 @@ html, body {
   <div class="panel">
     <div class="panel-header">
       <div class="panel-label now">⚡ On Stage Now</div>
-      <div class="panel-heat">Heat {{ state.heat }} <span style="color:var(--dim2);font-size:28px">/ {{ max_heat }}</span></div>
+      <div class="panel-heat" id="panel-now-heat">Heat {{ state.heat }} <span style="color:var(--dim2);font-size:28px">/ {{ max_heat }}</span></div>
     </div>
-    <div class="lane-list">
+    <div class="lane-list" id="panel-now-lanes">
       {% if current %}
         {% for lane in current %}
         <div class="lane-row">
@@ -145,12 +145,12 @@ html, body {
   <div class="panel">
     <div class="panel-header">
       <div class="panel-label next">↑ Up Next</div>
-      <div class="panel-heat" style="color:rgba(255,255,255,0.4)">
+      <div class="panel-heat" id="panel-next-heat" style="color:rgba(255,255,255,0.4)">
         {% if next_heat %}Heat {{ state.heat + 1 }} <span style="font-size:24px">/ {{ max_heat }}</span>
         {% else %}<span style="font-size:24px">Last heat</span>{% endif %}
       </div>
     </div>
-    <div class="lane-list">
+    <div class="lane-list" id="panel-next-lanes">
       {% if next_heat %}
         {% for lane in next_heat %}
         <div class="lane-row">
@@ -181,25 +181,117 @@ html, body {
 </div>
 
 <script>
-// Reload on heat/event change — callroom shows next-heat data that needs a server render.
-// No fixed-interval fallback; SSE auto-reconnects so OBS browser sources stay stable.
-// pagehide closes the stream so it doesn't fire location.reload() mid-navigation.
 (function() {
+  'use strict';
   var _ev = {{ state.event | tojson }};
   var _ht = {{ state.heat  | tojson }};
   var _es = null;
+  var _retryTimer = null;
+  var _laneCount = {{ lane_count | tojson }};
+
+  function _esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function buildCurrentLanes(lanes, laneCount, category, eventName) {
+    var html = '', catText = _esc(category) + ' · ' + _esc(eventName);
+    if (lanes && lanes.length) {
+      for (var i = 0; i < lanes.length; i++) {
+        html += '<div class="lane-row"><div class="lane-num gold">' + lanes[i].lane +
+          '</div><div class="lane-info"><div class="lane-name">' + _esc(lanes[i].athlete_name) +
+          '</div><div class="lane-category">' + catText + '</div></div></div>';
+      }
+      for (var j = lanes.length; j < laneCount; j++) {
+        html += '<div class="lane-row"><div class="lane-num gold" style="color:var(--dim)">' +
+          (j+1) + '</div><div class="lane-empty">—</div></div>';
+      }
+    } else {
+      for (var k = 0; k < laneCount; k++) {
+        html += '<div class="lane-row"><div class="lane-num gold" style="color:var(--dim)">' +
+          (k+1) + '</div><div class="lane-empty">No athletes</div></div>';
+      }
+    }
+    return html;
+  }
+
+  function buildNextLanes(lanes, laneCount, category, eventName) {
+    var html = '', catText = _esc(category) + ' · ' + _esc(eventName);
+    if (!lanes || !lanes.length) {
+      for (var k = 0; k < laneCount; k++) {
+        html += '<div class="lane-row"><div class="lane-num" style="color:var(--dim)">' +
+          (k+1) + '</div><div class="lane-empty">Last heat of category</div></div>';
+      }
+      return html;
+    }
+    for (var i = 0; i < lanes.length; i++) {
+      html += '<div class="lane-row"><div class="lane-num green" style="opacity:0.7">' + (i+1) +
+        '</div><div class="lane-info"><div class="lane-name next-name">' + _esc(lanes[i].athlete_name) +
+        '</div><div class="lane-category">' + catText + '</div></div></div>';
+    }
+    for (var j = lanes.length; j < laneCount; j++) {
+      html += '<div class="lane-row"><div class="lane-num" style="color:var(--dim)">' +
+        (j+1) + '</div><div class="lane-empty">—</div></div>';
+    }
+    return html;
+  }
+
+  function patchDOM(d) {
+    _ev = d.event; _ht = d.heat;
+    _laneCount = d.lane_count || _laneCount;
+    document.getElementById('hs-category').textContent = d.category;
+    document.getElementById('hs-event').textContent = d.event_name;
+    document.getElementById('hs-heat').innerHTML =
+      d.heat + ' <span style="font-size:16px;color:var(--dim2)">/ ' + d.max_heat + '</span>';
+    document.getElementById('panel-now-heat').innerHTML =
+      'Heat ' + d.heat + ' <span style="color:var(--dim2);font-size:28px">/ ' + d.max_heat + '</span>';
+    var nextEl = document.getElementById('panel-next-heat');
+    nextEl.innerHTML = (d.next_heat && d.next_heat.length)
+      ? 'Heat ' + (d.heat + 1) + ' <span style="font-size:24px">/ ' + d.max_heat + '</span>'
+      : '<span style="font-size:24px">Last heat</span>';
+    document.getElementById('panel-now-lanes').innerHTML =
+      buildCurrentLanes(d.current, _laneCount, d.category, d.event_name);
+    document.getElementById('panel-next-lanes').innerHTML =
+      buildNextLanes(d.next_heat, _laneCount, d.category, d.event_name);
+  }
+
+  function fetchAndPatch() {
+    fetch('/comp/api/callroom', {cache: 'no-store'})
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d) patchDOM(d); })
+      .catch(function() {});
+  }
+
+  function disconnect() {
+    if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
+    if (_es) { _es.close(); _es = null; }
+  }
+
   function connect() {
+    disconnect();
     _es = new EventSource('/stream');
     _es.onmessage = function(e) {
       try {
         var d = JSON.parse(e.data);
-        if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
+        if (d.compEvent !== undefined && d.compHeat !== undefined) {
+          if (d.compEvent !== _ev || d.compHeat !== _ht) fetchAndPatch();
+        }
       } catch(ex) {}
     };
-    _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
+    _es.onerror = function() {
+      if (_es) { _es.close(); _es = null; }
+      _retryTimer = setTimeout(connect, 5000);
+    };
   }
+
   connect();
-  window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
+
+  // Reconnect and refresh data when the tab becomes active again.
+  // pagehide (tab switch / bfcache) closed _es; pageshow re-opens it.
+  window.addEventListener('pageshow', function() {
+    if (!_es || _es.readyState === 2) connect();
+    fetchAndPatch();  // always sync data on tab focus — may have missed events while hidden
+  });
+  window.addEventListener('pagehide', disconnect);
 })();
 </script>
 </body>

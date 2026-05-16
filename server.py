@@ -1412,14 +1412,50 @@ def comp_heats():
 
 @app.route("/comp/callroom")
 def comp_callroom():
-    cs = get_comp_state()
-    category, event, heat = cs["category"], cs["event"], cs["heat"]
     con = db()
-    event_row = con.execute("SELECT name FROM events WHERE event_number=?",(event,)).fetchone()
+    cs_row = con.execute("SELECT category, event, heat FROM competition_state").fetchone()
+    cs = dict(cs_row) if cs_row else {"category": "", "event": 1, "heat": 1}
+    category, event, heat = cs["category"], cs["event"], cs["heat"]
+    event_row = con.execute("SELECT name FROM events WHERE event_number=?", (event,)).fetchone()
+    event_name = event_row["name"] if event_row else f"Event {event}"
+    current = [dict(r) for r in con.execute(
+        "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
+        (category, heat)).fetchall()]
+    next_heat = [dict(r) for r in con.execute(
+        "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
+        (category, heat + 1)).fetchall()]
+    max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
     con.close()
-    return render_template("comp_callroom.html", state=cs, current=get_heat_lanes(category,heat),
-        next_heat=get_heat_lanes(category,heat+1), event_name=event_row["name"] if event_row else f"Event {event}",
-        max_heat=get_max_heat(category), category_order=CATEGORY_ORDER, lane_count=get_lane_count())
+    lane_count = get_lane_count()
+    return render_template("comp_callroom.html", state=cs, current=current,
+        next_heat=next_heat, event_name=event_name,
+        max_heat=max_heat, category_order=CATEGORY_ORDER, lane_count=lane_count)
+
+@app.route("/comp/api/callroom")
+def api_callroom():
+    """JSON snapshot for call-room DOM patching on heat/event change. Same data as comp_callroom() view."""
+    con = db()
+    cs_row = con.execute("SELECT category, event, heat FROM competition_state").fetchone()
+    cs = dict(cs_row) if cs_row else {"category": "", "event": 1, "heat": 1}
+    category, event, heat = cs["category"], cs["event"], cs["heat"]
+    event_row = con.execute("SELECT name FROM events WHERE event_number=?", (event,)).fetchone()
+    event_name = event_row["name"] if event_row else f"Event {event}"
+    current = [dict(r) for r in con.execute(
+        "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
+        (category, heat)).fetchall()]
+    next_heat = [dict(r) for r in con.execute(
+        "SELECT lane, athlete_name FROM heats WHERE category=? AND heat_number=? ORDER BY lane",
+        (category, heat + 1)).fetchall()]
+    max_heat = con.execute("SELECT MAX(heat_number) FROM heats WHERE category=?", (category,)).fetchone()[0] or 1
+    con.close()
+    resp = jsonify({
+        "category": category, "event": event, "heat": heat,
+        "event_name": event_name, "max_heat": max_heat,
+        "lane_count": get_lane_count(),
+        "current": current, "next_heat": next_heat,
+    })
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 @app.route("/comp/arena")
 def comp_arena():
