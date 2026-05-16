@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16
+**Last updated:** 2026-05-16 (Phase 1 stabilization complete)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -7,7 +7,7 @@ Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
 ## CRITICAL
 
-None currently active. TD-C1 (Gunicorn init bypass) was resolved in Phase 1.
+None currently active. TD-C1 (Gunicorn init bypass) resolved in Phase 1. C1 (control.html 5 s poll) resolved in `a96ea86`.
 
 ---
 
@@ -36,6 +36,22 @@ None currently active. TD-C1 (Gunicorn init bypass) was resolved in Phase 1.
 ### ~~H3-heats-reload~~ — `comp_heats.html` infinite reload loop after Generate Heats
 **Resolved in:** `5e45c26`  
 `lastResultsVersion` initialised as `null` in JS; `null` coerces to `0` for numeric comparison, so any `results_version > 0` (true after the first `_invalidate_results_cache()` call — load test data, add athlete) caused `N <= null → N <= 0 → false → location.reload()`. Page reloaded, null again, infinite loop. Fix: seed `lastResultsVersion` from the first SSE message and return early (no reload) to establish a baseline. Subsequent higher versions still trigger reload as intended.
+
+### ~~H1~~ — results_version resets to 0 on server restart
+**Resolved in:** `a96ea86`  
+`_RESTART_TOKEN` (epoch at startup) now injected into every SSE payload and `/state.json`. All `results_version`-tracking pages detect token change and reset their local version counter, triggering an immediate re-fetch. Prevents indefinite stale-results display after server restart.
+
+### ~~H2~~ — comp_run.html had no live updates
+**Resolved in:** `a96ea86`  
+SSE listener added. Reloads page on `compHeat`/`compEvent` change from any source. Score entry forms unaffected — reload only fires on heat advance, not on score updates.
+
+### ~~H3-arena~~ — comp_arena.html reloaded on heat change (OBS unsafe)
+**Resolved in:** `a96ea86`  
+Replaced `location.reload()` with full DOM-patch on every SSE push. Event name, category, heat label, and all lane panels update in-place. Zero blank frames. Fully stable as OBS browser source.
+
+### ~~H3-callroom~~ — comp_callroom.html had 30 s periodic fallback reload
+**Resolved in:** `a96ea86`  
+Removed `setInterval(() => location.reload(), 30000)` fallback. Added proper SSE reconnect with 5 s backoff. Heat-change reload preserved (callroom shows next-heat data that requires a server render).
 
 ### H3 — `set_lanes` Swallows `regenerate_remaining_heats` Errors
 **Source:** TD-H3, STRESS_TEST recommendations item 1  
@@ -80,6 +96,22 @@ None currently active. TD-C1 (Gunicorn init bypass) was resolved in Phase 1.
 ### ~~M5~~ — `comp_leaderboard.html` Template Ignores Computed Data
 **Resolved in:** `ab093ec`  
 Full per-event breakdown table now rendered when category selected. SSE live updates added. Public `/api/results/<cat>` endpoint added for spectator pages.
+
+### ~~M1~~ — comp_leaderboard.html null coercion on results_version
+**Resolved in:** `a96ea86`  
+Seeded `lastVersion` from first SSE message without triggering fetch. Added `renderTable` null guard. Added restart_token detection.
+
+### ~~M2~~ — comp_results_public.html null coercion on results_version
+**Resolved in:** `a96ea86`  
+Same fix as M1.
+
+### ~~M4~~ — control.html category color fallback mismatch
+**Resolved in:** `a96ea86`  
+Replaced positional array with named object matching `app/config.py` CAT_COLORS. Added separate `CAT_COLOR_PALETTE` array for `addCategory()` cycling.
+
+### ~~L3~~ — ws-client.js dead code
+**Resolved in:** `a96ea86`  
+Deleted. Zero imports confirmed across all HTML files.
 
 ### M6 — No `/health` Endpoint
 **Source:** TD-L4  
