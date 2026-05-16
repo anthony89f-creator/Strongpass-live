@@ -178,20 +178,22 @@ html, body {
 </div>
 
 <script>
-// Reload only when the active event or heat changes, not on a fixed timer.
-// Falls back to 30s interval if SSE is unavailable.
+// Reload on heat/event change — callroom shows next-heat data that needs a server render.
+// No fixed-interval fallback; SSE auto-reconnects so OBS browser sources stay stable.
 (function() {
   var _ev = {{ state.event | tojson }};
   var _ht = {{ state.heat  | tojson }};
-  var _fallback = setInterval(() => location.reload(), 30000);
-  var _es = new EventSource('/stream');
-  _es.onopen  = function() { clearInterval(_fallback); };
-  _es.onmessage = function(e) {
-    try {
-      var d = JSON.parse(e.data);
-      if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
-    } catch(ex) {}
-  };
+  function connect() {
+    var es = new EventSource('/stream');
+    es.onmessage = function(e) {
+      try {
+        var d = JSON.parse(e.data);
+        if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
+      } catch(ex) {}
+    };
+    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+  }
+  connect();
 })();
 </script>
 </body>

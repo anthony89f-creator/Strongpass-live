@@ -5,7 +5,7 @@ Broadcast HTML files are served RAW (send_from_directory, bypasses Jinja2).
 Comp pages live in templates/ subfolder and are rendered with render_template.
 """
 
-import json, os, shutil, sqlite3, math, urllib.request, urllib.parse, threading, base64, functools
+import json, os, shutil, sqlite3, math, urllib.request, urllib.parse, threading, base64, functools, time
 from datetime import datetime
 from flask import Flask, render_template, redirect, jsonify, request, send_from_directory, abort, Response
 
@@ -31,6 +31,10 @@ app = Flask(__name__, template_folder=TPL_DIR, static_folder=None)
 register_beta_auth(app)
 
 CATEGORY_ORDER = list(DEFAULT_CATEGORY_ORDER)
+
+# Epoch-second token written once at startup. Included in every SSE payload and
+# /state.json so clients can detect a server restart and reset their version tracking.
+_RESTART_TOKEN = int(time.time())
 
 state_lock = threading.Lock()
 
@@ -813,6 +817,7 @@ def stream():
                 evs, _res = _get_cached_results()
                 data["events"] = evs
                 data["results_version"] = _sse_mod._results_version
+                data["restart_token"] = _RESTART_TOKEN
                 # results blob omitted from SSE stream (126 KB) — consumers fetch
                 # /state.json or the API endpoints when results_version changes
                 yield f"data: {json.dumps(data)}\n\n"
@@ -860,6 +865,7 @@ def state_json():
     data["events"] = evs
     data["results"] = res
     data["results_version"] = _sse_mod._results_version
+    data["restart_token"] = _RESTART_TOKEN
     resp = app.response_class(response=json.dumps(data), mimetype="application/json")
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Access-Control-Allow-Origin"] = "*"

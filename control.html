@@ -697,12 +697,19 @@ function setConn(ok) {
   document.getElementById('conn-text').style.color = ok ? 'var(--green-bright)' : '#FF4444';
 }
 
-// SSE connection drives the status dot — no periodic poll needed.
+// SSE connection: drives status dot AND triggers live sync on every state push.
+// Debounced so rapid timer-tick bursts don't queue up concurrent fetches.
+var _syncDebounceTimer = null;
+function _debouncedSync() {
+  clearTimeout(_syncDebounceTimer);
+  _syncDebounceTimer = setTimeout(syncFromCompEngine, 80);
+}
+
 (function startConnSSE() {
   const es = new EventSource('/stream');
-  es.onopen  = () => setConn(true);
-  es.onerror = () => { setConn(false); es.close(); setTimeout(startConnSSE, 3000); };
-  // Ignore onmessage — syncFromCompEngine handles data updates on its own schedule.
+  es.onopen    = () => setConn(true);
+  es.onmessage = () => _debouncedSync();
+  es.onerror   = () => { setConn(false); es.close(); setTimeout(startConnSSE, 3000); };
 })();
 
 // ─── PUSH UPDATE ──────────────────────────────────────────────────────────────
@@ -920,7 +927,13 @@ function laneAthleteSelected(i, name) {
 }
 
 // ─── CATEGORIES (API) ─────────────────────────────────────────────────────────
-const CAT_COLORS = ['#CC0000','#D4A017','#0088CC','#00AA44','#8800CC','#CC6600','#CC0088','#006644'];
+// Color palette for manually-added categories (API/manual mode).
+// Matches app/config.py CAT_COLORS for the standard six; extras for custom categories.
+const CAT_COLORS = {
+  'U80':       '#CC0044', 'U90':  '#D4A017', 'U105': '#0088CC',
+  'U120':      '#00AA44', 'Womens':'#CC0088', 'Mens Open':'#8800CC',
+};
+const CAT_COLOR_PALETTE = ['#CC0044','#D4A017','#0088CC','#00AA44','#CC0088','#8800CC','#FF8800','#006644'];
 
 function renderCategoryList() {
   const el = document.getElementById('category-list');
@@ -941,7 +954,7 @@ function renderCategoryList() {
 }
 
 function addCategory() {
-  const col = CAT_COLORS[state.categories.length % CAT_COLORS.length];
+  const col = CAT_COLOR_PALETTE[state.categories.length % CAT_COLOR_PALETTE.length];
   state.categories.push({name:'', url:'', color:col, athleteCount:undefined});
   renderCategoryList();
 }
@@ -1288,8 +1301,8 @@ async function syncFromCompEngine() {
   populateObsUrls();
   // Now pull live data from comp engine and update
   await syncFromCompEngine();
-  // Keep syncing every 5 seconds so control panel stays up to date
-  setInterval(syncFromCompEngine, 5000);
+  // 30 s fallback in case SSE drops — SSE onmessage handles the normal fast path
+  setInterval(syncFromCompEngine, 30000);
 })();
 
 // ── BROADCAST DATA SOURCE PANEL ───────────────────────────────────────────────

@@ -90,14 +90,20 @@
 <script>
 (function() {
   var lastResultsVersion = null;
+  var _lastRestartToken  = null;
   function connect() {
     var es = new EventSource('/stream');
     es.onmessage = function(evt) {
       try {
         var msg = JSON.parse(evt.data);
-        // Reload only when heats/results data changed, not on timer ticks.
-        // Seed lastResultsVersion on first message (null coerces to 0, which would
-        // make any results_version > 0 bypass the gate and trigger a reload loop).
+        // Detect server restart — reload immediately so heats reflect new server state
+        if (msg.restart_token !== undefined) {
+          if (_lastRestartToken !== null && msg.restart_token !== _lastRestartToken) {
+            location.reload(); return;
+          }
+          _lastRestartToken = msg.restart_token;
+        }
+        // Seed on first message; null coerces to 0 and would bypass the gate
         if (msg.results_version !== undefined) {
           if (lastResultsVersion === null) { lastResultsVersion = msg.results_version; return; }
           if (msg.results_version <= lastResultsVersion) return;

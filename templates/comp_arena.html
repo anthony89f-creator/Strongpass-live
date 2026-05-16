@@ -56,20 +56,33 @@
   <div class="auto-refresh"><div class="live-dot"></div>Auto-refreshes every 5s</div>
 </div>
 <script>
-// Reload only when the active event or heat changes, not on a fixed timer.
-// Falls back to 30s interval if SSE is unavailable.
+// DOM-patch on every SSE push — no page reload, OBS-safe.
 (function() {
-  var _ev = {{ state.event | tojson }};
-  var _ht = {{ state.heat  | tojson }};
-  var _fallback = setInterval(() => location.reload(), 30000);
-  var _es = new EventSource('/stream');
-  _es.onopen  = function() { clearInterval(_fallback); };
-  _es.onmessage = function(e) {
-    try {
-      var d = JSON.parse(e.data);
-      if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
-    } catch(ex) {}
-  };
+  function connect() {
+    var es = new EventSource('/stream');
+    es.onmessage = function(e) {
+      try {
+        var d = JSON.parse(e.data);
+        var en = document.querySelector('.event-name');
+        var hc = document.querySelector('.heat-cat');
+        var hn = document.querySelector('.heat-num');
+        if (en && d.compEventName) en.textContent = d.compEventName;
+        if (hc && d.compCategory)  hc.textContent = d.compCategory;
+        if (hn && d.compHeat)      hn.textContent = 'Heat ' + d.compHeat;
+        if (d.lanes) {
+          var grid = document.querySelector('.lanes-grid');
+          if (grid) grid.innerHTML = d.lanes.map(function(l) {
+            return '<div class="lane-panel">' +
+              '<div class="lane-num-big">Lane ' + l.num + '</div>' +
+              '<div class="lane-athlete">' + (l.name || '—') + '</div>' +
+              '</div>';
+          }).join('');
+        }
+      } catch(ex) {}
+    };
+    es.onerror = function() { es.close(); setTimeout(connect, 3000); };
+  }
+  connect();
 })();
 </script>
 </body>

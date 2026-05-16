@@ -233,6 +233,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 (function() {
   const CAT = {{ selected_category | tojson }};
   let lastVersion = null;
+  let _lastRestartToken = null;
 
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -287,7 +288,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   }
 
   function updateResults(data) {
-    if (data.version <= lastVersion) return;
+    if (lastVersion !== null && data.version <= lastVersion) return;
     lastVersion = data.version;
     var tableEl = document.querySelector('.results-table');
     if (!tableEl) return;
@@ -309,8 +310,19 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
     es.onmessage = function(evt) {
       try {
         var msg = JSON.parse(evt.data);
-        // Only fetch when results_version advances — timer ticks don't bump it
-        if (msg.results_version !== undefined && msg.results_version <= lastVersion) return;
+        // Detect server restart — reset so stale version gate doesn't block refresh
+        if (msg.restart_token !== undefined) {
+          if (_lastRestartToken !== null && msg.restart_token !== _lastRestartToken) {
+            lastVersion = null;
+            fetchAndUpdate();
+          }
+          _lastRestartToken = msg.restart_token;
+        }
+        // Seed lastVersion on first message; null coerces to 0 and bypasses the gate
+        if (msg.results_version !== undefined) {
+          if (lastVersion === null) { lastVersion = msg.results_version; return; }
+          if (msg.results_version <= lastVersion) return;
+        }
       } catch(e) {}
       fetchAndUpdate();
     };

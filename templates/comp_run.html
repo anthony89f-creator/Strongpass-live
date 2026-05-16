@@ -557,6 +557,24 @@ document.addEventListener('keydown', e => {
     }
   }
 });
+
+// Reload when heat or event advances from any source (judge panel, other admin tab).
+// Reloads only on heat/event change so in-progress score entries aren't disrupted.
+(function() {
+  var _ev = {{ state.event | tojson }};
+  var _ht = {{ state.heat  | tojson }};
+  function connect() {
+    var es = new EventSource('/stream');
+    es.onmessage = function(e) {
+      try {
+        var d = JSON.parse(e.data);
+        if (d.compEvent !== _ev || d.compHeat !== _ht) location.reload();
+      } catch(ex) {}
+    };
+    es.onerror = function() { es.close(); setTimeout(connect, 5000); };
+  }
+  connect();
+})();
 </script>
 
 </body>

@@ -227,6 +227,7 @@
   }
 
   var lastResultsVersion = null;
+  var _lastRestartToken = null;
 
   function fetchState() {
     fetch('/state.json?t=' + Date.now(), {cache: 'no-store'})
@@ -250,6 +251,16 @@
   window.onStateUpdate = function(d) {
     if (d.compName) compSub.textContent = d.compName;
     if (d.compSub) compSub.textContent = (compSub.textContent ? compSub.textContent + ' · ' : '') + d.compSub;
+    // Detect server restart — reset version so stale gate doesn't block refresh
+    if (d.restart_token !== undefined) {
+      if (_lastRestartToken !== null && d.restart_token !== _lastRestartToken) {
+        lastResultsVersion = null;
+        _lastRestartToken = d.restart_token;
+        fetchState();
+        return;
+      }
+      _lastRestartToken = d.restart_token;
+    }
     var rv = d.results_version;
     if (rv !== undefined && rv <= lastResultsVersion) return;
     fetchState();
