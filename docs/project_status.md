@@ -1,5 +1,5 @@
 # Project Status — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 3 reliability + auth complete)  
+**Last updated:** 2026-05-16 (Phase 4 broadcast director layer complete)  
 **Status:** Beta — live, protected, pre-production
 
 ---
@@ -97,6 +97,22 @@ Added `weight_reps` as a first-class scoring type (heavier weight wins, more rep
 - **control.html hash-based dirty checking**: `_syncHashes` tracks lanes, athletes, event, champ fingerprints. `renderLaneConfig()`, `renderAthleteTable()`, `renderH2HCategorySelects()`, `initInputs()` only called when their underlying data changes. Full DOM rebuild no longer fires on every timer tick (~1/s during competition).
 - **`/health` endpoint**: `GET /health` → `{"status":"ok","db":"ok","restart_token":N}` — performs live SQLite `SELECT 1`; for uptime monitors and load balancers.
 - **H3 set_lanes logging**: `except Exception: pass` → `app.logger.error(...)` — heat regeneration failures now visible in Gunicorn logs.
+
+### Phase 4 — Broadcast Director Layer (Architecture Refactor)
+**Commit:** `641aafb` (2026-05-16)
+
+**Core architectural separation — Competition Engine vs Broadcast Director:**
+
+The leaderboard overlay was tightly coupled to the scoring operator's active category. This is resolved by introducing a director override layer on top of the competition engine feed.
+
+**Key changes:**
+- `lbAthletes` — new state field: the pre-resolved leaderboard athletes for the director-selected category. Computed server-side by `sync_comp_to_broadcast()` and `/director/lb`. Falls back to `athletes` (current scoring category) when no override is active.
+- `lbCategoryOverride` — boolean flag. When `true`, `lbAthletes`/`lbCategory` are not overwritten by competition engine syncs.
+- `/director/lb` POST endpoint — director sets category → server fetches that category's leaderboard immediately → SSE → overlay updates in <100ms. Protected by comp session auth.
+- `control.html` — AUTO/MANUAL badge (green/gold) next to leaderboard dropdown. "↺ Auto" reset button. `syncFromCompEngine()` guards `lbCategory` update with `!state.lbCategoryOverride`.
+- `leaderboard.html` — uses `lbAthletes || athletes`. Shows DIRECTOR badge when override active. Hash `_lastLbKey` uses `lbAthletes`.
+
+**Architecture documented:** `docs/ARCHITECTURE_BROADCAST.md` — full state schema, data flow diagrams, AUTO vs MANUAL overlay modes, protected route table, performance architecture.
 
 ### Phase 3 — Operational Reliability, Overlay Stability, Auth
 **Commit:** Phase 3 (2026-05-16)

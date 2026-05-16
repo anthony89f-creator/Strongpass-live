@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 3 reliability + auth complete)
+**Last updated:** 2026-05-16 (Phase 4 broadcast director layer complete)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -194,3 +194,5 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 | lb category dropdown | showed only current-heat category (not all categories) | Phase 3 (reads `live.categories`) |
 | category color reversion | colors reverted to hardcoded fallbacks on SSE update | Phase 3 (preserves stored color in `sync_comp_to_broadcast`) |
 | comp auth Basic Auth | browser dialog, no separate operator session | Phase 3 (session-based `/comp/login`) |
+| lb coupled to scoring operator | leaderboard overlay followed scoring operator's active tab | Phase 4 (`lbAthletes` + `lbCategoryOverride` + `/director/lb`) |
+| lbCategory overwritten on sync | director's category selection reset by every syncFromCompEngine() | Phase 4 (guard: `!state.lbCategoryOverride`) |
