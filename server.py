@@ -2282,6 +2282,12 @@ def _init_state_file():
                 if k not in s["competition_config"]:
                     s["competition_config"][k] = v
                     changed = True
+        # Director overlay defaults — backfill so SSE payload always carries these
+        for key, default in [("lbFrozen", False), ("lbDisplayCount", 10),
+                             ("lbCategoryOverride", False), ("lbCategory", "all")]:
+            if key not in s:
+                s[key] = default
+                changed = True
         if changed:
             save_state(s)
     except Exception:
