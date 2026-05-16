@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 2 optimization complete)
+**Last updated:** 2026-05-16 (Phase 3 reliability + auth complete)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -21,13 +21,9 @@ None currently active. TD-C1 (Gunicorn init bypass) resolved in Phase 1. C1 (con
 **Fix:** Add Flask-WTF or a minimal CSRF token in the `before_request` / form rendering flow.  
 **Blocked by:** Nothing — standalone fix
 
-### H2 — `/update` and `/judge/set_status` Have No Per-Endpoint Auth
-**Source:** TD-H2  
-**File:** `server.py:970`, `server.py:1859`  
-**Impact:** Anyone with the beta password can push arbitrary state or mark athletes DNS/DNF. On LAN events this is tolerable; on internet-facing events it is a risk.  
-**Partially mitigated by:** Beta gate now requires site-level cookie auth before any endpoint is reachable.  
-**Fix options:** (a) Add a separate judge token distinct from BETA_TOKEN, or (b) document accepted risk and rely on beta gate for now.  
-**Note:** Completely unauthenticated before beta gate. Currently protected by beta cookie only.
+### ~~H2~~ — `/update` and `/judge/set_status` Had No Per-Endpoint Auth
+**Resolved in:** Phase 3  
+`/update`, `/control.html`, `/judge.html`, `/judge-master.html`, `/debug.html` now protected by session-based comp auth. HTTP Basic Auth removed. `/comp/login` login page with `session["comp_ok"]` cookie. `/comp/logout` clears session. Non-HTML requests (curl, AJAX) receive 401; browser requests redirect to login page. `COMP_PASSWORD` env var required; if unset, comp auth is skipped (dev mode). Public overlay routes (`/stream`, `/state.json`, `*.html` overlays) remain accessible without comp auth.
 
 ### ~~H3-sub~~ — Timer ticks triggered full SSE payload rebuilds
 **Resolved in:** `5a1ff30`  
@@ -189,3 +185,12 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 | L4 | `ws-client.js` still on disk | Phase 2 audit |
 | SSE N×load | N clients × N disk reads per SSE event | Phase 2 (SSE payload cache) |
 | control.html DOM churn | Full athlete/lane rebuild on every timer tick | Phase 2 (hash dirty check) |
+| scorebug.html animation reset | `#bug-scroll` CSS animation jumped to frame 0 every ~1s | Phase 3 (`_lastScrollKey`) |
+| leaderboard.html transition flash | `.lb-row` CSS transitions reset every tick | Phase 3 (`_lastLbKey`) |
+| lowerthird.html storm | animOut+animIn (700ms) fired on every SSE tick | Phase 3 (`_lastLanesKey`) |
+| champion.html particle storm | 40 DOM elements created on every SSE tick when visible | Phase 3 (`_champVisible`) |
+| reps.html innerHTML rebuild | lights strip + rep cards torn down/rebuilt every tick | Phase 3 (`_builtLaneCount` + `patchContent`) |
+| lineup.html fade storm | showCategory() fade-out/in fired on every SSE tick | Phase 3 (`_lastCatKey`) |
+| lb category dropdown | showed only current-heat category (not all categories) | Phase 3 (reads `live.categories`) |
+| category color reversion | colors reverted to hardcoded fallbacks on SSE update | Phase 3 (preserves stored color in `sync_comp_to_broadcast`) |
+| comp auth Basic Auth | browser dialog, no separate operator session | Phase 3 (session-based `/comp/login`) |

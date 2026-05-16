@@ -130,6 +130,15 @@ let state = {
 };
 let currentlyVisible = false;
 
+// Lane data fingerprint — only re-animate when lane content actually changes.
+// Without this, every SSE timer tick triggers animOut+animIn (1-second full re-animation).
+var _lastLanesKey = null;
+
+function _lanesKey() {
+  const count = Math.max(1, Math.min(4, parseInt(state.laneCount)||4));
+  return (state.scoreUnit||'PTS') + '|' + (state.lanes||[]).slice(0,count).map(l=>l.name+'|'+l.detail+'|'+l.score).join(',');
+}
+
 function buildCards(instant) {
   const count = Math.max(1, Math.min(4, parseInt(state.laneCount)||4));
   const lanes  = (state.lanes||[]).slice(0, count);
@@ -154,15 +163,30 @@ function animIn()  { buildCards(false); requestAnimationFrame(()=>requestAnimati
 function animOut(cb){ document.querySelectorAll('.lane-card').forEach((c,i)=>{ c.style.transitionDelay=(0.06*i)+'s'; c.classList.remove('visible'); }); setTimeout(cb,700); }
 
 function render() {
+  // Always update event bar text — cheap, no animation
   const bar = document.getElementById('event-bar');
   document.getElementById('eb-name').textContent = state.eventName||'';
   document.getElementById('eb-sub').textContent  = state.eventSub||'';
   state.eventBarVisible ? bar.classList.add('visible') : bar.classList.remove('visible');
 
   const want = !!state.lowerThirdVisible;
-  if (want && !currentlyVisible)       { animIn(); currentlyVisible=true; }
-  else if (!want && currentlyVisible)  { animOut(()=>buildCards(false)); currentlyVisible=false; }
-  else if (want && currentlyVisible)   { animOut(()=>animIn()); }
+  const key  = _lanesKey();
+
+  if (want && !currentlyVisible) {
+    // Becoming visible for first time
+    _lastLanesKey = key;
+    animIn();
+    currentlyVisible = true;
+  } else if (!want && currentlyVisible) {
+    // Hiding
+    animOut(() => buildCards(false));
+    currentlyVisible = false;
+  } else if (want && currentlyVisible && key !== _lastLanesKey) {
+    // Already visible but lane data changed (e.g. heat advance) — re-animate with new athletes
+    _lastLanesKey = key;
+    animOut(() => animIn());
+  }
+  // want && currentlyVisible && key === _lastLanesKey: nothing changed, skip re-animation
 }
 
 window.onStateUpdate = function(d) { Object.assign(state,d); render(); };

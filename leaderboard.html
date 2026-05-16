@@ -134,25 +134,49 @@ let state = {
   lbCategory:"all"
 };
 
+// Tracking state for OBS-safe incremental updates
+var _lastLbKey     = null;   // athlete data hash — only rebuild rows when this changes
+var _animTimer     = null;   // pending row-in animation timer
+var _lbWasVisible  = false;  // track visibility transition
+
 function catColor(catName) {
   const found = (state.categories||[]).find(c=>c.name===catName);
   return found ? found.color : 'rgba(255,255,255,0.3)';
 }
 
 function render() {
-  const lb = document.getElementById('leaderboard');
+  const lb  = document.getElementById('leaderboard');
   const cat = state.lbCategory || 'all';
   const filtered = cat === 'all'
     ? state.athletes
     : state.athletes.filter(a => (a.category||'') === cat);
 
-  // Header
+  // Always update text/dot — cheap, no DOM rebuild
   const catLabel = cat === 'all' ? 'Overall' : cat;
   const dotCol   = cat === 'all' ? 'rgba(255,255,255,0.3)' : catColor(cat);
   document.getElementById('lb-cat-label').textContent = catLabel;
   document.getElementById('lb-cat-dot').style.background = dotCol;
   document.getElementById('lb-event').textContent  = state.eventName||'';
   document.getElementById('lb-comp').textContent   = state.compName||'';
+
+  // Visibility toggle — no DOM rebuild
+  const want = !!state.leaderboard;
+  if (want && !_lbWasVisible) {
+    lb.classList.add('visible');
+    _lbWasVisible = true;
+  } else if (!want && _lbWasVisible) {
+    lb.classList.remove('visible');
+    document.querySelectorAll('.lb-row').forEach(r => r.classList.remove('in'));
+    _lbWasVisible = false;
+  }
+
+  // Only rebuild rows when athlete data or category filter changes.
+  // Rebuilding innerHTML resets all CSS slide-in transitions — avoid on every timer tick.
+  const lbKey = cat + '|' + filtered.slice(0,10).map(a=>a.name+'|'+a.score).join(',');
+  if (lbKey === _lastLbKey) return;
+  _lastLbKey = lbKey;
+
+  clearTimeout(_animTimer);
 
   document.getElementById('lb-body').innerHTML = filtered.slice(0,10).map((a,i) => {
     const pc  = i===0?'pos-1':i===1?'pos-2':i===2?'pos-3':'';
@@ -173,12 +197,8 @@ function render() {
     </div>`;
   }).join('');
 
-  if (state.leaderboard) {
-    lb.classList.add('visible');
-    setTimeout(() => document.querySelectorAll('.lb-row').forEach(r => r.classList.add('in')), 100);
-  } else {
-    lb.classList.remove('visible');
-    document.querySelectorAll('.lb-row').forEach(r => r.classList.remove('in'));
+  if (want) {
+    _animTimer = setTimeout(() => document.querySelectorAll('.lb-row').forEach(r => r.classList.add('in')), 50);
   }
 }
 

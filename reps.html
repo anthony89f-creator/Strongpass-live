@@ -104,60 +104,107 @@ let state = {
   lanes: [],
 };
 
+// Build structure once per laneCount; patch content on every SSE event.
+// Rebuilding innerHTML resets CSS transitions (.light-panel background, .lp-dot glow),
+// causing visible flicker on every timer tick even when nothing changed.
+var _builtLaneCount  = null;
+var _repsWasVisible  = false;
+
 function fmtTime(s) {
   if (s === undefined || s === null) return '—';
   return Math.floor(s/60) + ':' + String(Math.max(0,s)%60).padStart(2,'0');
 }
 
-function render() {
-  const count = Math.max(1, Math.min(4, parseInt(state.laneCount)||4));
-  const lanes = state.lanes || [];
-
-  // ── LIGHTS STRIP ──
-  const strip = document.getElementById('lights-strip');
-  strip.innerHTML = Array.from({length:count},(_,i) => {
-    const jd = state['judgeL'+(i+1)] || {};
-    const lane = lanes[i] || {};
-    const light = jd.light || 'none';
-    const lightCls = light === 'good' ? 'good' : light === 'no' ? 'no' : '';
-    const dotCls   = lightCls;
-    const decText  = light === 'good' ? 'GOOD REP' : light === 'no' ? 'NO REP' : '';
-    return `<div class="light-panel ${lightCls}">
+function buildStructure(count) {
+  _builtLaneCount = count;
+  document.getElementById('lights-strip').innerHTML = Array.from({length:count},(_,i) => `
+    <div class="light-panel" id="lp-${i}">
       <div>
         <div class="lp-lane">Lane ${i+1}</div>
-        <div class="lp-name">${lane.name||''}</div>
+        <div class="lp-name" id="lp-name-${i}"></div>
       </div>
-      <div class="lp-dot ${dotCls}"></div>
-      <div class="lp-decision ${lightCls}">${decText}</div>
-    </div>`;
-  }).join('');
-
-  state.lightsVisible ? strip.classList.add('visible') : strip.classList.remove('visible');
-
-  // ── REP CARDS ──
-  const bar = document.getElementById('reps-bar');
-  bar.innerHTML = Array.from({length:count},(_,i) => {
-    const jd = state['judgeL'+(i+1)] || {};
-    const light = jd.light || 'none';
-    const lightCls = light==='good'?'good':light==='no'?'no':'';
-    const rem = jd.timerRemaining;
-    const timerCls = (rem!==undefined&&rem<=10)?'danger':(rem!==undefined&&rem<=20)?'warning':'';
-    const decText  = light==='good'?'GOOD REP':light==='no'?'NO REP':'';
-    return `<div class="rep-card ${lightCls}${state.repsVisible?' visible':''}">
+      <div class="lp-dot" id="lp-dot-${i}"></div>
+      <div class="lp-decision" id="lp-dec-${i}"></div>
+    </div>`).join('');
+  document.getElementById('reps-bar').innerHTML = Array.from({length:count},(_,i) => `
+    <div class="rep-card" id="rc-${i}">
       <div class="rc-light"></div>
       <div style="text-align:center;padding:0 10px;flex-shrink:0">
-        <div class="rc-reps">${jd.reps||0}</div>
+        <div class="rc-reps" id="rc-reps-${i}">0</div>
         <div class="rc-label">Reps</div>
       </div>
       <div class="rc-timer">
-        <div class="rc-timer-num ${timerCls}">${rem!==undefined?fmtTime(rem):'—'}</div>
+        <div class="rc-timer-num" id="rc-timer-${i}">—</div>
         <div class="rc-timer-label">Time</div>
       </div>
       <div class="rc-decision">
-        <div class="rc-decision-text">${decText}</div>
+        <div class="rc-decision-text" id="rc-dec-${i}"></div>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
+  // Re-apply visible if cards were showing before a laneCount change
+  if (_repsWasVisible) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (state.repsVisible) document.querySelectorAll('.rep-card').forEach(c => c.classList.add('visible'));
+    }));
+  }
+}
+
+function patchContent(count) {
+  const lanes = state.lanes || [];
+  for (let i = 0; i < count; i++) {
+    const jd   = state['judgeL'+(i+1)] || {};
+    const lane = lanes[i] || {};
+    const light = jd.light || 'none';
+    const lcls  = light === 'good' ? 'good' : light === 'no' ? 'no' : '';
+
+    // Lights strip — update class + text, preserve transition-capable elements
+    const lp = document.getElementById('lp-'+i);
+    if (lp) {
+      lp.className = 'light-panel' + (lcls ? ' '+lcls : '');
+      document.getElementById('lp-name-'+i).textContent = lane.name || '';
+      document.getElementById('lp-dot-'+i).className    = 'lp-dot'      + (lcls ? ' '+lcls : '');
+      const dec = document.getElementById('lp-dec-'+i);
+      dec.className   = 'lp-decision' + (lcls ? ' '+lcls : '');
+      dec.textContent = light==='good' ? 'GOOD REP' : light==='no' ? 'NO REP' : '';
+    }
+
+    // Rep card — preserve 'visible' class, only swap light class
+    const rc = document.getElementById('rc-'+i);
+    if (rc) {
+      const wasVis = rc.classList.contains('visible');
+      rc.className = 'rep-card' + (lcls ? ' '+lcls : '') + (wasVis ? ' visible' : '');
+      document.getElementById('rc-reps-'+i).textContent = jd.reps !== undefined ? jd.reps : 0;
+      const rem = jd.timerRemaining;
+      const timerEl = document.getElementById('rc-timer-'+i);
+      timerEl.textContent = rem !== undefined ? fmtTime(rem) : '—';
+      timerEl.className   = 'rc-timer-num' + ((rem!==undefined&&rem<=10)?' danger':(rem!==undefined&&rem<=20)?' warning':'');
+      document.getElementById('rc-dec-'+i).textContent = light==='good' ? 'GOOD REP' : light==='no' ? 'NO REP' : '';
+    }
+  }
+}
+
+function render() {
+  const count = Math.max(1, Math.min(4, parseInt(state.laneCount)||4));
+  if (count !== _builtLaneCount) buildStructure(count);
+
+  patchContent(count);
+
+  // Lights strip visibility
+  const strip = document.getElementById('lights-strip');
+  state.lightsVisible ? strip.classList.add('visible') : strip.classList.remove('visible');
+
+  // Rep cards — animate in on false→true, remove on true→false, skip if unchanged
+  const want = !!state.repsVisible;
+  if (want && !_repsWasVisible) {
+    document.querySelectorAll('.rep-card').forEach(c => c.classList.remove('visible'));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (state.repsVisible) document.querySelectorAll('.rep-card').forEach(c => c.classList.add('visible'));
+    }));
+    _repsWasVisible = true;
+  } else if (!want && _repsWasVisible) {
+    document.querySelectorAll('.rep-card').forEach(c => c.classList.remove('visible'));
+    _repsWasVisible = false;
+  }
 }
 
 window.onStateUpdate = function(d) { Object.assign(state, d); render(); };

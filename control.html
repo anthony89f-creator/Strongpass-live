@@ -1295,6 +1295,19 @@ async function syncFromCompEngine() {
     if (athletesChanged)           { renderAthleteTable(); renderH2HCategorySelects(); }
     if (eventChanged || champChanged) initInputs();
 
+    // Populate lb category dropdown from live categories (all active categories, not just
+    // current-heat athletes). live.athletes is scoped to the active category; live.categories
+    // has the full list from sync_comp_to_broadcast().
+    if (live.categories && live.categories.length) {
+      const lbSel = document.getElementById('lbCategorySelect');
+      if (lbSel) {
+        const cur = lbSel.value;
+        lbSel.innerHTML = '<option value="all">All Athletes (Overall)</option>' +
+          live.categories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+        lbSel.value = live.categories.some(c => c.name === cur) ? cur : (state.lbCategory || 'all');
+      }
+    }
+
     // Update event winner preview banner only when champ data changes
     if (champChanged && live.champName) {
       const preview = document.getElementById('winner-preview');

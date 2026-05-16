@@ -184,6 +184,20 @@ let progressTimer = null;
 let currentIndex = 0;
 let isVisible = false;
 
+// Hash of the currently displayed category's data. showCategory() triggers a
+// fade-out/fade-in animation — only call it when displayed content actually changes,
+// not on every SSE timer tick.
+var _lastCatKey = null;
+
+function _catKey() {
+  const cats = getCategoryData();
+  if (!cats.length) return 'empty|' + (state.compName||'');
+  const ci = ((currentIndex % cats.length) + cats.length) % cats.length;
+  const cat = cats[ci];
+  return (state.compName||'') + '|' + ci + '|' + cat.name + '|' + cat.count + '|' +
+    cat.athletes.slice(0,6).map(a => a.name + ':' + (a.score||'')).join(',');
+}
+
 function getCategoryData() {
   // Build category list from athletes
   const catNames = state.categories && state.categories.length
@@ -231,6 +245,9 @@ function showCategory(index) {
     content.style.transform = 'translateY(0)';
   }, 50);
 
+  // Record what we just rendered so render() doesn't re-trigger this animation
+  _lastCatKey = _catKey();
+
   // Progress bar
   clearTimeout(progressTimer);
   const bar = document.getElementById('progress-bar');
@@ -274,11 +291,15 @@ function render() {
     startAuto();
   } else if (!want && isVisible) {
     isVisible = false;
+    _lastCatKey = null; // Reset so next show re-renders
     el.classList.remove('visible');
     stopAuto();
   } else if (want && isVisible) {
-    // Update content if state changed
-    showCategory(state.lineupIndex !== undefined ? state.lineupIndex : currentIndex);
+    // Only re-animate when displayed data actually changed — showCategory() fades out/in
+    const key = _catKey();
+    if (key !== _lastCatKey) {
+      showCategory(state.lineupIndex !== undefined ? state.lineupIndex : currentIndex);
+    }
   }
 }
 

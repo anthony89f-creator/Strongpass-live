@@ -5,9 +5,9 @@ Broadcast HTML files are served RAW (send_from_directory, bypasses Jinja2).
 Comp pages live in templates/ subfolder and are rendered with render_template.
 """
 
-import json, os, shutil, sqlite3, math, urllib.request, urllib.parse, threading, base64, functools, time
+import json, os, shutil, sqlite3, math, urllib.request, urllib.parse, threading, base64, functools, time, hmac
 from datetime import datetime
-from flask import Flask, render_template, redirect, jsonify, request, send_from_directory, abort, Response
+from flask import Flask, render_template, redirect, jsonify, request, send_from_directory, abort, Response, session, make_response
 
 from app.config import (
     DIR, TPL_DIR, STATE_FILE, DB_FILE, BACKUPS_DIR,
@@ -25,6 +25,16 @@ from app.utils import (
 from app.beta_auth import register_beta_auth
 
 app = Flask(__name__, template_folder=TPL_DIR, static_folder=None)
+
+# Secret key — required for session cookies (comp auth + beta gate).
+# Prefer an explicit SECRET_KEY env var; derive from COMP_PASSWORD if unset; static fallback.
+_sk = os.environ.get("SECRET_KEY", "").strip()
+if not _sk:
+    _sk = os.environ.get("COMP_PASSWORD", "").strip()
+if not _sk:
+    _sk = os.environ.get("BETA_TOKEN", "").strip()
+if _sk:
+    app.secret_key = f"__sp__{_sk}"
 
 # Beta gate — registered first so it runs before all other before_request hooks.
 # Disable: unset BETA_TOKEN in strongman.service and restart (no deploy needed).
@@ -145,31 +155,123 @@ def _restore_category_order():
         CATEGORY_ORDER.clear()
         CATEGORY_ORDER.extend(saved)
 
-# ─── AUTH ─────────────────────────────────────────────────────────────────────
-def _check_auth():
-    """Return True if request is authenticated (or no password is configured)."""
-    password = os.environ.get("COMP_PASSWORD", "").strip()
+# ─── COMP AUTH ────────────────────────────────────────────────────────────────
+# Session-based auth for operator routes. Separate from the beta gate (which wraps
+# the entire site). COMP_PASSWORD env var required; unset = open access.
+#
+# Protected routes: /comp/*, /update, /control.html, /judge.html,
+#                   /judge-master.html, /debug.html
+# Public routes:    overlays, /state.json, /stream, /health, /results.html,
+#                   static assets, /comp/login, /comp/logout
+
+_COMP_AUTH_LOGIN_HTML = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StrongPass — Operator Access</title>
+  <style>
+    *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:#0d0d0d;color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}}
+    .card{{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:2.5rem 2rem;width:100%;max-width:360px}}
+    .wordmark{{text-align:center;font-size:1.5rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem}}
+    .wordmark span{{color:#cc0033}}
+    .subtitle{{text-align:center;font-size:0.75rem;letter-spacing:0.18em;text-transform:uppercase;color:#555;margin-bottom:2rem}}
+    label{{display:block;font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:#888;margin-bottom:0.5rem}}
+    input[type=password]{{display:block;width:100%;padding:0.7rem 0.85rem;background:#111;border:1px solid #333;border-radius:5px;color:#eee;font-size:1rem;outline:none;transition:border-color 0.15s}}
+    input[type=password]:focus{{border-color:#555}}
+    input[type=password].err{{border-color:#cc3333}}
+    .error-msg{{margin-top:0.5rem;font-size:0.8rem;color:#e05555}}
+    button{{display:block;width:100%;margin-top:1.25rem;padding:0.75rem;background:#880022;border:none;border-radius:5px;color:#fff;font-size:0.9rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;transition:background 0.15s}}
+    button:hover{{background:#aa0033}}
+    .footer{{margin-top:1.75rem;text-align:center;font-size:0.7rem;color:#3a3a3a;letter-spacing:0.05em}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="wordmark">Strong<span>Pass</span></div>
+    <div class="subtitle">Operator Access</div>
+    <form method="post" autocomplete="on" novalidate>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Operator password"
+             autofocus autocomplete="current-password" {err_cls}>
+      {err_msg}
+      <button type="submit">Enter</button>
+    </form>
+    <div class="footer">COMPETITION OS &mdash; OPERATOR</div>
+  </div>
+</body>
+</html>"""
+
+# Operator routes that require comp auth (beyond the beta gate)
+_COMP_PROTECTED_PATHS = frozenset({"/update", "/control.html", "/judge.html", "/judge-master.html", "/debug.html"})
+_COMP_AUTH_BYPASS     = frozenset({"/comp/login", "/comp/logout"})
+
+def _comp_password() -> str:
+    return os.environ.get("COMP_PASSWORD", "").strip()
+
+def _comp_session_valid() -> bool:
+    return session.get("comp_ok") is True
+
+@app.route("/comp/login", methods=["GET", "POST"])
+def comp_login():
+    password = _comp_password()
     if not password:
-        return True
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Basic "):
-        try:
-            decoded = base64.b64decode(auth[6:]).decode("utf-8")
-            _, pwd = decoded.split(":", 1)
-            if pwd == password:
-                return True
-        except Exception:
-            pass
-    return False
+        return redirect(request.args.get("next", "/comp/events"))
+
+    raw_next = request.args.get("next", "/comp/events")
+    next_url = raw_next if (raw_next.startswith("/") and not raw_next.startswith("//")) else "/comp/events"
+    err = False
+
+    if request.method == "POST":
+        submitted = request.form.get("password", "")
+        if submitted and hmac.compare_digest(submitted, password):
+            session.permanent = True
+            session["comp_ok"] = True
+            return redirect(next_url)
+        err = True
+
+    html = _COMP_AUTH_LOGIN_HTML.format(
+        err_cls='class="err"' if err else '',
+        err_msg='<div class="error-msg">Incorrect password — try again.</div>' if err else '',
+    )
+    resp = make_response(html)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.route("/comp/logout")
+def comp_logout():
+    session.pop("comp_ok", None)
+    return redirect("/comp/login")
 
 @app.before_request
 def _require_comp_auth():
-    """Protect all /comp/* routes with HTTP Basic Auth when COMP_PASSWORD is set."""
-    if request.path.startswith("/comp/") or request.path == "/comp":
-        if not _check_auth():
-            resp = app.response_class("Unauthorized\n", status=401, mimetype="text/plain")
-            resp.headers["WWW-Authenticate"] = 'Basic realm="Competition Control"'
-            return resp
+    """Session-based auth for operator routes. Protects /comp/*, /update, and key HTML files."""
+    path = request.path
+
+    # Only intercept operator-tier paths
+    is_comp = path.startswith("/comp/") or path == "/comp"
+    is_op   = path in _COMP_PROTECTED_PATHS
+    if not is_comp and not is_op:
+        return
+
+    # Auth bypass: login/logout pages and OPTIONS preflights
+    if path in _COMP_AUTH_BYPASS or request.method == "OPTIONS":
+        return
+
+    password = _comp_password()
+    if not password:
+        return  # No password configured — open access
+
+    if _comp_session_valid():
+        return  # Session authenticated
+
+    # Non-HTML callers (fetch, SSE, API) get 401 — don't redirect
+    accept = request.headers.get("Accept", "")
+    if "text/html" not in accept:
+        return app.response_class("Unauthorized\n", status=401, mimetype="text/plain")
+
+    return redirect(f"/comp/login?next={path}")
 
 def _canonical_category(category):
     """Resolve category to the form used in CATEGORY_ORDER (e.g. 'u80' -> 'U80') so lookups match."""
@@ -739,12 +841,17 @@ def sync_comp_to_broadcast():
         "WHERE rr.event_id=? AND a.category=? AND a.status='active'",
         (event_id, category)
     ).fetchone()[0] if event_id else 0
-    # Category list for overlay (only categories that have athletes)
+    # Category list for overlay (only categories that have athletes).
+    # Prefer any custom color already stored in state.json by the broadcast director;
+    # fall back to CAT_COLORS config defaults, then to gold (#F5C842).
+    _stored_cats = {c["name"]: c for c in _s.get("categories", []) if isinstance(c, dict) and c.get("name")}
     cats = []
     for cat in CATEGORY_ORDER:
         n = con.execute("SELECT COUNT(*) FROM athletes WHERE category=? AND status='active'", (cat,)).fetchone()[0]
         if n > 0:
-            cats.append({"name": cat, "color": CAT_COLORS.get(cat, "#F5C842"), "athleteCount": n})
+            stored_color = _stored_cats.get(cat, {}).get("color")
+            color = stored_color or CAT_COLORS.get(cat, "#F5C842")
+            cats.append({"name": cat, "color": color, "athleteCount": n})
     con.close()
 
     # Raw results for current heat lanes (separate helper uses its own connection)

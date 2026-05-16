@@ -148,6 +148,10 @@ let state = {
   compName:"IRON CHALLENGE", compSub:"2025 STRONGMAN"
 };
 
+// Hash of athlete list — only rebuild scroll animation when this changes.
+// Without this, every SSE timer tick resets the CSS animation to position 0.
+var _lastScrollKey = null;
+
 function buildItems(athletes) {
   return athletes.map((a,i) => {
     const rc = i===0?'r1':i===1?'r2':i===2?'r3':'';
@@ -166,17 +170,7 @@ function buildItems(athletes) {
 }
 
 function render() {
-  const athletes = state.athletes || [];
-  // Duplicate content so scroll loops seamlessly
-  const html = buildItems(athletes);
-  document.getElementById('bug-scroll').innerHTML = html + html;
-
-  // Adjust speed based on number of athletes — always readable
-  // Aim for ~18px/s. Each item ~220px wide.
-  const totalW = athletes.length * 220;
-  const duration = Math.max(40, Math.round(totalW / 18)) + 's';
-  document.getElementById('bug-scroll').style.animationDuration = duration;
-
+  // Always update static text — cheap textContent writes, no DOM rebuild
   document.getElementById('bug-comp').textContent     = state.compName||'STRONGMAN';
   document.getElementById('bug-comp-sub').textContent = state.compSub||'';
   document.getElementById('bug-event').textContent    = state.eventName||'';
@@ -184,6 +178,20 @@ function render() {
 
   const bug = document.getElementById('scorebug');
   state.scorebug ? bug.classList.add('visible') : bug.classList.remove('visible');
+
+  // Only rebuild scroll DOM when athlete data or score unit changes.
+  // Rebuilding innerHTML resets the CSS scroll animation — do NOT do this on every tick.
+  const athletes = state.athletes || [];
+  const scrollKey = (state.scoreUnit||'PTS') + '|' + athletes.map(a=>a.name+'|'+a.score).join(',');
+  if (scrollKey === _lastScrollKey) return;
+  _lastScrollKey = scrollKey;
+
+  const html = buildItems(athletes);
+  document.getElementById('bug-scroll').innerHTML = html + html;
+
+  // Aim for ~18px/s scroll speed. Each item ~220px wide.
+  const totalW = athletes.length * 220;
+  document.getElementById('bug-scroll').style.animationDuration = Math.max(40, Math.round(totalW / 18)) + 's';
 }
 
 window.onStateUpdate = function(data) { Object.assign(state, data); render(); };

@@ -1,5 +1,5 @@
 # Project Status — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 2 optimization complete)  
+**Last updated:** 2026-05-16 (Phase 3 reliability + auth complete)  
 **Status:** Beta — live, protected, pre-production
 
 ---
@@ -97,6 +97,35 @@ Added `weight_reps` as a first-class scoring type (heavier weight wins, more rep
 - **control.html hash-based dirty checking**: `_syncHashes` tracks lanes, athletes, event, champ fingerprints. `renderLaneConfig()`, `renderAthleteTable()`, `renderH2HCategorySelects()`, `initInputs()` only called when their underlying data changes. Full DOM rebuild no longer fires on every timer tick (~1/s during competition).
 - **`/health` endpoint**: `GET /health` → `{"status":"ok","db":"ok","restart_token":N}` — performs live SQLite `SELECT 1`; for uptime monitors and load balancers.
 - **H3 set_lanes logging**: `except Exception: pass` → `app.logger.error(...)` — heat regeneration failures now visible in Gunicorn logs.
+
+### Phase 3 — Operational Reliability, Overlay Stability, Auth
+**Commit:** Phase 3 (2026-05-16)
+
+**P1 — Overlay flicker/animation storm (all 6 OBS overlays):**  
+Root cause: every overlay was doing full innerHTML rebuilds or running animations on every SSE event (~1/s timer tick), regardless of whether data changed. Each fix adds a hash fingerprint and a `_wasVisible` guard so DOM operations only fire when content actually changes.
+
+| Overlay | Root Cause | Fix |
+|---------|-----------|-----|
+| `scorebug.html` | `#bug-scroll` `innerHTML=` reset CSS `animation` to frame 0 every tick | `_lastScrollKey` hash; only rebuild scroll DOM when athletes/scoreUnit change |
+| `leaderboard.html` | `.lb-row` CSS transitions (opacity+translateX) reset every tick; timer accumulation | `_lastLbKey` hash; cancel pending `_animTimer` on rebuild |
+| `lowerthird.html` | `animOut()→animIn()` (700ms) fired on every SSE tick when visible | `_lastLanesKey` hash; most severe — nameplates animated in/out every second |
+| `champion.html` | `spawnParticles()` created 40 DOM elements every tick while champion shown | `_champVisible` guard; particles spawn only on `false→true` transition |
+| `reps.html` | Full innerHTML rebuild of lights strip + rep cards every tick | `_builtLaneCount` + `patchContent()` — structure built once, content patched |
+| `lineup.html` | `showCategory()` fade-out/in fired on every SSE tick when visible | `_lastCatKey` hash; animation only on category data change |
+
+**P1 — Comp auth replacement:**  
+- Removed HTTP Basic Auth (browser password dialog, no logout, ugly)
+- `COMP_PASSWORD` env var → session-based auth via `session["comp_ok"]`
+- `/comp/login` (GET: form, POST: verify + set session), `/comp/logout`
+- Protected paths: `/update`, `/control.html`, `/judge.html`, `/judge-master.html`, `/debug.html`, all `/comp/*` routes
+- Public overlay paths (`/stream`, `/state.json`, `scorebug.html`, etc.) remain open
+- `app.secret_key` initialized from `SECRET_KEY → COMP_PASSWORD → BETA_TOKEN` cascade
+
+**P2 — Leaderboard category dropdown showed only one category:**  
+`live.athletes` in `sync_comp_to_broadcast()` is scoped to the current active category. Fixed by reading `live.categories` (all active categories) directly into `lbCategorySelect` in `syncFromCompEngine()`.
+
+**P2 — Category color reversion to yellow on SSE update:**  
+`sync_comp_to_broadcast()` always overwrote stored category colors with hardcoded `CAT_COLORS` values. Fixed by checking `state.json`'s existing `categories` array first — stored color takes precedence, `CAT_COLORS` is now a fallback only.
 
 ### Security — Beta Auth Gate
 **Commits:** `1f87961`, `1329897`  

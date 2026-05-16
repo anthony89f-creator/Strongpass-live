@@ -135,6 +135,11 @@ let state = {
   champEyebrow:"IRON CHALLENGE 2025", champComp:"STRONGMAN CHAMPIONSHIP", eventName:"ATLAS STONES"
 };
 
+// Track visibility so particles are only spawned once on the visible transition.
+// Without this, spawnParticles() fires on every SSE event while champion is displayed,
+// creating 40 new animated DOM elements per tick and causing visible flicker.
+var _champVisible = false;
+
 function spawnParticles() {
   const c = document.getElementById('particles'); c.innerHTML='';
   for (let i=0;i<40;i++) {
@@ -149,6 +154,7 @@ function spawnParticles() {
 }
 
 function render() {
+  // Always update text — cheap textContent writes, no DOM rebuild
   document.getElementById('w-eyebrow').textContent    = state.champEyebrow||'';
   document.getElementById('w-event').textContent      = state.eventName||'EVENT';
   document.getElementById('w-name').textContent       = state.champName||'';
@@ -157,9 +163,20 @@ function render() {
   document.getElementById('w-score-label').textContent= state.champScoreLabel||'EVENT SCORE';
   document.getElementById('w-events').textContent     = state.champEvents||'';
   document.getElementById('w-comp').textContent       = state.champComp||'';
-  const el = document.getElementById('winner');
-  if (state.champion) { el.classList.add('visible'); spawnParticles(); }
-  else { el.classList.remove('visible'); document.getElementById('particles').innerHTML=''; }
+
+  const el   = document.getElementById('winner');
+  const want = !!state.champion;
+
+  if (want && !_champVisible) {
+    el.classList.add('visible');
+    spawnParticles();
+    _champVisible = true;
+  } else if (!want && _champVisible) {
+    el.classList.remove('visible');
+    document.getElementById('particles').innerHTML = '';
+    _champVisible = false;
+  }
+  // want && _champVisible: already showing — text updated above, no particle respawn
 }
 
 window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
