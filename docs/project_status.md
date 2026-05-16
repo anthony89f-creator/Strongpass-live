@@ -1,6 +1,6 @@
 # Project Status — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 5: color persistence, cached standings, director freeze controls)  
-**Status:** Beta — live, protected, pre-production
+**Last updated:** 2026-05-16 (Phase 13: broadcast stabilization complete)  
+**Status:** Production-stable — live events ready
 
 ---
 
@@ -11,7 +11,7 @@
 | Server | **Live** | strongpass.live, Hetzner Ubuntu 24.04 |
 | SSL | **Active** | Let's Encrypt via Certbot |
 | Nginx | **Active** | Reverse proxy, SSE unbuffered, HTTP→HTTPS redirect |
-| Gunicorn | **Active** | 1 worker, 8 gthread threads, port 8080 |
+| Gunicorn | **Active** | 1 worker, 32 gthread threads, port 8080 |
 | Systemd | **Enabled** | `strongpass.service`, auto-restart |
 | Beta gate | **Active** | `BETA_TOKEN` set in service file |
 | Admin auth | **Active** | `COMP_PASSWORD` set in service file |
