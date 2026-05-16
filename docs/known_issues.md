@@ -1,5 +1,5 @@
 # Known Issues — StrongPass Competition OS
-**Last updated:** 2026-05-16 (Phase 4 broadcast director layer complete)
+**Last updated:** 2026-05-16 (Phase 6 — timer tick freeze fix `dec4b37`)
 
 Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
@@ -7,7 +7,7 @@ Severity: **CRITICAL** → **HIGH** → **MEDIUM** → **LOW**
 
 ## CRITICAL
 
-None currently active. TD-C1 (Gunicorn init bypass) resolved in Phase 1. C1 (control.html 5 s poll) resolved in `a96ea86`.
+None currently active. TD-C1 (Gunicorn init bypass) resolved in Phase 1. C1 (control.html 5 s poll) resolved in `a96ea86`. C2 (timer tick freeze) resolved in `dec4b37`.
 
 ---
 
@@ -199,3 +199,5 @@ File confirmed deleted from disk — no longer present at `/opt/strongpass/curre
 | comp auth Basic Auth | browser dialog, no separate operator session | Phase 3 (session-based `/comp/login`) |
 | lb coupled to scoring operator | leaderboard overlay followed scoring operator's active tab | Phase 4 (`lbAthletes` + `lbCategoryOverride` + `/director/lb`) |
 | lbCategory overwritten on sync | director's category selection reset by every syncFromCompEngine() | Phase 4 (guard: `!state.lbCategoryOverride`) |
+| Timer tick freeze (C2) | `_apply_judge_scores_to_raw_results()` called `sync_comp_to_broadcast()` unconditionally — 3+ DB opens + 4 disk R/W per tick at 4 Hz saturated gthread pool, causing 10-120s UI freezes | `dec4b37` (sync only when `results_changed=True`; unchanged ticks call `_sse_notify()` only; 50-150ms → 2-5ms per tick) |
+| double sync in save_next | `action_save_results_run` called `sync_comp_to_broadcast()` twice when advancing to next heat (one after save, one after state advance) | `dec4b37` (single sync after all mutations) |
