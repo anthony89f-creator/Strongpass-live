@@ -204,7 +204,7 @@ _COMP_AUTH_LOGIN_HTML = """<!doctype html>
 </html>"""
 
 # Operator routes that require comp auth (beyond the beta gate)
-_COMP_PROTECTED_PATHS = frozenset({"/update", "/control.html", "/judge.html", "/judge-master.html", "/debug.html"})
+_COMP_PROTECTED_PATHS = frozenset({"/update", "/control.html", "/judge.html", "/judge-master.html", "/debug.html", "/director/lb"})
 _COMP_AUTH_BYPASS     = frozenset({"/comp/login", "/comp/logout"})
 
 def _comp_password() -> str:
@@ -872,6 +872,19 @@ def sync_comp_to_broadcast():
 
     leaderboard = get_leaderboard(category=category)
 
+    # Director-controlled leaderboard overlay data — independent of scoring operator's active category.
+    # When lbCategoryOverride is True, the leaderboard overlay shows the director-selected category
+    # even while a different category is actively being scored.
+    _lb_override = _s.get("lbCategoryOverride", False)
+    _lb_cat      = _s.get("lbCategory", None)
+    if _lb_override and _lb_cat:
+        if _lb_cat == "all":
+            lb_athletes = get_leaderboard()           # all categories combined
+        else:
+            lb_athletes = get_leaderboard(category=_lb_cat)
+    else:
+        lb_athletes = leaderboard                     # auto-follow current scoring category
+
     champ_fields = {}
     if total_active > 0 and results_entered >= total_active and leaderboard:
         top = leaderboard[0]
@@ -892,6 +905,7 @@ def sync_comp_to_broadcast():
     }
     broadcast_block = {
         "lanes": broadcast_lanes, "laneCount": lane_count, "athletes": leaderboard,
+        "lbAthletes": lb_athletes, "lbCategoryOverride": _lb_override,
         "categories": cats, "eventName": event_name.upper(),
         "eventNum": f"EVENT {event} OF {total_events}", "eventSub": f"HEAT {heat} · {category}",
         "compCategory": category, "compEvent": event, "compHeat": heat, "compEventName": event_name,
@@ -1151,6 +1165,42 @@ def update_state():
     resp = jsonify({"ok": True})
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
+
+
+@app.route("/director/lb", methods=["POST"])
+def director_set_lb():
+    """Broadcast Director: set leaderboard overlay category, independently of the scoring operator's active tab.
+
+    Body: {"category": "U90" | "all" | "auto", "override": true|false}
+    "auto" or override=false clears the override — leaderboard follows the competition engine.
+    """
+    data     = request.get_json(force=True, silent=True) or {}
+    category = data.get("category", "all")
+    override = bool(data.get("override", True))
+    if category == "auto":
+        override = False
+        category = "all"
+
+    with state_lock:
+        s = load_state()
+        s["lbCategoryOverride"] = override
+        s["lbCategory"]         = category
+        if override:
+            if category == "all":
+                lb_athletes = get_leaderboard()
+            else:
+                lb_athletes = get_leaderboard(category=category)
+        else:
+            # Revert to competition engine's current category
+            comp_cat = s.get("compCategory", "")
+            lb_athletes = get_leaderboard(category=comp_cat) if comp_cat else (s.get("athletes") or [])
+            s["lbCategory"] = comp_cat or "all"
+        s["lbAthletes"] = lb_athletes
+        save_state(s)
+
+    _sse_notify()
+    return jsonify({"ok": True, "lbCategory": s.get("lbCategory"), "lbCategoryOverride": override})
+
 
 _PROXY_ALLOWLIST = [h.strip().lower() for h in os.environ.get("PROXY_ALLOWLIST", "").split(",") if h.strip()]
 

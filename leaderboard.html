@@ -109,6 +109,7 @@
   <div class="lb-body" id="lb-body"></div>
   <div class="lb-foot">
     <span class="lb-foot-text"><span class="live-dot"></span>LIVE</span>
+    <span id="lb-override-badge" style="display:none;font-size:9px;font-weight:700;letter-spacing:0.2em;color:#F5C842;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.25);border-radius:2px;padding:1px 6px">DIRECTOR</span>
     <span class="lb-foot-text" id="lb-comp"></span>
   </div>
 </div>
@@ -129,6 +130,8 @@ let state = {
     {name:"MARK FELIX",origin:"England",score:"25.5",category:"Open"},
     {name:"EVAN SINGLETON",origin:"USA",score:"23.0",category:"Open"},
   ],
+  lbAthletes: null,       // Director-controlled leaderboard data. null = fall back to athletes.
+  lbCategoryOverride: false,
   categories:[],
   eventName:"IRON CHALLENGE 2025", compName:"STRONGMAN CHAMPIONSHIP", scoreUnit:"PTS",
   lbCategory:"all"
@@ -147,9 +150,10 @@ function catColor(catName) {
 function render() {
   const lb  = document.getElementById('leaderboard');
   const cat = state.lbCategory || 'all';
-  const filtered = cat === 'all'
-    ? state.athletes
-    : state.athletes.filter(a => (a.category||'') === cat);
+
+  // lbAthletes: pre-resolved server-side for the director-selected category.
+  // Falls back to athletes (current scoring category) when no override is active.
+  const displayAthletes = (state.lbAthletes && state.lbAthletes.length) ? state.lbAthletes : state.athletes;
 
   // Always update text/dot — cheap, no DOM rebuild
   const catLabel = cat === 'all' ? 'Overall' : cat;
@@ -158,6 +162,10 @@ function render() {
   document.getElementById('lb-cat-dot').style.background = dotCol;
   document.getElementById('lb-event').textContent  = state.eventName||'';
   document.getElementById('lb-comp').textContent   = state.compName||'';
+
+  // Show MANUAL badge when broadcast director has pinned a category
+  const modeBadge = document.getElementById('lb-override-badge');
+  if (modeBadge) modeBadge.style.display = state.lbCategoryOverride ? '' : 'none';
 
   // Visibility toggle — no DOM rebuild
   const want = !!state.leaderboard;
@@ -170,15 +178,15 @@ function render() {
     _lbWasVisible = false;
   }
 
-  // Only rebuild rows when athlete data or category filter changes.
+  // Only rebuild rows when athlete data or category changes.
   // Rebuilding innerHTML resets all CSS slide-in transitions — avoid on every timer tick.
-  const lbKey = cat + '|' + filtered.slice(0,10).map(a=>a.name+'|'+a.score).join(',');
+  const lbKey = cat + '|' + displayAthletes.slice(0,10).map(a=>a.name+'|'+a.score).join(',');
   if (lbKey === _lastLbKey) return;
   _lastLbKey = lbKey;
 
   clearTimeout(_animTimer);
 
-  document.getElementById('lb-body').innerHTML = filtered.slice(0,10).map((a,i) => {
+  document.getElementById('lb-body').innerHTML = displayAthletes.slice(0,10).map((a,i) => {
     const pc  = i===0?'pos-1':i===1?'pos-2':i===2?'pos-3':'';
     const col = cat === 'all' ? catColor(a.category) : 'transparent';
     return `<div class="lb-row ${pc}">

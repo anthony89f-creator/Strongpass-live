@@ -252,11 +252,13 @@
           <div class="overlay-row-left"><div><div class="overlay-label">Leaderboard</div><div class="overlay-sub">Top 10 · Right panel</div></div></div>
           <div><label class="toggle"><input type="checkbox" id="tog-leaderboard" onchange="toggleOverlay('leaderboard',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-leaderboard" style="color:var(--dim)">OFF</div></div>
         </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-top:-4px">
-          <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap">Leaderboard shows:</span>
-          <select id="lbCategorySelect" onchange="setLbCategory(this.value)" style="flex:1;font-size:13px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-top:-4px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap">Leaderboard:</span>
+          <span id="lb-mode-badge" style="font-size:10px;font-weight:700;letter-spacing:0.14em;padding:2px 8px;border-radius:3px;background:rgba(0,255,136,0.08);color:var(--green-bright);white-space:nowrap">AUTO</span>
+          <select id="lbCategorySelect" onchange="setLbCategory(this.value)" style="flex:1;min-width:120px;font-size:13px">
             <option value="all">All Athletes (Overall)</option>
           </select>
+          <button id="lb-reset-btn" class="btn btn-outline btn-sm" style="display:none;white-space:nowrap;padding:4px 10px" onclick="resetLbOverride()">↺ Auto</button>
         </div>
         <div class="overlay-row">
           <div class="overlay-row-left"><div><div class="overlay-label">Nameplates</div><div class="overlay-sub">Lane athlete cards</div></div></div>
@@ -681,7 +683,8 @@ let state = {
     {num:4,name:"MARTINS LICIS",detail:"USA · PRO",score:"38.0"},
   ],
   categories:[], // [{name, url, color}]
-  lbCategory: 'all', // which category leaderboard shows
+  lbCategory: 'all',         // which category leaderboard shows
+  lbCategoryOverride: false, // true = director manually pinned lbCategory; false = auto-follows competition engine
   laneCount:4, scoreUnit:"PTS",
   eventName:"ATLAS STONES", eventSub:"IRON CHALLENGE 2025 · EVENT 4 OF 6",
   compName:"IRON CHALLENGE", compSub:"2025 STRONGMAN", eventNum:"EVENT 4 OF 6",
@@ -829,9 +832,57 @@ function updateCategoryFilter() {
     lbSel.value = cats.includes(lbCur) ? lbCur : (state.lbCategory || 'all');
   }
 }
-function setLbCategory(cat) {
+// ── BROADCAST DIRECTOR — LEADERBOARD OVERRIDE ─────────────────────────────────
+// Selecting a category from the dropdown pins the leaderboard overlay to that
+// category independently of which category the scoring operator has open.
+// The server fetches that category's leaderboard and broadcasts it as lbAthletes.
+
+function updateLbOverrideBadge() {
+  const badge    = document.getElementById('lb-mode-badge');
+  const resetBtn = document.getElementById('lb-reset-btn');
+  if (!badge) return;
+  if (state.lbCategoryOverride) {
+    badge.textContent = 'MANUAL';
+    badge.style.background = 'rgba(245,200,66,0.14)';
+    badge.style.color = '#F5C842';
+    if (resetBtn) resetBtn.style.display = '';
+  } else {
+    badge.textContent = 'AUTO';
+    badge.style.background = 'rgba(0,255,136,0.08)';
+    badge.style.color = 'var(--green-bright)';
+    if (resetBtn) resetBtn.style.display = 'none';
+  }
+}
+
+async function setLbCategory(cat) {
   state.lbCategory = cat;
-  pushUpdate();
+  state.lbCategoryOverride = true;
+  updateLbOverrideBadge();
+  try {
+    await fetch('/director/lb', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({category: cat, override: true})
+    });
+  } catch(e) { console.warn('director/lb failed:', e); }
+}
+
+async function resetLbOverride() {
+  state.lbCategoryOverride = false;
+  updateLbOverrideBadge();
+  try {
+    const r = await fetch('/director/lb', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({category: 'auto', override: false})
+    });
+    const d = await r.json();
+    if (d.lbCategory) {
+      state.lbCategory = d.lbCategory;
+      const sel = document.getElementById('lbCategorySelect');
+      if (sel) sel.value = d.lbCategory;
+    }
+  } catch(e) { console.warn('director/lb reset failed:', e); }
 }
 function filterByCategory() { catFilterValue = document.getElementById('catFilter').value; renderAthleteTable(); }
 function addAthlete()    { state.athletes.push({name:'NEW ATHLETE',origin:'',score:'0',category:'Open'}); renderAthleteTable(); }
@@ -1273,7 +1324,25 @@ async function syncFromCompEngine() {
     if (live.eventName) state.eventName = live.eventName;
     if (live.eventNum)  state.eventNum  = live.eventNum;
     if (live.eventSub)  state.eventSub  = live.eventSub;
-    if (live.compCategory) state.lbCategory = live.compCategory;
+
+    // Sync director override state from server (e.g. another operator changed it, or reset)
+    if (live.lbCategoryOverride !== undefined && live.lbCategoryOverride !== state.lbCategoryOverride) {
+      state.lbCategoryOverride = live.lbCategoryOverride;
+      updateLbOverrideBadge();
+    }
+    if (live.lbCategory && live.lbCategoryOverride) {
+      // Server confirmed a director-set category — update dropdown to match
+      state.lbCategory = live.lbCategory;
+      const lbSel = document.getElementById('lbCategorySelect');
+      if (lbSel && lbSel.value !== live.lbCategory) lbSel.value = live.lbCategory;
+    }
+
+    // Only auto-follow competition category when leaderboard is NOT in director-override mode
+    if (live.compCategory && !state.lbCategoryOverride) {
+      state.lbCategory = live.compCategory;
+      const lbSel = document.getElementById('lbCategorySelect');
+      if (lbSel && lbSel.value !== live.compCategory) lbSel.value = live.compCategory;
+    }
 
     // Sync event winner fields
     if (live.champName)       state.champName       = live.champName;
@@ -1335,6 +1404,7 @@ async function syncFromCompEngine() {
   renderLaneConfig();
   renderCategoryList();
   renderH2HCategorySelects();
+  updateLbOverrideBadge();
   renderLineupCatButtons();
   populateObsUrls();
   // Now pull live data from comp engine and update
