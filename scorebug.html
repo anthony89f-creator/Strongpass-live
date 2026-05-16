@@ -180,7 +180,9 @@ function render() {
   document.getElementById('bug-event-num').textContent= state.eventNum||'';
 
   const bug = document.getElementById('scorebug');
+  const wasVisible = bug.classList.contains('visible');
   state.scorebug ? bug.classList.add('visible') : bug.classList.remove('visible');
+  if (wasVisible !== !!state.scorebug) console.log('[scorebug] visibility → ' + (state.scorebug ? 'SHOW' : 'HIDE'));
 
   // Only rebuild scroll DOM when athlete data or score unit changes.
   // Rebuilding innerHTML resets the CSS scroll animation — do NOT do this on every tick.
@@ -197,7 +199,11 @@ function render() {
   document.getElementById('bug-scroll').style.animationDuration = Math.max(40, Math.round(totalW / 18)) + 's';
 }
 
-window.onStateUpdate = function(data) { Object.assign(state, data); render(); };
+window.onStateUpdate = function(data) {
+  console.log('[scorebug] onStateUpdate scorebug=' + data.scorebug + ' athletes=' + (data.athletes ? data.athletes.length : 'n/a'));
+  Object.assign(state, data);
+  render();
+};
 </script>
 </body>
 </html>

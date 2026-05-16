@@ -1431,6 +1431,22 @@ async function syncFromCompEngine() {
     if (live.champEyebrow)    state.champEyebrow    = live.champEyebrow;
     if (live.champComp)       state.champComp       = live.champComp;
 
+    // Sync h2h athlete fields — only populate inputs when they are blank to avoid
+    // overwriting in-progress user entry, but restores data after a page reload.
+    [['Left', live.h2hLeft], ['Right', live.h2hRight]].forEach(function(pair) {
+      var side = pair[0], ath = pair[1];
+      if (ath === undefined) return;
+      state['h2h' + side] = ath || {name:'', origin:'', category:'', photoUrl:''};
+      var s = side.toLowerCase();
+      var nameEl = document.getElementById('h2h-' + s + '-name');
+      if (!nameEl || nameEl.value) return;
+      var fx = function(id, v) { var e = document.getElementById(id); if (e) e.value = v || ''; };
+      fx('h2h-' + s + '-name',   ath.name    || '');
+      fx('h2h-' + s + '-origin', ath.origin  || '');
+      fx('h2h-' + s + '-cat2',   ath.category|| '');
+      fx('h2h-' + s + '-photo',  ath.photoUrl|| '');
+    });
+
     // Commit hashes
     if (lanesChanged)    _syncHashes.lanes    = lanesKey;
     if (athletesChanged) _syncHashes.athletes = athletesKey;

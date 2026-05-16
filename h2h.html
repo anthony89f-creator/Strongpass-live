@@ -226,10 +226,17 @@ function render() {
   document.getElementById('h2h-comp').textContent  = state.compName||'';
 
   const el = document.getElementById('h2h');
+  const wasVisible = el.classList.contains('visible');
   state.h2h ? el.classList.add('visible') : el.classList.remove('visible');
+  if (wasVisible !== !!state.h2h) console.log('[h2h] visibility → ' + (state.h2h ? 'SHOW left=' + (L.name||'(empty)') : 'HIDE'));
 }
 
-window.onStateUpdate = function(d) { Object.assign(state, d); render(); };
+window.onStateUpdate = function(d) {
+  if (d.h2h !== undefined || d.h2hLeft !== undefined || d.h2hRight !== undefined)
+    console.log('[h2h] onStateUpdate h2h=' + d.h2h + ' left=' + JSON.stringify(d.h2hLeft) + ' right=' + JSON.stringify(d.h2hRight));
+  Object.assign(state, d);
+  render();
+};
 </script>
 </body>
 </html>
