@@ -80,6 +80,42 @@ def _get_cached_results():
             _results_dirty = False
         return _results_cache
 
+def _get_cached_standings(category=None):
+    """Return leaderboard athletes list derived from the shared results cache — no extra DB queries.
+    Replaces direct get_leaderboard() calls in the broadcast hot path."""
+    evs, results = _get_cached_results()
+    cats = CATEGORY_ORDER if (not category or category == "all") else [category]
+    out = []
+    for cat in cats:
+        for row in results.get(cat, []):
+            out.append({
+                "name":     row["name"],
+                "category": cat,
+                "score":    str(round(row.get("total_points") or 0, 2)),
+                "origin":   "",
+            })
+    out.sort(key=lambda x: float(x.get("score") or 0), reverse=True)
+    return out
+
+def _build_lb_standings():
+    """Build {category: [athletes]} dict for all active categories plus 'all'. Uses warm cache."""
+    evs, results = _get_cached_results()
+    standings = {}
+    all_athletes = []
+    for cat in CATEGORY_ORDER:
+        if cat in results:
+            athletes = [{
+                "name":     row["name"],
+                "category": cat,
+                "score":    str(round(row.get("total_points") or 0, 2)),
+                "origin":   "",
+            } for row in results[cat]]
+            standings[cat] = athletes
+            all_athletes.extend(athletes)
+    all_athletes.sort(key=lambda x: float(x.get("score") or 0), reverse=True)
+    standings["all"] = all_athletes
+    return standings
+
 def load_state():
     """Load state.json; returns {} on missing file, invalid JSON, or I/O error."""
     try:
@@ -894,7 +930,9 @@ def sync_comp_to_broadcast():
         else:
             broadcast_lanes.append({"num": i+1, "name": "", "detail": "", "score": ""})
 
-    leaderboard = get_leaderboard(category=category)
+    # Use shared results cache — no extra DB queries on every sync tick.
+    leaderboard  = _get_cached_standings(category=category)
+    lb_standings = _build_lb_standings()   # pre-computed for all categories
 
     # Director-controlled leaderboard overlay data — independent of scoring operator's active category.
     # When lbCategoryOverride is True, the leaderboard overlay shows the director-selected category
@@ -902,10 +940,7 @@ def sync_comp_to_broadcast():
     _lb_override = _s.get("lbCategoryOverride", False)
     _lb_cat      = _s.get("lbCategory", None)
     if _lb_override and _lb_cat:
-        if _lb_cat == "all":
-            lb_athletes = get_leaderboard()           # all categories combined
-        else:
-            lb_athletes = get_leaderboard(category=_lb_cat)
+        lb_athletes = lb_standings.get("all" if _lb_cat == "all" else _lb_cat) or leaderboard
     else:
         lb_athletes = leaderboard                     # auto-follow current scoring category
 
@@ -930,6 +965,7 @@ def sync_comp_to_broadcast():
     broadcast_block = {
         "lanes": broadcast_lanes, "laneCount": lane_count, "athletes": leaderboard,
         "lbAthletes": lb_athletes, "lbCategoryOverride": _lb_override,
+        "lbStandings": lb_standings,
         "categories": cats, "eventName": event_name.upper(),
         "eventNum": f"EVENT {event} OF {total_events}", "eventSub": f"HEAT {heat} · {category}",
         "compCategory": category, "compEvent": event, "compHeat": heat, "compEventName": event_name,
@@ -957,6 +993,7 @@ def _get_sse_payload(version):
         if _sse_payload_cache["version"] == version:
             return _sse_payload_cache["payload"]
         data = load_state()
+        data.pop("lbStandings", None)   # omitted from stream (~10KB) — fetch via /state.json
         evs, _res = _get_cached_results()
         data["events"] = evs
         data["results_version"] = _sse_mod._results_version
@@ -1205,21 +1242,21 @@ def director_set_lb():
         override = False
         category = "all"
 
+    # Resolve standings from the pre-computed cache (no DB query needed).
+    standings = _build_lb_standings()
     with state_lock:
         s = load_state()
         s["lbCategoryOverride"] = override
         s["lbCategory"]         = category
         if override:
-            if category == "all":
-                lb_athletes = get_leaderboard()
-            else:
-                lb_athletes = get_leaderboard(category=category)
+            lb_athletes = standings.get("all" if category == "all" else category) or \
+                          _get_cached_standings(category=None if category == "all" else category)
         else:
-            # Revert to competition engine's current category
             comp_cat = s.get("compCategory", "")
-            lb_athletes = get_leaderboard(category=comp_cat) if comp_cat else (s.get("athletes") or [])
+            lb_athletes = standings.get(comp_cat) or (s.get("athletes") or [])
             s["lbCategory"] = comp_cat or "all"
-        s["lbAthletes"] = lb_athletes
+        s["lbAthletes"]  = lb_athletes
+        s["lbStandings"] = standings
         save_state(s)
 
     _sse_notify()
