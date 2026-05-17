@@ -505,23 +505,28 @@ body {
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 var _token = new URLSearchParams(window.location.search).get('token') || '';
 var Q      = _token ? ('?token=' + encodeURIComponent(_token)) : '';
+// PVW query string — ?pvw=1 disables sse-client.js inside the overlay iframe.
+// Token appended if present.
+var QPVW   = _token ? ('?pvw=1&token=' + encodeURIComponent(_token)) : '?pvw=1';
 
+// Overlay definitions.
+// pvwFlags: visibility flags forced to true when injecting state into PVW iframe.
+// pgmKeys:  flags read from liveState to determine on-air status.
 var OVERLAYS = [
-  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', pvwFlags:['leaderboard'],                   pgmKeys:['leaderboard'] },
-  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         pvwFlags:['h2h'],                          pgmKeys:['h2h'] },
-  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      pvwFlags:['lineup'],                       pgmKeys:['lineup'] },
-  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  pvwFlags:['lowerThirdVisible'],            pgmKeys:['lowerThirdVisible'] },
-  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        pvwFlags:['repsVisible','lightsVisible'],  pgmKeys:['repsVisible','lightsVisible'] },
-  { key:'champion',    label:'Champion',      src:'/champion.html',    pvwFlags:['champion'],                     pgmKeys:['champion'] },
+  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
+  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         pvwFlags:['h2h'],                         pgmKeys:['h2h'] },
+  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
+  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  pvwFlags:['lowerThirdVisible'],           pgmKeys:['lowerThirdVisible'] },
+  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
+  { key:'champion',    label:'Champion',      src:'/champion.html',    pvwFlags:['champion'],                    pgmKeys:['champion'] },
 ];
-var ALL_FLAGS = ['leaderboard','h2h','lineup','lowerThirdVisible','repsVisible','lightsVisible','champion'];
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 var liveState    = {};
 var pvwSelection = null;
-var _taking      = false; // re-entry guard for take()
+var _taking      = false; // re-entry guard — prevents concurrent TAKE calls
 
-// ─── SSE ──────────────────────────────────────────────────────────────────────
+// ─── SSE — director's own connection ─────────────────────────────────────────
 var _es = null, _retryTimer = null, _retryMs = 1000;
 
 function setConn(ok) {
@@ -556,11 +561,39 @@ document.addEventListener('visibilitychange', function() {
   if (!document.hidden) { if (!_es) connect(); fetchState(); }
 });
 
+// ─── PVW STATE INJECTION ──────────────────────────────────────────────────────
+// Compute the state object to inject into a PVW iframe.
+// Clones liveState, forces the overlay's pvwFlags to true, all other overlay
+// visibility flags to false — so the overlay renders as if it's the only thing
+// on air, regardless of actual live state.
+var _ALL_OVL_FLAGS = (function() {
+  var s = {};
+  OVERLAYS.forEach(function(o) { o.pvwFlags.forEach(function(f) { s[f] = true; }); });
+  return Object.keys(s);
+}());
+
+function pvwStateFor(ovl) {
+  var s = Object.assign({}, liveState);
+  _ALL_OVL_FLAGS.forEach(function(f) { s[f] = false; });
+  ovl.pvwFlags.forEach(function(f) { s[f] = true; });
+  return s;
+}
+
+// Send state to a PVW iframe via postMessage.
+// The overlay loaded with ?pvw=1 has removed its sse-client.js and is listening
+// for these messages instead. No cross-frame function references needed.
+function pushToPVW(ovl) {
+  var frame = document.getElementById('pvw-frame-' + ovl.key);
+  if (!frame) return;
+  try {
+    frame.contentWindow.postMessage(pvwStateFor(ovl), '*');
+  } catch(e) {}
+}
+
 // ─── STATE UPDATE ─────────────────────────────────────────────────────────────
-// PVW iframes are NOT refreshed here. Each PVW iframe has its own sse-client.js
-// which calls window.onStateUpdate (the injectPVWOverride wrapper) automatically.
-// Calling refreshPVW() here would cause a synchronous cross-frame render() call
-// on every SSE tick (~1/s), which causes event loop stalls in Safari.
+// Called on every SSE tick and on initial /state.json fetch.
+// Forwards the latest state to the active PVW iframe via postMessage so PVW
+// always reflects live competition data (athlete names, scores, etc.) in real time.
 function onStateUpdate(d) {
   Object.assign(liveState, d);
   renderCtxStrip();
@@ -568,6 +601,18 @@ function onStateUpdate(d) {
   renderPGMVisibility();
   renderOvlButtons();
   renderCtrlPanel();
+  // Refresh active PVW — postMessage, no SSE connection from iframe
+  if (pvwSelection) {
+    var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
+    if (ovl) pushToPVW(ovl);
+  }
+  // Reconstruct on-air PGM iframe if program.scene is set but iframe missing
+  // (e.g. after a director reload while something was live)
+  var scene = (liveState.program || {}).scene;
+  if (scene && !document.getElementById('pgm-frame-' + scene)) {
+    var pgmOvl = OVERLAYS.find(function(o) { return o.key === scene; });
+    if (pgmOvl) _ensurePGMFrame(pgmOvl);
+  }
 }
 
 // ─── CONTEXT STRIP ────────────────────────────────────────────────────────────
@@ -580,6 +625,8 @@ function renderCtxStrip() {
 }
 
 // ─── PGM STATUS ───────────────────────────────────────────────────────────────
+// Derives on-air state from liveState overlay flags (which are kept in sync by
+// the server after every /broadcast/take and /broadcast/clean call).
 function renderPGMStatus() {
   var live = OVERLAYS.filter(function(o) {
     return o.pgmKeys.some(function(f) { return !!liveState[f]; });
@@ -593,14 +640,14 @@ function renderPGMStatus() {
   var cleanEl = document.getElementById('pgm-clean');
   if (cleanEl) cleanEl.classList.toggle('visible', !isOnAir);
 
-  // On-air tally — tints the PGM monitor frame when something is live
   var pgmMon = document.getElementById('pgm-monitor');
   if (pgmMon) pgmMon.classList.toggle('on-air', isOnAir);
 }
 
 // ─── PGM VISIBILITY ───────────────────────────────────────────────────────────
-// The PGM monitor contains all 6 overlay iframes stacked. We explicitly control
-// which one is visible so we never rely on iframe transparency stacking behaviour.
+// Shows/hides PGM iframes based on overlay flags in liveState.
+// Only the live iframe is visible; others stay loaded (SSE connected) for instant
+// re-take without reload latency.
 function renderPGMVisibility() {
   OVERLAYS.forEach(function(o) {
     var frame = document.getElementById('pgm-frame-' + o.key);
@@ -610,7 +657,7 @@ function renderPGMVisibility() {
   });
 }
 
-// ─── OVERLAY BUTTONS ─────────────────────────────────────────────────────────
+// ─── OVERLAY BUTTONS ──────────────────────────────────────────────────────────
 function renderOvlButtons() {
   OVERLAYS.forEach(function(o) {
     var btn = document.querySelector('.ovl-btn[data-key="' + o.key + '"]');
@@ -621,58 +668,48 @@ function renderOvlButtons() {
   });
 }
 
-// ─── PVW IFRAME INJECTION ─────────────────────────────────────────────────────
-function injectPVWOverride(frame, flags) {
-  try {
-    var cw = frame.contentWindow;
-    if (!cw || typeof cw.onStateUpdate !== 'function') return;
-    if (!frame._origUpdate) frame._origUpdate = cw.onStateUpdate;
-    var orig = frame._origUpdate;
-    cw.onStateUpdate = function(d) {
-      var p = Object.assign({}, d);
-      flags.forEach(function(f) { p[f] = true; });
-      orig.call(cw, p);
-    };
-  } catch(e) {}
-}
-function refreshPVW(frame, flags) {
-  injectPVWOverride(frame, flags);
-  try {
-    if (frame.contentWindow && typeof frame.contentWindow.onStateUpdate === 'function') {
-      frame.contentWindow.onStateUpdate(Object.assign({}, liveState));
-    }
-  } catch(e) {}
+// ─── PGM IFRAME MANAGEMENT ────────────────────────────────────────────────────
+// PGM iframes load in normal mode (no ?pvw=1) — they run their own sse-client.js
+// and show exactly what OBS shows. Lazy-created on first TAKE, kept alive across
+// CUTs for instant re-take.
+function _ensurePGMFrame(ovl) {
+  if (document.getElementById('pgm-frame-' + ovl.key)) return;
+  var frame       = document.createElement('iframe');
+  frame.id        = 'pgm-frame-' + ovl.key;
+  frame.className = 'ovl-frame pgm-frame';
+  frame.src       = ovl.src + Q; // normal mode — sse-client.js runs inside
+  document.getElementById('pgm-screen').appendChild(frame);
 }
 
-// ─── OVERLAY SELECTOR ─────────────────────────────────────────────────────────
+// ─── PVW OVERLAY SELECTOR ─────────────────────────────────────────────────────
+// Selects which overlay is shown in PVW.
+// PVW iframes are lazy-created on first click and load with ?pvw=1 so they do NOT
+// open an SSE connection. State is injected via postMessage from onStateUpdate.
 function selectPVW(key) {
   pvwSelection = key;
-  _ctrlKey = null; // force ctrl panel rebuild on overlay switch
+  _ctrlKey     = null; // force ctrl panel rebuild on overlay switch
+
   var ovl = OVERLAYS.find(function(o) { return o.key === key; });
 
-  // Lazy-create PVW iframe on first selection of this overlay
+  // Lazy-create PVW iframe with ?pvw=1
   if (key && ovl && !document.getElementById('pvw-frame-' + key)) {
-    var pvwScreen2        = document.getElementById('pvw-screen');
-    var pvwFrame2         = document.createElement('iframe');
-    pvwFrame2.id          = 'pvw-frame-' + key;
-    pvwFrame2.className   = 'ovl-frame pvw-frame';
-    pvwFrame2.src         = ovl.src + Q;
-    pvwFrame2._ready      = false;
-    pvwFrame2._origUpdate = null;
-    pvwFrame2.addEventListener('load', (function(frame, o) {
+    var frame       = document.createElement('iframe');
+    frame.id        = 'pvw-frame-' + key;
+    frame.className = 'ovl-frame pvw-frame';
+    frame.src       = ovl.src + QPVW;
+    // Push initial state once iframe has loaded
+    frame.addEventListener('load', (function(f, o) {
       return function() {
-        frame._ready = true;
-        if (pvwSelection === o.key) refreshPVW(frame, o.pvwFlags);
+        if (pvwSelection === o.key) pushToPVW(o);
       };
-    }(pvwFrame2, ovl)));
-    pvwScreen2.appendChild(pvwFrame2);
+    }(frame, ovl)));
+    document.getElementById('pvw-screen').appendChild(frame);
   }
 
   // Show only the selected PVW frame
   document.querySelectorAll('.pvw-frame').forEach(function(f) {
     f.style.visibility = (f.id === 'pvw-frame-' + key) ? 'visible' : 'hidden';
   });
-
   document.getElementById('pvw-empty').style.display = key ? 'none' : 'flex';
 
   var cur = document.getElementById('pvw-current');
@@ -680,10 +717,8 @@ function selectPVW(key) {
 
   renderOvlButtons();
 
-  if (key && ovl) {
-    var frame = document.getElementById('pvw-frame-' + key);
-    if (frame && frame._ready) refreshPVW(frame, ovl.pvwFlags);
-  }
+  // Push current state to already-loaded iframe immediately
+  if (ovl) pushToPVW(ovl);
 
   updateTakeBtn();
   renderCtrlPanel();
@@ -694,57 +729,60 @@ function updateTakeBtn() {
   document.getElementById('take-btn').classList.toggle('ready', pvwSelection !== null);
 }
 
-// ─── TAKE — transition PVW selection to live PGM ─────────────────────────────
+// ─── TAKE — transition PVW selection to program ──────────────────────────────
+// Calls /broadcast/take which atomically:
+//   1. Clears other overlays in the same mutual-exclusion group
+//   2. Sets the scene flag to true
+//   3. Sets program.scene = scene
+//   4. Fires SSE to all clients
+// On 200, applies an optimistic local update so director UI updates immediately
+// without waiting for the SSE round-trip (~50-200ms).
 async function take() {
   if (_taking || !pvwSelection) return;
   var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
   if (!ovl) return;
   _taking = true;
 
-  var payload = {};
-  ALL_FLAGS.forEach(function(f) { payload[f] = false; });
-  ovl.pvwFlags.forEach(function(f) { payload[f] = true; });
-
   var btn = document.getElementById('take-btn');
   btn.disabled = true;
+
   try {
-    var r = await fetch('/update', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload), credentials: 'include',
+    var r = await fetch('/broadcast/take', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({scene: ovl.key}),
+      credentials: 'include',
     });
-    if (r.status === 401 || r.status === 403 || (r.redirected && r.url.indexOf('login') !== -1)) {
+
+    if (r.status === 401 || r.status === 403) {
       document.getElementById('auth-notice').classList.add('visible');
       showStatus('Login required — see link below', false);
-    } else if (r.ok) {
-      document.getElementById('auth-notice').classList.remove('visible');
-      Object.assign(liveState, payload);
-
-      // Lazy-create PGM iframe on first TAKE of this overlay
-      if (!document.getElementById('pgm-frame-' + ovl.key)) {
-        var pgmScreen2  = document.getElementById('pgm-screen');
-        var pgmFrame2   = document.createElement('iframe');
-        pgmFrame2.id    = 'pgm-frame-' + ovl.key;
-        pgmFrame2.className = 'ovl-frame pgm-frame';
-        pgmFrame2.src   = ovl.src + Q;
-        pgmScreen2.appendChild(pgmFrame2);
-      }
-
-      renderPGMStatus();
-      renderPGMVisibility();
-
-      // Push state immediately — don't wait for SSE propagation
-      try {
-        var _pgmEl = document.getElementById('pgm-frame-' + ovl.key);
-        if (_pgmEl && _pgmEl.contentWindow && typeof _pgmEl.contentWindow.onStateUpdate === 'function') {
-          _pgmEl.contentWindow.onStateUpdate(Object.assign({}, liveState));
-        }
-      } catch(e) {}
-
-      renderOvlButtons();
-      showStatus('Taken live — ' + ovl.label, true);
-    } else {
-      showStatus('Server error (' + r.status + ')', false);
+      return;
     }
+
+    if (!r.ok) {
+      var msg = 'Server error (' + r.status + ')';
+      try { var j = await r.json(); if (j.error) msg = j.error; } catch(_) {}
+      showStatus(msg, false);
+      return;
+    }
+
+    document.getElementById('auth-notice').classList.remove('visible');
+    var result = await r.json();
+
+    // Optimistic local update — mirrors what the server wrote to state.json
+    ovl.pvwFlags.forEach(function(f) { liveState[f] = true; });
+    liveState.program = { scene: ovl.key, takenAt: result.takenAt, cleanAt: (liveState.program || {}).cleanAt };
+
+    // Ensure PGM iframe exists and is scaled
+    _ensurePGMFrame(ovl);
+    applyScale();
+
+    renderPGMStatus();
+    renderPGMVisibility();
+    renderOvlButtons();
+    showStatus('Taken live — ' + ovl.label, true);
+
   } catch(e) {
     showStatus('Network error', false);
   } finally {
@@ -753,29 +791,36 @@ async function take() {
   }
 }
 
-// ─── CLEAN / CUT — clear all live overlays ───────────────────────────────────
-// CUT is a hard cut to clean (remove all on-air graphics immediately).
-// CLEAN is the deliberate safety button — same operation.
+// ─── CLEAN / CUT ─────────────────────────────────────────────────────────────
+// Calls /broadcast/clean which clears all director overlay flags atomically.
 async function goClean() {
-  var payload = {};
-  ALL_FLAGS.forEach(function(f) { payload[f] = false; });
   try {
-    var r = await fetch('/update', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload), credentials: 'include',
+    var r = await fetch('/broadcast/clean', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: '{}',
+      credentials: 'include',
     });
-    if (r.ok) {
-      Object.assign(liveState, payload);
-      renderPGMStatus();
-      renderPGMVisibility();
-      renderOvlButtons();
-      showStatus('Clean — all overlays off', true);
-    } else if (r.status === 401 || r.status === 403) {
+
+    if (r.status === 401 || r.status === 403) {
       document.getElementById('auth-notice').classList.add('visible');
       showStatus('Login required', false);
-    } else {
-      showStatus('Error (' + r.status + ')', false);
+      return;
     }
+    if (!r.ok) { showStatus('Error (' + r.status + ')', false); return; }
+
+    document.getElementById('auth-notice').classList.remove('visible');
+    var result = await r.json();
+
+    // Optimistic local update
+    OVERLAYS.forEach(function(o) { o.pgmKeys.forEach(function(f) { liveState[f] = false; }); });
+    liveState.program = { scene: null, takenAt: (liveState.program || {}).takenAt, cleanAt: result.cleanAt };
+
+    renderPGMStatus();
+    renderPGMVisibility();
+    renderOvlButtons();
+    showStatus('Clean — all overlays off', true);
+
   } catch(e) {
     showStatus('Network error', false);
   }
@@ -793,8 +838,7 @@ function showStatus(msg, ok) {
                      String(n.getSeconds()).padStart(2,'0');
 }
 
-// ─── SCALE — fit 1920×1080 iframe into the monitor body ──────────────────────
-// monitor-body has aspect-ratio:16/9 so width/1920 is always the correct scale
+// ─── SCALE — fit 1920×1080 iframes into monitor bodies ───────────────────────
 function applyScale() {
   var pvwBody = document.getElementById('pvw-body');
   if (!pvwBody) return;
@@ -809,9 +853,6 @@ window.addEventListener('resize', function() {
 });
 
 // ─── INLINE OVERLAY CONTROLS ──────────────────────────────────────────────────
-// Contextual quick-controls for each overlay type. These affect shared state
-// (categories, display count, H2H athletes) but changes are staged in PVW
-// before going live on TAKE.
 function getCats() {
   var cats = liveState.categories || [];
   return cats.map(function(c) { return (typeof c === 'string') ? c : (c.name || ''); }).filter(Boolean);
@@ -895,7 +936,7 @@ function buildH2HCtrls() {
     '<input class="ctrl-input" type="text" placeholder="Athlete name" value="' + esc(right) + '" onchange="ctrlH2H(\'right\',this.value)">';
 }
 
-// Control action helpers
+// ─── CONTROL ACTION HELPERS ───────────────────────────────────────────────────
 async function postUpdate(obj) {
   try {
     var r = await fetch('/update', {
@@ -936,7 +977,7 @@ function ctrlH2H(side, val) {
   postUpdate(payload);
 }
 
-// Keyboard shortcuts
+// ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
   var tag = (e.target || {}).tagName || '';
   if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
@@ -944,12 +985,11 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') { e.preventDefault(); goClean(); }
 });
 
-// ─── BUILD SELECTOR BUTTONS ───────────────────────────────────────────────────
-// Iframes are lazy-created: PVW on first button click, PGM on first TAKE.
-// This keeps the initial SSE connection count at 1 (director only).
+// ─── INIT ────────────────────────────────────────────────────────────────────
+// Build selector buttons. No iframes created at init — all lazy.
+// Initial SSE connection count: 1 (director's own).
 (function init() {
   var selectorEl = document.getElementById('ovl-selector');
-
   OVERLAYS.forEach(function(ovl) {
     var btn = document.createElement('button');
     btn.className   = 'ovl-btn';
@@ -960,7 +1000,6 @@ document.addEventListener('keydown', function(e) {
     }(ovl.key)));
     selectorEl.appendChild(btn);
   });
-
   setTimeout(applyScale, 80);
   fetchState();
   connect();

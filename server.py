@@ -1276,7 +1276,7 @@ def update_state():
         # sending it from control.html's local API-mode state would clobber it with [].
         _UPDATE_EXCLUDE = frozenset({"resetAllTimers", "categories", "events", "results",
                                      "lbStandings", "results_version", "restart_token",
-                                     "scorebug"})
+                                     "scorebug", "program"})
         merge_dict = {k: v for k, v in payload.items() if k not in _UPDATE_EXCLUDE}
         current.update(merge_dict)
         for i in range(lane_count + 1, 9):
@@ -1323,6 +1323,84 @@ def director_set_lb():
 
     _sse_notify()
     return jsonify({"ok": True, "lbCategory": s.get("lbCategory"), "lbCategoryOverride": override})
+
+
+# ─── BROADCAST DIRECTOR — PROGRAM STATE MACHINE ──────────────────────────────
+# Server-owned program state: which scene is on air, when it was taken/cleaned.
+# These routes replace the /update-based TAKE/CUT approach so the server is the
+# authoritative record of program state, not the frontend.
+#
+# Overlay groups enforce mutual exclusion at TAKE time:
+#   A — full-frame (leaderboard / h2h / lineup): only one active at a time
+#   B — lower slot (lowerthird / champion): only one active at a time
+#   C — data strip (reps / lights): only one active at a time
+_OVERLAY_GROUPS = {
+    "leaderboard": {"flag": "leaderboard",      "group": "A"},
+    "h2h":         {"flag": "h2h",              "group": "A"},
+    "lineup":      {"flag": "lineup",           "group": "A"},
+    "lowerthird":  {"flag": "lowerThirdVisible", "group": "B"},
+    "champion":    {"flag": "champion",          "group": "B"},
+    "reps":        {"flag": "repsVisible",       "group": "C"},
+    "lights":      {"flag": "lightsVisible",     "group": "C"},
+}
+_ALL_DIRECTOR_FLAGS = [info["flag"] for info in _OVERLAY_GROUPS.values()]
+
+
+@app.route("/broadcast/take", methods=["POST"])
+def broadcast_take():
+    """Atomically take an overlay scene to program.
+    Clears other overlays in the same mutual-exclusion group before setting the new one.
+    Body: {"scene": "leaderboard"|"h2h"|"lineup"|"lowerthird"|"champion"|"reps"|"lights"}
+    Requires comp session auth.
+    """
+    if not session.get("comp_ok"):
+        return jsonify({"error": "authentication required"}), 401
+    data  = request.get_json(force=True, silent=True) or {}
+    scene = data.get("scene", "")
+    if scene not in _OVERLAY_GROUPS:
+        return jsonify({"error": f"unknown scene: {scene}"}), 400
+    overlay = _OVERLAY_GROUPS[scene]
+    group   = overlay["group"]
+    # Peers to clear — same group, different scene
+    peers = [info["flag"] for k, info in _OVERLAY_GROUPS.items()
+             if info["group"] == group and k != scene]
+    now = int(time.time() * 1000)
+    with state_lock:
+        s = load_state()
+        for flag in peers:
+            s[flag] = False
+        s[overlay["flag"]] = True
+        s["program"] = {
+            "scene":   scene,
+            "takenAt": now,
+            "cleanAt": s.get("program", {}).get("cleanAt"),
+        }
+        save_state(s)
+    _sse_notify()
+    return jsonify({"ok": True, "scene": scene, "takenAt": now})
+
+
+@app.route("/broadcast/clean", methods=["POST"])
+def broadcast_clean():
+    """Clear all director-managed overlay flags and set program.scene to null.
+    Requires comp session auth.
+    """
+    if not session.get("comp_ok"):
+        return jsonify({"error": "authentication required"}), 401
+    now = int(time.time() * 1000)
+    with state_lock:
+        s = load_state()
+        for flag in _ALL_DIRECTOR_FLAGS:
+            s[flag] = False
+        prev = s.get("program", {})
+        s["program"] = {
+            "scene":   None,
+            "takenAt": prev.get("takenAt"),
+            "cleanAt": now,
+        }
+        save_state(s)
+    _sse_notify()
+    return jsonify({"ok": True, "cleanAt": now})
 
 
 _PROXY_ALLOWLIST = [h.strip().lower() for h in os.environ.get("PROXY_ALLOWLIST", "").split(",") if h.strip()]
@@ -2461,6 +2539,10 @@ def _init_state_file():
             if key not in s:
                 s[key] = default
                 changed = True
+        # Broadcast program state — server-owned; survives reloads and restarts
+        if "program" not in s:
+            s["program"] = {"scene": None, "takenAt": None, "cleanAt": None}
+            changed = True
         if changed:
             save_state(s)
     except Exception:

@@ -98,6 +98,18 @@
 <!-- Rep counters above nameplates -->
 <div id="reps-bar"></div>
 
+<script>
+(function(){
+  if(!/[?&]pvw=1/.test(location.search)) return;
+  // PVW mode: state arrives via postMessage from director — no SSE connection opened.
+  document.currentScript.nextElementSibling.remove();
+  window.addEventListener('message', function(e){
+    if(typeof window.onStateUpdate==='function'){
+      try{ window.onStateUpdate(e.data); }catch(_){}
+    }
+  });
+}());
+</script>
 <script src="sse-client.js"></script>
 <script>
 let state = {
