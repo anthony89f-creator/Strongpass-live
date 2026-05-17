@@ -5,204 +5,235 @@
 <title>Category Lineup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:transparent; font-family:'Barlow Condensed',sans-serif; width:1920px; height:1080px; overflow:hidden; }
-  :root {
-    --bg:   rgba(5,5,5,0.97);
-    --gold: #F5C842;
-    --dim:  #666;
-    --text: #F0F0F0;
-  }
 
   #lineup {
     position:absolute; inset:0;
     display:flex; align-items:center; justify-content:center;
     opacity:0; pointer-events:none;
-    transition:opacity 0.4s ease;
+    transition:opacity 0.35s ease;
   }
   #lineup.visible { opacity:1; }
 
-  /* Full bg */
+  /* ── BACKGROUND ─────────────────────────────────────── */
   .bg-fill {
     position:absolute; inset:0;
-    background:var(--bg);
+    background:#090909;
   }
 
-  /* Animated noise texture */
-  .bg-texture {
-    position:absolute; inset:0; opacity:0.03;
-    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  /* Precision grid — engineering paper, barely visible */
+  .bg-grid {
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+    background-size:80px 80px;
   }
 
-  /* Horizontal lines */
-  .scan-lines {
-    position:absolute; inset:0; pointer-events:none;
-    background:repeating-linear-gradient(0deg, transparent 0px, transparent 5px, rgba(255,255,255,0.008) 5px, rgba(255,255,255,0.008) 6px);
-  }
-
-  /* Gold accent lines */
-  .accent-line-top {
-    position:absolute; top:80px; left:120px; right:120px; height:1px;
-    background:linear-gradient(90deg, transparent, rgba(245,200,66,0.4), transparent);
+  /* Ruled horizontal lines — mechanical reveal on show */
+  .rule-h {
+    position:absolute; left:100px; right:100px; height:1px;
+    background:rgba(255,255,255,0.1);
     transform:scaleX(0);
-    transition:transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.2s;
   }
-  .accent-line-bot {
-    position:absolute; bottom:80px; left:120px; right:120px; height:1px;
-    background:linear-gradient(90deg, transparent, rgba(245,200,66,0.4), transparent);
-    transform:scaleX(0);
-    transition:transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.3s;
+  .rule-h.top {
+    top:72px;
+    transform-origin:left center;
+    transition:transform 0.55s cubic-bezier(0.4,0,0.2,1) 0.1s;
   }
-  #lineup.visible .accent-line-top,
-  #lineup.visible .accent-line-bot { transform:scaleX(1); }
-
-  /* Content */
-  .content {
-    position:relative; z-index:2; text-align:center;
-    opacity:0; transform:translateY(30px);
-    transition:opacity 0.6s ease 0.35s, transform 0.6s cubic-bezier(0.16,1,0.3,1) 0.35s;
+  .rule-h.bottom {
+    bottom:72px;
+    transform-origin:right center;
+    transition:transform 0.55s cubic-bezier(0.4,0,0.2,1) 0.22s;
   }
-  #lineup.visible .content { opacity:1; transform:translateY(0); }
-
-  .comp-name {
-    font-size:14px; font-weight:700; letter-spacing:0.4em;
-    text-transform:uppercase; color:var(--dim);
-    font-family:'Barlow',sans-serif; margin-bottom:24px;
-  }
-
-  /* Category dot */
-  .cat-dot-wrap { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:16px; }
-  .cat-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-  .cat-dot-line { height:1px; width:60px; background:rgba(255,255,255,0.1); }
-
-  /* Main category name */
-  .cat-name {
-    font-size:130px; font-weight:900; letter-spacing:0.03em;
-    text-transform:uppercase; line-height:0.88; color:#fff;
-    text-shadow:0 8px 60px rgba(0,0,0,0.8);
-  }
-
-  /* Athlete count */
-  .cat-count-row {
-    display:flex; align-items:center; justify-content:center; gap:20px; margin-top:28px;
-  }
-  .cat-count-line { height:1px; width:80px; background:rgba(255,255,255,0.1); }
-  .cat-count {
-    font-size:18px; font-weight:700; letter-spacing:0.22em;
-    text-transform:uppercase; color:rgba(255,255,255,0.45);
-    font-family:'Barlow',sans-serif;
-  }
-  .cat-count span { color:var(--gold); font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:900; }
-
-  /* Top athletes preview */
-  .athletes-row {
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    margin-top:32px; flex-wrap:wrap;
-  }
-  .ath-chip {
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
-    border-radius:3px; padding:5px 14px;
-    font-size:14px; font-weight:700; letter-spacing:0.08em;
-    text-transform:uppercase; color:rgba(255,255,255,0.5);
-  }
-  .ath-chip.first { color:var(--gold); border-color:rgba(245,200,66,0.2); background:rgba(245,200,66,0.05); }
-
-  /* Navigation dots */
-  .nav-dots {
-    position:absolute; bottom:50px; left:0; right:0;
-    display:flex; align-items:center; justify-content:center; gap:8px; z-index:3;
-  }
-  .nav-dot {
-    width:6px; height:6px; border-radius:50%;
-    background:rgba(255,255,255,0.15); transition:all 0.3s ease;
-  }
-  .nav-dot.active { background:var(--gold); transform:scale(1.3); }
-
-  /* Progress bar */
-  .progress-bar {
-    position:absolute; bottom:0; left:0; height:2px; background:var(--gold);
-    transition:width 0s linear;
-  }
+  #lineup.visible .rule-h { transform:scaleX(1); }
 
   /* Corner labels */
   .corner-tl, .corner-tr {
-    position:absolute; top:40px; font-size:10px; font-weight:700;
-    letter-spacing:0.25em; text-transform:uppercase; color:var(--dim);
-    font-family:'Barlow',sans-serif; z-index:3;
+    position:absolute; top:36px; z-index:3;
+    font-size:11px; font-weight:700; letter-spacing:0.3em;
+    text-transform:uppercase; color:rgba(255,255,255,0.28);
+    font-family:'Barlow',sans-serif;
   }
-  .corner-tl { left:60px; }
-  .corner-tr { right:60px; text-align:right; }
+  .corner-tl { left:100px; }
+  .corner-tr { right:100px; text-align:right; }
+
+  /* ── CONTENT BLOCK ───────────────────────────────────── */
+  .content {
+    position:relative; z-index:2;
+    width:1100px;
+    opacity:0;
+    /* opacity managed via inline styles in showCategory() */
+  }
+
+  /* Category header */
+  .cat-header { margin-bottom:32px; }
+
+  /* Category color accent — disciplined 3px strip */
+  .cat-accent {
+    width:40px; height:3px;
+    margin-bottom:20px;
+    /* background set via inline style */
+  }
+
+  /* Eyebrow label */
+  .cat-eyebrow {
+    display:block;
+    font-size:11px; font-weight:700; letter-spacing:0.36em;
+    text-transform:uppercase; color:rgba(255,255,255,0.28);
+    font-family:'Barlow',sans-serif;
+    margin-bottom:10px;
+  }
+
+  /* Category name — the hero */
+  .cat-name {
+    font-size:94px; font-weight:900; letter-spacing:0.01em;
+    text-transform:uppercase; line-height:0.88; color:#F0F0F0;
+  }
+
+  /* Horizontal separator */
+  .cat-divider {
+    height:1px; background:rgba(255,255,255,0.08);
+    margin:28px 0 0;
+  }
+
+  /* ── ATHLETE LIST ─────────────────────────────────────── */
+  .athlete-list {
+    border-left:3px solid #F5C842; /* overridden inline per category color */
+    padding-left:28px;
+  }
+
+  .ath-row {
+    display:grid;
+    grid-template-columns:60px 1fr auto;
+    align-items:center;
+    height:56px;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    opacity:0;
+    transform:translateX(-8px);
+    transition:opacity 0.16s ease, transform 0.16s ease;
+  }
+  .ath-row.in { opacity:1; transform:translateX(0); }
+
+  /* Rank — dim by default, accented for top 3 */
+  .ath-rank {
+    font-size:24px; font-weight:900;
+    color:rgba(255,255,255,0.16);
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .ath-row[data-rank="1"] .ath-rank { color:rgba(245,200,66,0.55); }
+  .ath-row[data-rank="2"] .ath-rank { color:rgba(255,255,255,0.32); }
+  .ath-row[data-rank="3"] .ath-rank { color:rgba(255,255,255,0.24); }
+
+  /* Athlete name — broadcast-readable at distance */
+  .ath-name {
+    font-size:38px; font-weight:800; letter-spacing:0.025em;
+    text-transform:uppercase; color:#F0F0F0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    line-height:1;
+  }
+
+  /* Origin / nationality */
+  .ath-origin {
+    font-size:14px; font-weight:700; letter-spacing:0.22em;
+    text-transform:uppercase; color:rgba(255,255,255,0.26);
+    font-family:'Barlow',sans-serif;
+    padding-left:20px;
+    white-space:nowrap;
+  }
+
+  /* Overflow indicator */
+  .ath-overflow {
+    font-size:12px; font-weight:700; letter-spacing:0.24em;
+    text-transform:uppercase; color:rgba(255,255,255,0.18);
+    font-family:'Barlow',sans-serif;
+    padding-top:14px;
+    padding-left:60px;
+  }
+
+  /* ── NAVIGATION — F1 segment bar ─────────────────────── */
+  .nav-strip {
+    position:absolute; bottom:84px; left:100px; right:100px;
+    display:flex; align-items:center; gap:3px; z-index:3;
+    height:2px;
+  }
+  .nav-seg {
+    flex:1; height:2px;
+    background:rgba(255,255,255,0.1);
+    transition:background 0.3s ease;
+  }
+  .nav-seg.active { background:rgba(255,255,255,0.62); }
+
+  /* Progress bar — gold, razor thin */
+  .progress-bar {
+    position:absolute; bottom:0; left:0; height:2px;
+    background:#F5C842;
+    transition:width 0s linear;
+  }
 </style>
 </head>
 <body>
 
 <div id="lineup">
   <div class="bg-fill"></div>
-  <div class="bg-texture"></div>
-  <div class="scan-lines"></div>
-  <div class="accent-line-top"></div>
-  <div class="accent-line-bot"></div>
+  <div class="bg-grid"></div>
+  <div class="rule-h top"></div>
+  <div class="rule-h bottom"></div>
 
-  <div class="corner-tl" id="corner-comp">IRON CHALLENGE 2025</div>
-  <div class="corner-tr" id="corner-event">WEIGHT CATEGORIES</div>
+  <div class="corner-tl" id="corner-comp"></div>
+  <div class="corner-tr" id="corner-event"></div>
 
   <div class="content">
-    <div class="comp-name" id="disp-comp">IRON CHALLENGE 2025</div>
-    <div class="cat-dot-wrap">
-      <div class="cat-dot-line"></div>
-      <div class="cat-dot" id="disp-dot" style="background:#F5C842"></div>
-      <div class="cat-dot-line"></div>
+    <div class="cat-header">
+      <div class="cat-accent" id="cat-accent"></div>
+      <span class="cat-eyebrow" id="cat-eyebrow">Weight Category</span>
+      <div class="cat-name" id="disp-name">OPEN</div>
     </div>
-    <div class="cat-name" id="disp-name">OPEN</div>
-    <div class="cat-count-row">
-      <div class="cat-count-line"></div>
-      <div class="cat-count"><span id="disp-count">0</span> Athletes Competing</div>
-      <div class="cat-count-line"></div>
-    </div>
-    <div class="athletes-row" id="disp-athletes"></div>
+    <div class="cat-divider"></div>
+    <div class="athlete-list" id="disp-athletes"></div>
   </div>
 
-  <div class="nav-dots" id="nav-dots"></div>
+  <div class="nav-strip" id="nav-strip"></div>
   <div class="progress-bar" id="progress-bar"></div>
 </div>
 
 <script src="sse-client.js"></script>
 <script>
 let state = {
-  lineup: false,
-  lineupAuto: true,
-  lineupDuration: 5,       // seconds per category
-  lineupIndex: 0,
-  categories: [],
-  athletes: [],
-  compName: 'IRON CHALLENGE 2025',
-  eventName: 'WEIGHT CATEGORIES'
+  lineup:         false,
+  lineupAuto:     true,
+  lineupDuration: 5,
+  lineupIndex:    0,
+  categories:     [],
+  athletes:       [],
+  compName:       '',
+  eventName:      'WEIGHT CATEGORIES'
 };
 
-let autoTimer = null;
+let autoTimer    = null;
 let progressTimer = null;
-let currentIndex = 0;
-let isVisible = false;
+let currentIndex  = 0;
+let isVisible     = false;
 
 // Hash of the currently displayed category's data. showCategory() triggers a
-// fade-out/fade-in animation — only call it when displayed content actually changes,
-// not on every SSE timer tick.
+// fade-out/fade-in + stagger — only call it when displayed content actually changes.
 var _lastCatKey = null;
 
 function _catKey() {
   const cats = getCategoryData();
   if (!cats.length) return 'empty|' + (state.compName||'');
-  const ci = ((currentIndex % cats.length) + cats.length) % cats.length;
+  const ci  = ((currentIndex % cats.length) + cats.length) % cats.length;
   const cat = cats[ci];
   return (state.compName||'') + '|' + ci + '|' + cat.name + '|' + cat.count + '|' +
-    cat.athletes.slice(0,6).map(a => a.name + ':' + (a.score||'')).join(',');
+    cat.athletes.slice(0,8).map(a => a.name + ':' + (a.score||'')).join(',');
 }
 
 function getCategoryData() {
-  // Build category list from athletes
   const catNames = state.categories && state.categories.length
     ? state.categories.map(c => ({ name: c.name, color: c.color }))
     : [...new Set((state.athletes||[]).map(a=>a.category||'').filter(Boolean))].map(c=>({ name:c, color:'#F5C842' }));
@@ -210,7 +241,7 @@ function getCategoryData() {
   return catNames.map(cat => {
     const athletes = (state.athletes||[]).filter(a => (a.category||'') === cat.name);
     athletes.sort((a,b) => parseFloat(b.score||0) - parseFloat(a.score||0));
-    return { ...cat, count: athletes.length, athletes: athletes.slice(0,6) };
+    return { ...cat, count: athletes.length, athletes };
   }).filter(c => c.count > 0);
 }
 
@@ -218,50 +249,64 @@ function showCategory(index) {
   const cats = getCategoryData();
   if (!cats.length) return;
   currentIndex = ((index % cats.length) + cats.length) % cats.length;
-  const cat = cats[currentIndex];
+  const cat    = cats[currentIndex];
 
-  // Update content
-  document.getElementById('disp-comp').textContent  = state.compName || '';
-  document.getElementById('disp-name').textContent  = cat.name;
-  document.getElementById('disp-dot').style.background = cat.color || '#F5C842';
-  document.getElementById('disp-count').textContent = cat.count;
+  // Corner labels
   document.getElementById('corner-comp').textContent  = state.compName || '';
-  document.getElementById('corner-event').textContent = 'WEIGHT CATEGORIES';
+  document.getElementById('corner-event').textContent = state.eventName || 'WEIGHT CATEGORIES';
 
-  // Athletes chips
-  document.getElementById('disp-athletes').innerHTML = cat.athletes.map((a,i) =>
-    `<div class="ath-chip${i===0?' first':''}">${a.name}</div>`
+  // Category header
+  const accentEl = document.getElementById('cat-accent');
+  accentEl.style.background = cat.color || '#F5C842';
+  document.getElementById('cat-eyebrow').textContent = 'Weight Category';
+  document.getElementById('disp-name').textContent   = cat.name;
+
+  // Athlete list — up to 8 rows, overflow note if more
+  const listEl   = document.getElementById('disp-athletes');
+  const shown    = cat.athletes.slice(0, 8);
+  const overflow = cat.count - shown.length;
+  listEl.style.borderLeftColor = cat.color || '#F5C842';
+  listEl.innerHTML = shown.map((a, i) =>
+    `<div class="ath-row" data-rank="${i+1}">` +
+      `<span class="ath-rank">${i+1}</span>` +
+      `<span class="ath-name">${a.name}</span>` +
+      (a.origin ? `<span class="ath-origin">${a.origin}</span>` : '') +
+    `</div>`
+  ).join('') + (overflow > 0 ? `<div class="ath-overflow">+${overflow} more</div>` : '');
+
+  // Nav segments
+  document.getElementById('nav-strip').innerHTML = cats.map((_,i) =>
+    `<div class="nav-seg${i===currentIndex?' active':''}"></div>`
   ).join('');
 
-  // Nav dots
-  document.getElementById('nav-dots').innerHTML = cats.map((_,i) =>
-    `<div class="nav-dot${i===currentIndex?' active':''}"></div>`
-  ).join('');
-
-  // Animate content refresh
-  const content = document.querySelector('.content');
-  content.style.opacity = '0';
-  content.style.transform = 'translateY(20px)';
-  setTimeout(() => {
-    content.style.transition = 'opacity 0.5s ease, transform 0.5s cubic-bezier(0.16,1,0.3,1)';
-    content.style.opacity = '1';
-    content.style.transform = 'translateY(0)';
-  }, 50);
-
-  // Record what we just rendered so render() doesn't re-trigger this animation
+  // Record rendered state — prevents re-triggering animation on every SSE tick
   _lastCatKey = _catKey();
+
+  // Animate: immediate opacity cut → content swap → fast fade-in + sequential row reveal
+  const content = document.querySelector('.content');
+  content.style.transition = 'none';
+  content.style.opacity    = '0';
+
+  setTimeout(() => {
+    content.style.transition = 'opacity 0.2s ease';
+    content.style.opacity    = '1';
+    // Stagger athlete rows — engineered, sequential reveal
+    document.querySelectorAll('#disp-athletes .ath-row').forEach((row, i) => {
+      setTimeout(() => row.classList.add('in'), i * 42);
+    });
+  }, 75);
 
   // Progress bar
   clearTimeout(progressTimer);
   const bar = document.getElementById('progress-bar');
   bar.style.transition = 'none';
-  bar.style.width = '0%';
+  bar.style.width      = '0%';
   if (state.lineupAuto !== false) {
     const dur = (state.lineupDuration || 5) * 1000;
     setTimeout(() => {
       bar.style.transition = `width ${dur}ms linear`;
-      bar.style.width = '100%';
-    }, 50);
+      bar.style.width      = '100%';
+    }, 75);
   }
 }
 
@@ -279,11 +324,11 @@ function stopAuto() {
   clearInterval(autoTimer);
   const bar = document.getElementById('progress-bar');
   bar.style.transition = 'none';
-  bar.style.width = '0%';
+  bar.style.width      = '0%';
 }
 
 function render() {
-  const el = document.getElementById('lineup');
+  const el   = document.getElementById('lineup');
   const want = !!state.lineup;
 
   if (want && !isVisible) {
@@ -293,12 +338,11 @@ function render() {
     showCategory(currentIndex);
     startAuto();
   } else if (!want && isVisible) {
-    isVisible = false;
-    _lastCatKey = null; // Reset so next show re-renders
+    isVisible    = false;
+    _lastCatKey  = null;
     el.classList.remove('visible');
     stopAuto();
   } else if (want && isVisible) {
-    // Only re-animate when displayed data actually changed — showCategory() fades out/in
     const key = _catKey();
     if (key !== _lastCatKey) {
       showCategory(state.lineupIndex !== undefined ? state.lineupIndex : currentIndex);
@@ -315,7 +359,6 @@ window.onStateUpdate = function(d) {
     render();
   }
 };
-
 </script>
 </body>
 </html>
