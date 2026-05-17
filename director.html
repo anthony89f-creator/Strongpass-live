@@ -507,18 +507,19 @@ var _token = new URLSearchParams(window.location.search).get('token') || '';
 var Q      = _token ? ('?token=' + encodeURIComponent(_token)) : '';
 
 var OVERLAYS = [
-  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', pvwFlags:['leaderboard','eventBarVisible'], pgmKeys:['leaderboard'] },
+  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', pvwFlags:['leaderboard'],                   pgmKeys:['leaderboard'] },
   { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         pvwFlags:['h2h'],                          pgmKeys:['h2h'] },
   { key:'lineup',      label:'Lineup',        src:'/lineup.html',      pvwFlags:['lineup'],                       pgmKeys:['lineup'] },
   { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  pvwFlags:['lowerThirdVisible'],            pgmKeys:['lowerThirdVisible'] },
   { key:'reps',        label:'Reps / Lights', src:'/reps.html',        pvwFlags:['repsVisible','lightsVisible'],  pgmKeys:['repsVisible','lightsVisible'] },
   { key:'champion',    label:'Champion',      src:'/champion.html',    pvwFlags:['champion'],                     pgmKeys:['champion'] },
 ];
-var ALL_FLAGS = ['leaderboard','eventBarVisible','h2h','lineup','lowerThirdVisible','repsVisible','lightsVisible','champion'];
+var ALL_FLAGS = ['leaderboard','h2h','lineup','lowerThirdVisible','repsVisible','lightsVisible','champion'];
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 var liveState    = {};
 var pvwSelection = null;
+var _taking      = false; // re-entry guard for take()
 
 // ─── SSE ──────────────────────────────────────────────────────────────────────
 var _es = null, _retryTimer = null, _retryMs = 1000;
@@ -556,6 +557,10 @@ document.addEventListener('visibilitychange', function() {
 });
 
 // ─── STATE UPDATE ─────────────────────────────────────────────────────────────
+// PVW iframes are NOT refreshed here. Each PVW iframe has its own sse-client.js
+// which calls window.onStateUpdate (the injectPVWOverride wrapper) automatically.
+// Calling refreshPVW() here would cause a synchronous cross-frame render() call
+// on every SSE tick (~1/s), which causes event loop stalls in Safari.
 function onStateUpdate(d) {
   Object.assign(liveState, d);
   renderCtxStrip();
@@ -563,11 +568,6 @@ function onStateUpdate(d) {
   renderPGMVisibility();
   renderOvlButtons();
   renderCtrlPanel();
-  if (pvwSelection) {
-    var frame = document.getElementById('pvw-frame-' + pvwSelection);
-    var ovl   = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
-    if (frame && ovl && frame._ready) refreshPVW(frame, ovl.pvwFlags);
-  }
 }
 
 // ─── CONTEXT STRIP ────────────────────────────────────────────────────────────
@@ -647,6 +647,7 @@ function refreshPVW(frame, flags) {
 // ─── OVERLAY SELECTOR ─────────────────────────────────────────────────────────
 function selectPVW(key) {
   pvwSelection = key;
+  _ctrlKey = null; // force ctrl panel rebuild on overlay switch
   var ovl = OVERLAYS.find(function(o) { return o.key === key; });
 
   // Lazy-create PVW iframe on first selection of this overlay
@@ -695,9 +696,10 @@ function updateTakeBtn() {
 
 // ─── TAKE — transition PVW selection to live PGM ─────────────────────────────
 async function take() {
-  if (!pvwSelection) return;
+  if (_taking || !pvwSelection) return;
   var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
   if (!ovl) return;
+  _taking = true;
 
   var payload = {};
   ALL_FLAGS.forEach(function(f) { payload[f] = false; });
@@ -746,6 +748,7 @@ async function take() {
   } catch(e) {
     showStatus('Network error', false);
   } finally {
+    _taking      = false;
     btn.disabled = false;
   }
 }
@@ -817,17 +820,21 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+var _ctrlKey = null;
 function renderCtrlPanel() {
   var panel = document.getElementById('ctrl-panel');
   if (!panel) return;
+  // Dirty-check: skip DOM rebuild if nothing relevant changed.
+  // Prevents innerHTML thrash (and focused-<select> destruction) on every SSE tick.
+  var key = pvwSelection + '|' + (liveState.lbCategory||'') + '|' + (liveState.lbDisplayCount||'') + '|' + (!!liveState.lbFrozen) + '|' + (liveState.lineupIndex||'0') + '|' + (liveState.lineupAuto!==false) + '|' + ((liveState.h2hLeft||{}).name||'') + '|' + ((liveState.h2hRight||{}).name||'') + '|' + (getCats().join(','));
+  if (key === _ctrlKey) return;
+  _ctrlKey = key;
   var html = '';
   if      (pvwSelection === 'leaderboard') html = buildLbCtrls();
   else if (pvwSelection === 'lineup')      html = buildLineupCtrls();
   else if (pvwSelection === 'h2h')         html = buildH2HCtrls();
   panel.innerHTML = html;
   panel.classList.toggle('open', !!html);
-  // Re-scale because ctrl panel changes monitors-section height
-  setTimeout(applyScale, 10);
 }
 
 function buildLbCtrls() {
