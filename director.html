@@ -10,265 +10,512 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
 :root {
-  --green:#00AA44; --green-bright:#00DD55;
-  --gold:#D4A017;  --gold-light:#F5C842;
-  --bg:#0A0A0A; --surface:#141414; --surface2:#1C1C1C; --surface3:#222;
-  --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666;
+  --green:       #00AA44;
+  --green-bright:#00DD55;
+  --red:         #C42000;
+  --red-mid:     #E03010;
+  --red-bright:  #FF4422;
+  --gold:        #D4A017;
+  --gold-light:  #F5C842;
+  --bg:          #060606;
+  --panel:       #0C0C0C;
+  --rail:        #090909;
+  --surface:     #101010;
+  --surface2:    #141414;
+  --surface3:    #181818;
+  --border:      rgba(255,255,255,0.055);
+  --border-hi:   rgba(255,255,255,0.11);
+  --text:        #EFEFEF;
+  --dim:         rgba(255,255,255,0.3);
+  --dim2:        rgba(255,255,255,0.14);
 }
-html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; overscroll-behavior:none; }
 
-/* ── HEADER ─────────────────────────────────────────────────── */
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────────────── */
 .header {
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:10px 18px; display:flex; align-items:center; justify-content:space-between;
-  position:sticky; top:0; z-index:200;
+  height: 40px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 200;
 }
-.header-left { display:flex; align-items:center; gap:12px; }
+.header-left { display:flex; align-items:center; gap:10px; }
 .back-link {
-  background:var(--surface2); border:1px solid var(--border); border-radius:4px;
-  padding:5px 11px; font-size:11px; font-weight:800; letter-spacing:0.14em;
-  text-transform:uppercase; color:var(--dim); text-decoration:none; white-space:nowrap;
-  transition:color 0.15s, border-color 0.15s;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-decoration: none;
+  transition: color 0.12s, border-color 0.12s;
+  white-space: nowrap;
 }
-.back-link:hover { color:var(--text); border-color:rgba(255,255,255,0.18); }
-.header-logo { height:36px; width:auto; object-fit:contain; mix-blend-mode:lighten; }
-.header-title { font-size:16px; font-weight:900; letter-spacing:0.1em; text-transform:uppercase; color:#fff; line-height:1; }
-.header-sub   { font-size:9px;  font-weight:700; letter-spacing:0.24em; color:var(--dim); text-transform:uppercase; margin-top:2px; }
-.conn-dot { width:7px; height:7px; border-radius:50%; background:#2a2a2a; display:inline-block; }
-.conn-dot.ok { background:var(--green-bright); animation:pulse 2s infinite; }
-.conn-text { font-size:11px; font-weight:700; letter-spacing:0.1em; color:var(--dim); text-transform:uppercase; margin-left:5px; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.back-link:hover { color: var(--text); border-color: var(--border-hi); }
+.header-logo {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+  mix-blend-mode: lighten;
+  opacity: 0.8;
+}
+.header-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.header-title {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1;
+}
+.header-sub {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--dim2);
+  font-family: 'Barlow', sans-serif;
+}
+.conn-wrap { display:flex; align-items:center; gap:5px; }
+.conn-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #222;
+}
+.conn-dot.ok { background: var(--green-bright); }
+.conn-text {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-family: 'Barlow', sans-serif;
+}
 
-/* ── LAYOUT ─────────────────────────────────────────────────── */
-.main { padding:10px 14px; max-width:1500px; margin:0 auto; display:flex; flex-direction:column; gap:8px; }
+/* ── PAGE LAYOUT ─────────────────────────────────────────────────────── */
+.main {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-/* ── COMPETITION STRIP ──────────────────────────────────────── */
+/* ── COMPETITION STRIP ───────────────────────────────────────────────── */
 .comp-strip {
-  display:flex; align-items:center; gap:0; flex-wrap:wrap; overflow:hidden;
-  background:var(--surface); border:1px solid var(--border); border-radius:4px;
-  padding:7px 14px;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 12px;
+  overflow: hidden;
+  gap: 0;
 }
 .ctx-item {
-  font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
-  color:rgba(255,255,255,0.38); font-family:'Barlow',sans-serif; white-space:nowrap;
-  padding:1px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+  font-family: 'Barlow', sans-serif;
+  white-space: nowrap;
+  padding: 0 7px;
 }
-.ctx-item:first-child { padding-left:0; color:var(--text); }
-.ctx-sep { color:rgba(255,255,255,0.12); font-size:12px; }
+.ctx-item:first-child { padding-left: 0; color: var(--text); font-size: 11px; font-weight: 800; }
+.ctx-sep { color: rgba(255,255,255,0.1); font-size: 10px; }
 
-/* ── MONITOR GRID ───────────────────────────────────────────── */
-.monitors {
-  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+/* ── MONITORS SECTION ────────────────────────────────────────────────── */
+/* Unified titanium frame containing PVW | TRANSITION | PGM */
+.monitors-section {
+  display: flex;
+  align-items: stretch;
+  background: var(--rail);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-/* Monitor chrome */
+/* ── MONITOR PANE ────────────────────────────────────────────────────── */
 .monitor {
-  display:flex; flex-direction:column;
-  background:var(--surface); border:1px solid var(--border); border-radius:4px;
-  overflow:hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  min-width: 0;
 }
-.pvw-monitor { border-top:3px solid var(--gold); }
-.pgm-monitor { border-top:3px solid var(--green); }
+
+/* Colored top rail — the identity strip */
+.pvw-monitor { border-top: 2px solid var(--gold); }
+.pgm-monitor { border-top: 2px solid var(--red);  }
 
 /* Monitor label bar */
 .monitor-head {
-  display:flex; align-items:center; gap:8px;
-  padding:7px 12px;
-  background:var(--surface2); border-bottom:1px solid var(--border);
-  flex-shrink:0;
+  height: 30px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  flex-shrink: 0;
 }
-.monitor-ind { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.pvw-ind { background:var(--gold); }
-.pgm-ind { background:var(--green-bright); animation:pulse 2s infinite; }
-.monitor-label {
-  font-size:10px; font-weight:900; letter-spacing:0.26em; text-transform:uppercase; color:var(--dim);
+.mon-ind {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
-.monitor-badge {
-  font-size:8px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase;
-  padding:2px 7px; border-radius:3px;
-  background:rgba(0,170,68,0.1); color:var(--green-bright);
-  border:1px solid rgba(0,170,68,0.2);
+.pvw-ind { background: rgba(212,160,23,0.65); }
+.pgm-ind {
+  background: var(--red-bright);
+  animation: live-pulse 1.1s ease-in-out infinite;
 }
-.monitor-current {
-  margin-left:auto;
-  font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase;
-  color:rgba(255,255,255,0.28); font-family:'Barlow',sans-serif;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:50%;
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
 }
-.monitor-current.active { color:var(--gold-light); }
+.mon-label {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-family: 'Barlow', sans-serif;
+  line-height: 1;
+}
+.pvw-monitor .mon-label { color: rgba(212,160,23,0.7); }
+.pgm-monitor .mon-label { color: rgba(255,68,34,0.75); }
 
-/* 16:9 screen area */
+/* LIVE badge — hard indicator */
+.live-badge {
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-family: 'Barlow', sans-serif;
+  color: var(--red-bright);
+  background: rgba(196,32,0,0.1);
+  border: 1px solid rgba(196,32,0,0.22);
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+
+/* 16:9 screen — maintains aspect ratio from width */
 .monitor-body {
-  position:relative; width:100%; padding-bottom:56.25%;
-  background:#030303; flex-shrink:0;
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  background: #020202;
+  flex-shrink: 0;
 }
 .monitor-screen {
-  position:absolute; inset:0; overflow:hidden;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
 }
 
-/* All overlay iframes — 1920×1080, scaled down by JS */
+/* Subtle inner vignette — recessed screen feel */
+.monitor-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  box-shadow: inset 0 0 28px rgba(0,0,0,0.55);
+}
+
+/* All overlay iframes — native 1920×1080, scaled down by JS */
 .ovl-frame {
-  position:absolute; top:0; left:0;
-  width:1920px; height:1080px;
-  transform-origin:top left;
-  border:none; pointer-events:none;
+  position: absolute;
+  top: 0; left: 0;
+  width: 1920px; height: 1080px;
+  transform-origin: top left;
+  border: none;
+  pointer-events: none;
 }
+.pvw-frame { visibility: hidden; }
 
-/* PVW frames hidden by default; JS shows one at a time */
-.pvw-frame { visibility:hidden; }
-
-/* Empty state shown in PVW when nothing is selected */
+/* PVW empty state */
 .monitor-empty {
-  position:absolute; inset:0;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:8px; color:rgba(255,255,255,0.1);
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.06);
 }
-.monitor-empty-icon {
-  font-size:28px; line-height:1;
-}
+.monitor-empty-icon  { font-size: 22px; line-height: 1; }
 .monitor-empty-label {
-  font-size:11px; font-weight:700; letter-spacing:0.3em; text-transform:uppercase;
-  font-family:'Barlow',sans-serif;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.34em;
+  text-transform: uppercase; font-family: 'Barlow', sans-serif;
 }
 
-/* PGM clean indicator — shown when no overlays are live */
+/* PGM clean state */
 .pgm-clean {
-  position:absolute; inset:0;
-  display:none; align-items:center; justify-content:center;
-  color:rgba(255,255,255,0.06);
-  font-size:13px; font-weight:700; letter-spacing:0.4em;
-  text-transform:uppercase; font-family:'Barlow',sans-serif;
+  position: absolute; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5em;
+  text-transform: uppercase; font-family: 'Barlow', sans-serif;
+  color: rgba(255,255,255,0.04);
 }
-.pgm-clean.visible { display:flex; }
+.pgm-clean.visible { display: flex; }
 
-/* ── OVERLAY SELECTOR ───────────────────────────────────────── */
-.ovl-selector-wrap {
-  background:var(--surface); border:1px solid var(--border); border-radius:4px;
-  padding:10px;
+/* Source label bar — below the screen */
+.monitor-foot {
+  height: 24px;
+  padding: 0 12px;
+  display: flex; align-items: center; gap: 7px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  flex-shrink: 0;
 }
-.ovl-selector-label {
-  font-size:9px; font-weight:800; letter-spacing:0.28em; text-transform:uppercase;
-  color:var(--dim); font-family:'Barlow',sans-serif;
-  margin-bottom:8px;
+.mfoot-tag {
+  font-size: 7px; font-weight: 900; letter-spacing: 0.32em;
+  text-transform: uppercase; font-family: 'Barlow', sans-serif;
+  color: rgba(255,255,255,0.1);
+  flex-shrink: 0;
 }
-.ovl-selector {
-  display:flex; gap:6px; flex-wrap:wrap;
+/* JS sets className = 'monitor-current' or 'monitor-current active' */
+.monitor-current {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; font-family: 'Barlow', sans-serif;
+  color: rgba(255,255,255,0.18);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ovl-btn {
-  flex:1; min-width:100px;
-  padding:10px 10px; border-radius:3px;
-  border:1px solid var(--border); background:var(--surface3);
-  color:rgba(255,255,255,0.35);
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:13px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase;
-  cursor:pointer; transition:all 0.12s; position:relative;
-  -webkit-user-select:none; user-select:none; touch-action:manipulation;
+.pvw-monitor .monitor-current.active { color: var(--gold-light); }
+.pgm-monitor .monitor-current.active { color: var(--red-mid);    }
+
+/* ── TRANSITION COLUMN ───────────────────────────────────────────────── */
+/* The control spine between PVW and PGM */
+.transition-col {
+  width: 78px;
+  flex-shrink: 0;
+  background: var(--rail);
+  border-left:  1px solid rgba(255,255,255,0.04);
+  border-right: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 7px;
+  gap: 5px;
 }
-.ovl-btn:hover  { border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.7); }
-.ovl-btn:active { transform:scale(0.97); }
-/* Selected in PVW */
-.ovl-btn.selected {
-  background:rgba(212,160,23,0.08); border-color:var(--gold); color:var(--gold-light);
+.t-eyebrow {
+  font-size: 7px; font-weight: 900; letter-spacing: 0.38em;
+  text-transform: uppercase; font-family: 'Barlow', sans-serif;
+  color: rgba(255,255,255,0.07);
+  margin-bottom: 6px;
 }
-/* Live in PGM — green dot top-right */
-.ovl-btn.live::after {
-  content:''; position:absolute; top:6px; right:6px;
-  width:5px; height:5px; border-radius:50%;
-  background:var(--green-bright);
+.t-sep {
+  width: 36px; height: 1px;
+  background: rgba(255,255,255,0.04);
+  margin: 4px 0;
 }
 
-/* ── ACTION STRIP ───────────────────────────────────────────── */
-.action-strip {
-  display:flex; gap:8px; align-items:stretch;
-}
-
+/* ── TAKE ── primary transition button */
 #take-btn {
-  flex:4; padding:16px 24px;
-  border-radius:4px; border:2px solid var(--border);
-  background:var(--surface2); color:rgba(255,255,255,0.18);
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:24px; font-weight:900; letter-spacing:0.26em; text-transform:uppercase;
-  cursor:pointer; transition:all 0.16s;
-  -webkit-user-select:none; user-select:none;
+  width: 62px;
+  padding: 16px 0;
+  border-radius: 2px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  color: rgba(255,255,255,0.14);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 900; letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+  -webkit-user-select: none; user-select: none;
 }
 #take-btn.ready {
-  background:rgba(0,90,36,0.35); border-color:var(--green); color:var(--green-bright);
+  background: rgba(0,80,30,0.3);
+  border-color: rgba(0,180,70,0.5);
+  color: var(--green-bright);
+  box-shadow: 0 0 10px rgba(0,180,60,0.07);
 }
-#take-btn.ready:hover { background:rgba(0,110,44,0.45); }
-#take-btn:active  { transform:scale(0.99); }
-#take-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
+#take-btn.ready:hover {
+  background: rgba(0,100,36,0.45);
+  border-color: var(--green);
+}
+#take-btn:active    { transform: scale(0.96); }
+#take-btn:disabled  { opacity: 0.3; cursor: not-allowed; transform: none; }
 
+/* ── CUT ── hard cut, same action */
 #cut-btn {
-  flex:1; padding:16px 12px;
-  border-radius:4px; border:1px solid var(--border);
-  background:var(--surface2); color:rgba(255,255,255,0.28);
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:14px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;
-  cursor:pointer; transition:all 0.12s;
-  -webkit-user-select:none; user-select:none;
+  width: 62px;
+  padding: 10px 0;
+  border-radius: 2px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: transparent;
+  color: rgba(255,255,255,0.18);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s;
+  -webkit-user-select: none; user-select: none;
 }
-#cut-btn:hover { border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.55); }
-#cut-btn:active { transform:scale(0.97); }
+#cut-btn:hover  { border-color: var(--border-hi); color: rgba(255,255,255,0.45); }
+#cut-btn:active { transform: scale(0.96); }
 
+/* ── AUTO placeholder */
+.auto-btn {
+  width: 62px;
+  padding: 8px 0;
+  border-radius: 2px;
+  border: 1px solid rgba(255,255,255,0.03);
+  background: transparent;
+  color: rgba(255,255,255,0.08);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: not-allowed;
+  -webkit-user-select: none; user-select: none;
+}
+
+/* ── CLEAN ── destructive, visually restrained */
 #clean-btn {
-  flex:1; padding:16px 12px;
-  border-radius:4px; border:1px solid rgba(180,0,0,0.18);
-  background:rgba(140,0,0,0.05); color:rgba(210,70,70,0.5);
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:13px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase;
-  cursor:pointer; transition:all 0.12s;
-  -webkit-user-select:none; user-select:none;
+  width: 62px;
+  padding: 7px 0;
+  border-radius: 2px;
+  border: 1px solid rgba(150,0,0,0.14);
+  background: rgba(80,0,0,0.04);
+  color: rgba(200,60,60,0.38);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s;
+  -webkit-user-select: none; user-select: none;
 }
-#clean-btn:hover { border-color:rgba(200,0,0,0.35); color:rgba(240,90,90,0.8); }
-#clean-btn:active { transform:scale(0.97); }
+#clean-btn:hover  { border-color: rgba(200,0,0,0.28); color: rgba(240,80,80,0.65); }
+#clean-btn:active { transform: scale(0.96); }
 
-/* ── STATUS / AUTH ──────────────────────────────────────────── */
-.status-bar {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:8px 12px;
-  background:var(--surface); border:1px solid var(--border); border-radius:4px;
-  font-size:11px; font-weight:600; letter-spacing:0.08em;
-  color:var(--dim); font-family:'Barlow',sans-serif;
+/* ── OVERLAY SELECTOR ────────────────────────────────────────────────── */
+.ovl-selector-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 7px 9px;
 }
-.status-ok  { color:var(--green-bright); }
-.status-err { color:#FF5555; }
-.status-time { font-size:10px; opacity:0.5; font-variant-numeric:tabular-nums; }
+.ovl-selector-label {
+  font-size: 7px; font-weight: 900; letter-spacing: 0.34em;
+  text-transform: uppercase; font-family: 'Barlow', sans-serif;
+  color: rgba(255,255,255,0.12);
+  margin-bottom: 6px;
+}
+.ovl-selector { display: flex; gap: 5px; }
+.ovl-btn {
+  flex: 1;
+  padding: 9px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: var(--surface3);
+  color: rgba(255,255,255,0.26);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s;
+  position: relative;
+  white-space: nowrap;
+  -webkit-user-select: none; user-select: none;
+  touch-action: manipulation;
+}
+.ovl-btn:hover  { border-color: var(--border-hi); color: rgba(255,255,255,0.55); }
+.ovl-btn:active { transform: scale(0.97); }
+/* In PVW */
+.ovl-btn.selected {
+  background: rgba(212,160,23,0.06);
+  border-color: rgba(212,160,23,0.45);
+  color: var(--gold-light);
+}
+/* Live on PGM — red pip top-right */
+.ovl-btn.live::after {
+  content: '';
+  position: absolute; top: 5px; right: 5px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--red-bright);
+}
 
+/* ── AUTH NOTICE ─────────────────────────────────────────────────────── */
 .auth-notice {
-  display:none; align-items:center; gap:10px;
-  padding:9px 12px;
-  background:rgba(180,0,0,0.06); border:1px solid rgba(180,0,0,0.2); border-radius:4px;
-  font-size:11px; font-weight:600; letter-spacing:0.08em;
-  color:rgba(255,100,100,0.8); font-family:'Barlow',sans-serif;
+  display: none; align-items: center; gap: 10px;
+  padding: 7px 12px;
+  background: rgba(140,0,0,0.06);
+  border: 1px solid rgba(140,0,0,0.2);
+  border-radius: 3px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  color: rgba(255,110,110,0.8); font-family: 'Barlow', sans-serif;
 }
-.auth-notice a { color:rgba(255,150,150,0.9); text-decoration:underline; font-weight:700; }
-.auth-notice.visible { display:flex; }
+.auth-notice a { color: rgba(255,150,150,0.9); text-decoration: underline; font-weight: 700; }
+.auth-notice.visible { display: flex; }
 
-/* ── RESPONSIVE ─────────────────────────────────────────────── */
-@media(max-width:800px) {
-  .monitors { grid-template-columns:1fr; }
-  #take-btn { font-size:20px; }
+/* ── STATUS BAR ──────────────────────────────────────────────────────── */
+.status-bar {
+  height: 26px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  color: var(--dim); font-family: 'Barlow', sans-serif;
 }
-@media(max-width:500px) {
-  .ovl-btn { font-size:11px; min-width:80px; }
-  .action-strip { flex-wrap:wrap; }
-  #take-btn { flex-basis:100%; }
+.status-ok  { color: var(--green-bright); }
+.status-err { color: #FF4444; }
+.status-time { font-size: 9px; opacity: 0.38; font-variant-numeric: tabular-nums; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .monitors-section { flex-direction: column; }
+  .transition-col {
+    width: 100%; height: 56px;
+    flex-direction: row;
+    border-left: none; border-right: none;
+    border-top:    1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    justify-content: center;
+  }
+  .t-eyebrow { display: none; }
+  .t-sep { width: 1px; height: 28px; margin: 0 4px; }
+}
+@media (max-width: 500px) {
+  .ovl-btn { font-size: 10px; min-width: 0; }
 }
 </style>
 </head>
 <body>
 
+<!-- ── HEADER ──────────────────────────────────────────────────────────── -->
 <div class="header">
   <div class="header-left">
-    <a class="back-link" href="/control.html">← Control</a>
+    <a class="back-link" href="/control.html">← CONTROL</a>
     <img class="header-logo" src="/logo.png" alt="">
-    <div>
+    <div class="header-wordmark">
       <div class="header-title">Broadcast Director</div>
       <div class="header-sub">Preview / Program</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center">
+  <div class="conn-wrap">
     <span class="conn-dot" id="conn-dot"></span>
     <span class="conn-text" id="conn-text">Connecting</span>
   </div>
@@ -276,7 +523,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 
 <div class="main">
 
-  <!-- Competition context -->
+  <!-- Competition context strip -->
   <div class="comp-strip">
     <span class="ctx-item" id="ctx-comp">—</span>
     <span class="ctx-sep">·</span>
@@ -287,67 +534,71 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
     <span class="ctx-item" id="ctx-cat">—</span>
   </div>
 
-  <!-- PVW + PGM monitors -->
-  <div class="monitors">
+  <!-- ── MONITOR ROW ─────────────────────────────────────────────────── -->
+  <div class="monitors-section">
 
-    <!-- PREVIEW monitor -->
+    <!-- PREVIEW — left, amber -->
     <div class="monitor pvw-monitor">
       <div class="monitor-head">
-        <span class="monitor-ind pvw-ind"></span>
-        <span class="monitor-label">Preview</span>
-        <span class="monitor-current" id="pvw-current">—</span>
+        <span class="mon-ind pvw-ind"></span>
+        <span class="mon-label">Preview</span>
       </div>
       <div class="monitor-body" id="pvw-body">
-        <div class="monitor-screen" id="pvw-screen">
-          <!-- PVW overlay iframes injected by JS -->
-        </div>
+        <div class="monitor-screen" id="pvw-screen"></div>
         <div class="monitor-empty" id="pvw-empty">
           <div class="monitor-empty-icon">▷</div>
-          <div class="monitor-empty-label">Select an overlay below</div>
+          <div class="monitor-empty-label">Select an overlay</div>
         </div>
+      </div>
+      <div class="monitor-foot">
+        <span class="mfoot-tag">PVW</span>
+        <span class="monitor-current" id="pvw-current">—</span>
       </div>
     </div>
 
-    <!-- PROGRAM monitor -->
+    <!-- TRANSITION — control spine -->
+    <div class="transition-col">
+      <div class="t-eyebrow">T/S</div>
+      <button id="take-btn" onclick="take()">TAKE</button>
+      <button id="cut-btn"  onclick="take()">CUT</button>
+      <div class="t-sep"></div>
+      <button class="auto-btn" disabled>AUTO</button>
+      <div class="t-sep"></div>
+      <button id="clean-btn" onclick="goClean()">CLN</button>
+    </div>
+
+    <!-- PROGRAM — right, red -->
     <div class="monitor pgm-monitor">
       <div class="monitor-head">
-        <span class="monitor-ind pgm-ind"></span>
-        <span class="monitor-label">Program</span>
-        <span class="monitor-badge">Live</span>
-        <span class="monitor-current" id="pgm-current">Clean</span>
+        <span class="mon-ind pgm-ind"></span>
+        <span class="mon-label">Program</span>
+        <span class="live-badge">Live</span>
       </div>
       <div class="monitor-body" id="pgm-body">
-        <div class="monitor-screen" id="pgm-screen">
-          <!-- PGM overlay iframes injected by JS — all stacked, self-manage visibility -->
-        </div>
+        <div class="monitor-screen" id="pgm-screen"></div>
         <div class="pgm-clean" id="pgm-clean">CLEAN</div>
+      </div>
+      <div class="monitor-foot">
+        <span class="mfoot-tag">PGM</span>
+        <span class="monitor-current" id="pgm-current">—</span>
       </div>
     </div>
 
-  </div><!-- /monitors -->
+  </div><!-- /monitors-section -->
 
-  <!-- Overlay selector — click to load into PVW -->
+  <!-- Overlay selector strip -->
   <div class="ovl-selector-wrap">
-    <div class="ovl-selector-label">Preview select</div>
-    <div class="ovl-selector" id="ovl-selector">
-      <!-- Buttons injected by JS -->
-    </div>
+    <div class="ovl-selector-label">Preview Select</div>
+    <div class="ovl-selector" id="ovl-selector"></div>
   </div>
 
-  <!-- TAKE / CUT / CLEAN -->
-  <div class="action-strip">
-    <button id="take-btn" onclick="take()">TAKE</button>
-    <button id="cut-btn"  onclick="take()">CUT</button>
-    <button id="clean-btn" onclick="goClean()">◼ CLEAN</button>
-  </div>
-
-  <!-- Auth notice -->
+  <!-- Auth notice (hidden until 401) -->
   <div class="auth-notice" id="auth-notice">
     <span>Operator login required —</span>
     <a href="/comp/login" target="_blank">Log in at /comp/login</a>
   </div>
 
-  <!-- Status -->
+  <!-- Status bar -->
   <div class="status-bar">
     <span id="status-text">Ready</span>
     <span id="status-time" class="status-time"></span>
