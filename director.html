@@ -91,9 +91,8 @@ body {
 .ctx-sep { color:rgba(255,255,255,0.09); font-size:9px; }
 
 /* ── MONITORS SECTION ───────────────────────────────────────────────────── */
-/* Takes all remaining vertical space — this is the money area */
 .monitors-section {
-  flex: 1; min-height: 0;
+  flex-shrink: 0;
   display: flex; align-items: stretch;
   background: var(--rail);
   border: 1px solid rgba(255,255,255,0.05);
@@ -147,11 +146,12 @@ body {
   padding: 1px 4px; border-radius: 2px;
 }
 
-/* Screen: fills the full monitor height — no padding-bottom 56.25% trick */
+/* 16:9 — width is set by flex, height follows via aspect-ratio */
 .monitor-body {
-  flex: 1; min-height: 0;
   position: relative;
   background: #010101;
+  flex-shrink: 0;
+  aspect-ratio: 16 / 9;
 }
 .monitor-screen {
   position: absolute; inset: 0;
@@ -647,15 +647,33 @@ function refreshPVW(frame, flags) {
 // ─── OVERLAY SELECTOR ─────────────────────────────────────────────────────────
 function selectPVW(key) {
   pvwSelection = key;
+  var ovl = OVERLAYS.find(function(o) { return o.key === key; });
 
-  OVERLAYS.forEach(function(o) {
-    var f = document.getElementById('pvw-frame-' + o.key);
-    if (f) f.style.visibility = (o.key === key) ? 'visible' : 'hidden';
+  // Lazy-create PVW iframe on first selection of this overlay
+  if (key && ovl && !document.getElementById('pvw-frame-' + key)) {
+    var pvwScreen2        = document.getElementById('pvw-screen');
+    var pvwFrame2         = document.createElement('iframe');
+    pvwFrame2.id          = 'pvw-frame-' + key;
+    pvwFrame2.className   = 'ovl-frame pvw-frame';
+    pvwFrame2.src         = ovl.src + Q;
+    pvwFrame2._ready      = false;
+    pvwFrame2._origUpdate = null;
+    pvwFrame2.addEventListener('load', (function(frame, o) {
+      return function() {
+        frame._ready = true;
+        if (pvwSelection === o.key) refreshPVW(frame, o.pvwFlags);
+      };
+    }(pvwFrame2, ovl)));
+    pvwScreen2.appendChild(pvwFrame2);
+  }
+
+  // Show only the selected PVW frame
+  document.querySelectorAll('.pvw-frame').forEach(function(f) {
+    f.style.visibility = (f.id === 'pvw-frame-' + key) ? 'visible' : 'hidden';
   });
 
   document.getElementById('pvw-empty').style.display = key ? 'none' : 'flex';
 
-  var ovl = OVERLAYS.find(function(o) { return o.key === key; });
   var cur = document.getElementById('pvw-current');
   if (cur) { cur.textContent = ovl ? ovl.label : '—'; cur.className = 'monitor-current' + (key ? ' active' : ''); }
 
@@ -698,8 +716,28 @@ async function take() {
     } else if (r.ok) {
       document.getElementById('auth-notice').classList.remove('visible');
       Object.assign(liveState, payload);
+
+      // Lazy-create PGM iframe on first TAKE of this overlay
+      if (!document.getElementById('pgm-frame-' + ovl.key)) {
+        var pgmScreen2  = document.getElementById('pgm-screen');
+        var pgmFrame2   = document.createElement('iframe');
+        pgmFrame2.id    = 'pgm-frame-' + ovl.key;
+        pgmFrame2.className = 'ovl-frame pgm-frame';
+        pgmFrame2.src   = ovl.src + Q;
+        pgmScreen2.appendChild(pgmFrame2);
+      }
+
       renderPGMStatus();
       renderPGMVisibility();
+
+      // Push state immediately — don't wait for SSE propagation
+      try {
+        var _pgmEl = document.getElementById('pgm-frame-' + ovl.key);
+        if (_pgmEl && _pgmEl.contentWindow && typeof _pgmEl.contentWindow.onStateUpdate === 'function') {
+          _pgmEl.contentWindow.onStateUpdate(Object.assign({}, liveState));
+        }
+      } catch(e) {}
+
       renderOvlButtons();
       showStatus('Taken live — ' + ovl.label, true);
     } else {
@@ -753,20 +791,13 @@ function showStatus(msg, ok) {
 }
 
 // ─── SCALE — fit 1920×1080 iframe into the monitor body ──────────────────────
-// Uses Math.min(scaleByWidth, scaleByHeight) so the content fits in both
-// dimensions, then centers it. Black bars fill any unused space.
+// monitor-body has aspect-ratio:16/9 so width/1920 is always the correct scale
 function applyScale() {
   var pvwBody = document.getElementById('pvw-body');
   if (!pvwBody) return;
-  var W = pvwBody.offsetWidth;
-  var H = pvwBody.offsetHeight;
-  if (!W || !H) return;
-  var scale = Math.min(W / 1920, H / 1080);
-  var tx    = Math.max(0, (W - 1920 * scale) / 2);
-  var ty    = Math.max(0, (H - 1080 * scale) / 2);
-  var xform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+  var scale = pvwBody.offsetWidth / 1920;
   document.querySelectorAll('.ovl-frame').forEach(function(el) {
-    el.style.transform = xform;
+    el.style.transform = 'scale(' + scale + ')';
   });
 }
 window.addEventListener('resize', function() {
@@ -906,38 +937,13 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') { e.preventDefault(); goClean(); }
 });
 
-// ─── BUILD IFRAMES AND SELECTOR BUTTONS ──────────────────────────────────────
+// ─── BUILD SELECTOR BUTTONS ───────────────────────────────────────────────────
+// Iframes are lazy-created: PVW on first button click, PGM on first TAKE.
+// This keeps the initial SSE connection count at 1 (director only).
 (function init() {
-  var pvwScreen  = document.getElementById('pvw-screen');
-  var pgmScreen  = document.getElementById('pgm-screen');
   var selectorEl = document.getElementById('ovl-selector');
 
   OVERLAYS.forEach(function(ovl) {
-    var src = ovl.src + Q;
-
-    // PVW iframe — hidden until selected; injection on load forces overlay visible
-    var pvwFrame         = document.createElement('iframe');
-    pvwFrame.id          = 'pvw-frame-' + ovl.key;
-    pvwFrame.className   = 'ovl-frame pvw-frame';
-    pvwFrame.src         = src;
-    pvwFrame._ready      = false;
-    pvwFrame._origUpdate = null;
-    pvwFrame.addEventListener('load', (function(frame, o) {
-      return function() {
-        frame._ready = true;
-        if (pvwSelection === o.key) refreshPVW(frame, o.pvwFlags);
-      };
-    }(pvwFrame, ovl)));
-    pvwScreen.appendChild(pvwFrame);
-
-    // PGM iframe — starts hidden; renderPGMVisibility() shows the live one
-    var pgmFrame       = document.createElement('iframe');
-    pgmFrame.id        = 'pgm-frame-' + ovl.key;
-    pgmFrame.className = 'ovl-frame pgm-frame';
-    pgmFrame.src       = src;
-    pgmScreen.appendChild(pgmFrame);
-
-    // Selector button
     var btn = document.createElement('button');
     btn.className   = 'ovl-btn';
     btn.dataset.key = ovl.key;
