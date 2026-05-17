@@ -1393,14 +1393,18 @@ def broadcast_take():
         for flag in peers:
             s[flag] = False
         s[overlay["flag"]] = True
+        prev_prog  = s.get("program", {})
+        prev_groups = dict(prev_prog.get("groups") or {})
+        prev_groups[group] = scene          # update only this group; other groups untouched
         s["program"] = {
             "scene":   scene,
+            "groups":  prev_groups,
             "takenAt": now,
-            "cleanAt": s.get("program", {}).get("cleanAt"),
+            "cleanAt": prev_prog.get("cleanAt"),
         }
         save_state(s)
     _sse_notify()
-    return jsonify({"ok": True, "scene": scene, "takenAt": now})
+    return jsonify({"ok": True, "scene": scene, "group": group, "takenAt": now})
 
 
 @app.route("/broadcast/clean", methods=["POST"])
@@ -1418,12 +1422,49 @@ def broadcast_clean():
         prev = s.get("program", {})
         s["program"] = {
             "scene":   None,
+            "groups":  {},
             "takenAt": prev.get("takenAt"),
             "cleanAt": now,
         }
         save_state(s)
     _sse_notify()
     return jsonify({"ok": True, "cleanAt": now})
+
+
+@app.route("/broadcast/clean_group", methods=["POST"])
+def broadcast_clean_group():
+    """Clear director overlay flags for a single mutual-exclusion group only.
+    Other groups remain untouched. Allows multi-layer broadcast: clean Group A
+    while Group B (lowerthird) and Group C (reps) stay live.
+    Body: {"group": "A"|"B"|"C"}
+    Requires comp session auth.
+    """
+    if not session.get("comp_ok"):
+        return jsonify({"error": "authentication required"}), 401
+    data  = request.get_json(force=True, silent=True) or {}
+    group = data.get("group", "")
+    if group not in ("A", "B", "C"):
+        return jsonify({"error": f"unknown group: {group}"}), 400
+    flags = [info["flag"] for info in _OVERLAY_GROUPS.values() if info["group"] == group]
+    now = int(time.time() * 1000)
+    with state_lock:
+        s = load_state()
+        for flag in flags:
+            s[flag] = False
+        prog        = s.get("program", {})
+        scene       = prog.get("scene")
+        new_groups  = dict(prog.get("groups") or {})
+        new_groups.pop(group, None)          # remove only this group; others stay live
+        new_scene   = None if (scene and _OVERLAY_GROUPS.get(scene, {}).get("group") == group) else scene
+        s["program"] = {
+            "scene":   new_scene,
+            "groups":  new_groups,
+            "takenAt": prog.get("takenAt"),
+            "cleanAt": now,
+        }
+        save_state(s)
+    _sse_notify()
+    return jsonify({"ok": True, "group": group, "cleanAt": now})
 
 
 _PROXY_ALLOWLIST = [h.strip().lower() for h in os.environ.get("PROXY_ALLOWLIST", "").split(",") if h.strip()]

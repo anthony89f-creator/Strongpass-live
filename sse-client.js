@@ -5,6 +5,12 @@
 (function () {
   'use strict';
 
+  // DISABLE_SSE is set by the PVW bootstrap block in each overlay before this runs.
+  if (window.DISABLE_SSE) {
+    console.log('[SSE] disabled in PVW mode');
+    return;
+  }
+
   var RETRY_BASE = 1000;
   var RETRY_MAX  = 30000;
   var _retryMs   = RETRY_BASE;
@@ -30,6 +36,7 @@
 
     _es.onopen = function () {
       _retryMs = RETRY_BASE;  // reset backoff on successful connection
+      console.log('[PGM] live SSE active');
     };
 
     _es.onmessage = function (evt) {

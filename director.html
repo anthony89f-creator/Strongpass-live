@@ -380,6 +380,26 @@ body {
 .status-err { color: #FF4444; }
 .status-time { opacity: 0.35; font-variant-numeric: tabular-nums; }
 
+/* ── RUNTIME HUD — always visible, top-right corner ─────────────────────── */
+#runtime-hud {
+  position:fixed; top:6px; right:8px; z-index:9999;
+  background:rgba(0,0,0,0.88); color:#ffe84d;
+  font:9px/1.5 'Courier New',monospace; letter-spacing:0;
+  padding:5px 8px; border:1px solid rgba(255,232,77,0.3); border-radius:2px;
+  pointer-events:none; white-space:pre; min-width:180px;
+}
+
+/* ── PVW SCALE DEBUG HUD (toggle: press D key) ──────────────────────────── */
+#pvw-dbg-hud {
+  position:absolute; bottom:3px; left:3px; z-index:200;
+  display:none; /* JS adds class 'on' to show */
+  background:rgba(0,0,0,0.93); color:#00ff88;
+  font:8px/1.55 'Courier New',monospace; letter-spacing:0;
+  padding:5px 7px; border:1px solid rgba(0,255,136,0.25); border-radius:2px;
+  pointer-events:none; white-space:pre;
+}
+#pvw-dbg-hud.on { display:block; }
+
 /* ── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 800px) {
   .monitors-section { flex-direction: column; }
@@ -412,6 +432,9 @@ body {
     <span class="conn-text" id="conn-text">Connecting</span>
   </div>
 </div>
+
+<!-- Runtime lifecycle HUD — always visible, top-right -->
+<div id="runtime-hud">BUILD: loading…</div>
 
 <div class="main">
 
@@ -502,6 +525,19 @@ body {
 </div><!-- /main -->
 
 <script>
+// ─── BUILD ID — proof that this exact source is running ──────────────────────
+// Change this value manually whenever you deploy to verify runtime matches file.
+var BUILD_ID = 'BUILD-20260517-C';
+document.title = 'Director [' + BUILD_ID + ']';
+(function() {
+  // Stamp build ID visibly in conn-text before any async work
+  var ct = document.getElementById('conn-text');
+  if (ct) ct.textContent = BUILD_ID;
+  // Log immediately — if this doesn't appear in console the file is not being served
+  console.log('%c[Director BOOT] BUILD_ID=' + BUILD_ID + ' url=' + location.href,
+              'background:#1a1a00;color:#ffe84d;font-weight:bold;padding:2px 6px');
+}());
+
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 var _token = new URLSearchParams(window.location.search).get('token') || '';
 var Q      = _token ? ('?token=' + encodeURIComponent(_token)) : '';
@@ -512,19 +548,93 @@ var QPVW   = _token ? ('?pvw=1&token=' + encodeURIComponent(_token)) : '?pvw=1';
 // Overlay definitions.
 // pvwFlags: visibility flags forced to true when injecting state into PVW iframe.
 // pgmKeys:  flags read from liveState to determine on-air status.
+// Groups enforce mutual exclusion: A=full-frame, B=lower-slot, C=data-strip.
+// Multiple groups can be live simultaneously — one overlay per group at most.
 var OVERLAYS = [
-  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
-  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         pvwFlags:['h2h'],                         pgmKeys:['h2h'] },
-  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
-  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  pvwFlags:['lowerThirdVisible'],           pgmKeys:['lowerThirdVisible'] },
-  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
-  { key:'champion',    label:'Champion',      src:'/champion.html',    pvwFlags:['champion'],                    pgmKeys:['champion'] },
+  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
+  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', pvwFlags:['h2h'],                         pgmKeys:['h2h'] },
+  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
+  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', pvwFlags:['lowerThirdVisible'],           pgmKeys:['lowerThirdVisible'] },
+  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', pvwFlags:['champion'],                    pgmKeys:['champion'] },
+  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
 ];
+
+// ─── INSTRUMENTATION ─────────────────────────────────────────────────────────
+var DL = (function() {
+  var t0 = Date.now();
+  return function(msg) {
+    console.log('[Director +' + (Date.now()-t0) + 'ms] ' + msg);
+  };
+}());
+
+// ─── LIFECYCLE STAGE TRACKER ─────────────────────────────────────────────────
+var _lifecycleStage = 'init';
+
+function _hudUpdate() {
+  var el = document.getElementById('runtime-hud');
+  if (!el) return;
+  var pvwFrames = document.querySelectorAll('.pvw-frame').length;
+  var pgmFrames = document.querySelectorAll('.pgm-frame').length;
+  el.textContent =
+    'BUILD:  ' + BUILD_ID + '\n' +
+    'stage:  ' + _lifecycleStage + '\n' +
+    'taking: ' + _taking + '\n' +
+    'pvwSel: ' + (pvwSelection || '—') + '\n' +
+    'pvwFrm: ' + pvwFrames + '  pgmFrm: ' + pgmFrames + '\n' +
+    'queue:  running';
+}
+
+function _setLifecycleStage(stage) {
+  _lifecycleStage = stage;
+  DL('[STAGE] ' + stage);
+  _hudUpdate();
+}
+
+window.addEventListener('error', function(e) {
+  console.error('[Director UNCAUGHT]', e.message, '@', e.filename + ':' + e.lineno);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[Director UNHANDLED PROMISE]', e.reason);
+});
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 var liveState    = {};
 var pvwSelection = null;
-var _taking      = false; // re-entry guard — prevents concurrent TAKE calls
+var _taking      = false;
+
+// ─── TRANSITION QUEUE ─────────────────────────────────────────────────────────
+var _queue      = Promise.resolve();
+var _queueSeq   = 0;  // monotonic counter to identify queue slots in logs
+function _enqueue(fn) {
+  var seq = ++_queueSeq;
+  var label = fn.name || 'anonymous';
+  console.log('[QUEUE] accepted seq=' + seq + ' fn=' + label);
+  _queue = _queue.then(
+    function() {
+      console.log('[QUEUE] running seq=' + seq + ' fn=' + label);
+      try {
+        var ret = fn();
+        if (ret && typeof ret.then === 'function') {
+          return ret.then(
+            function()  { console.log('[QUEUE] done seq=' + seq); },
+            function(e) { console.error('[QUEUE] fn rejected seq=' + seq, e); }
+          );
+        }
+        console.log('[QUEUE] done (sync) seq=' + seq);
+      } catch(e) {
+        console.error('[QUEUE] fn threw seq=' + seq, e);
+      }
+    },
+    function(e) {
+      console.error('[QUEUE] prev-slot rejected before seq=' + seq + ' ran', e);
+    }
+  );
+}
+
+// ─── PVW READY HANDSHAKE ──────────────────────────────────────────────────────
+// overlay-ready is now handled per-transition inside _createPVWFrame.
+// Each transition installs its own named message listener and removes it after settling.
+// No global _pvwReadyResolve — eliminates competing resolve paths.
 
 // ─── SSE — director's own connection ─────────────────────────────────────────
 var _es = null, _retryTimer = null, _retryMs = 1000;
@@ -536,10 +646,15 @@ function setConn(ok) {
 }
 function connect() {
   if (_es) { _es.close(); _es = null; }
+  DL('SSE connect → /stream');
   _es = new EventSource('/stream' + Q);
-  _es.onopen    = function()  { _retryMs = 1000; setConn(true); };
-  _es.onmessage = function(e) { try { onStateUpdate(JSON.parse(e.data)); } catch(_) {} };
+  _es.onopen    = function()  { _retryMs = 1000; setConn(true); DL('SSE open OK'); };
+  _es.onmessage = function(e) {
+    try { onStateUpdate(JSON.parse(e.data)); }
+    catch(err) { console.error('[Director SSE onmessage EXCEPTION]', err); }
+  };
   _es.onerror   = function()  {
+    DL('SSE error — reconnecting in ' + _retryMs + 'ms');
     setConn(false); _es.close(); _es = null;
     _retryTimer = setTimeout(connect, _retryMs);
     _retryMs    = Math.min(_retryMs * 2, 30000);
@@ -574,45 +689,87 @@ var _ALL_OVL_FLAGS = (function() {
 
 function pvwStateFor(ovl) {
   var s = Object.assign({}, liveState);
+  // Strip large fields not needed for overlay rendering — avoids postMessage
+  // structured-clone of 126KB+ results payload on every SSE tick.
+  delete s.results;
+  // lineup PVW needs lbStandings to enumerate all categories' athletes (state.athletes is single-category only).
+  if (ovl.key !== 'lineup') delete s.lbStandings;
   _ALL_OVL_FLAGS.forEach(function(f) { s[f] = false; });
   ovl.pvwFlags.forEach(function(f) { s[f] = true; });
   return s;
 }
 
 // Send state to a PVW iframe via postMessage.
-// The overlay loaded with ?pvw=1 has removed its sse-client.js and is listening
-// for these messages instead. No cross-frame function references needed.
+// The overlay loaded with ?pvw=1 skips sse-client.js and receives state here.
 function pushToPVW(ovl) {
   var frame = document.getElementById('pvw-frame-' + ovl.key);
-  if (!frame) return;
+  if (!frame) { DL('pushToPVW ' + ovl.key + ' — frame NOT in DOM'); return; }
+  if (!frame.contentWindow) { DL('pushToPVW ' + ovl.key + ' — contentWindow is null (frame not ready?)'); return; }
   try {
     frame.contentWindow.postMessage(pvwStateFor(ovl), '*');
-  } catch(e) {}
+    DL('pushToPVW ' + ovl.key + ' — sent OK');
+  } catch(e) { console.error('[Director pushToPVW EXCEPTION]', ovl.key, e); }
+}
+
+// Push current liveState to the active PVW frame immediately, without waiting for SSE.
+// Called after any ctrl action that mutates liveState, so the overlay preview reflects
+// the change right away rather than on the next SSE tick (~100-500ms later).
+function _pushCurrentPVW() {
+  if (!pvwSelection) return;
+  var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
+  if (ovl) pushToPVW(ovl);
 }
 
 // ─── STATE UPDATE ─────────────────────────────────────────────────────────────
-// Called on every SSE tick and on initial /state.json fetch.
-// Forwards the latest state to the active PVW iframe via postMessage so PVW
-// always reflects live competition data (athlete names, scores, etc.) in real time.
+var _sseTickCount = 0;
 function onStateUpdate(d) {
-  Object.assign(liveState, d);
-  renderCtxStrip();
-  renderPGMStatus();
-  renderPGMVisibility();
-  renderOvlButtons();
-  renderCtrlPanel();
-  // Refresh active PVW — postMessage, no SSE connection from iframe
+  _sseTickCount++;
+  var tick = _sseTickCount;
+  var incomingScene = d.program ? (d.program.scene || 'null') : '(no program key)';
+  DL('onStateUpdate tick=' + tick + ' incoming program.scene=' + incomingScene + ' pvwSelection=' + pvwSelection + ' _taking=' + _taking);
+  try {
+    Object.assign(liveState, d);
+  } catch(e) { console.error('[Director onStateUpdate merge EXCEPTION tick=' + tick + ']', e); return; }
+  try { renderCtxStrip(); }    catch(e) { console.error('[Director renderCtxStrip EXCEPTION]', e); }
+  try { renderPGMStatus(); }   catch(e) { console.error('[Director renderPGMStatus EXCEPTION]', e); }
+  try { renderPGMVisibility(); } catch(e) { console.error('[Director renderPGMVisibility EXCEPTION]', e); }
+  try { renderOvlButtons(); }  catch(e) { console.error('[Director renderOvlButtons EXCEPTION]', e); }
+  try { renderCtrlPanel(); }   catch(e) { console.error('[Director renderCtrlPanel EXCEPTION]', e); }
+  // Push to active PVW via postMessage
   if (pvwSelection) {
     var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
-    if (ovl) pushToPVW(ovl);
+    if (ovl) { try { pushToPVW(ovl); } catch(e) { console.error('[Director pushToPVW from SSE EXCEPTION]', e); } }
   }
-  // Reconstruct on-air PGM iframe if program.scene is set but iframe missing
-  // (e.g. after a director reload while something was live)
-  var scene = (liveState.program || {}).scene;
-  if (scene && !document.getElementById('pgm-frame-' + scene)) {
-    var pgmOvl = OVERLAYS.find(function(o) { return o.key === scene; });
-    if (pgmOvl) _ensurePGMFrame(pgmOvl);
-  }
+  // Reconstruct PGM iframes per group. Primary source: program.groups (server-tracked
+  // per-group intent). Fallback: individual overlay flags (for old state.json or
+  // states where groups key is absent). Never create more than one frame per group.
+  var _programGroups = (liveState.program && liveState.program.groups) || null;
+
+  _PGM_GROUP_ORDER.forEach(function(group) {
+    var wantedKey;
+    if (_programGroups) {
+      wantedKey = _programGroups[group] || null;
+    } else {
+      // Fallback: first overlay in this group whose flags are true
+      var liveOvl = OVERLAYS.find(function(o) {
+        return o.group === group && o.pgmKeys.some(function(f) { return !!liveState[f]; });
+      });
+      wantedKey = liveOvl ? liveOvl.key : null;
+    }
+
+    var currentKey = _pgmFrames[group] || null;
+    if (wantedKey && currentKey !== wantedKey) {
+      var ovl = OVERLAYS.find(function(o) { return o.key === wantedKey; });
+      if (ovl) {
+        DL('onStateUpdate: group=' + group + ' want=' + wantedKey + ' have=' + (currentKey||'none') + ' — creating PGM frame');
+        _createPGMGroupFrame(ovl);
+        applyScale();
+      }
+    } else if (!wantedKey && currentKey) {
+      DL('onStateUpdate: group=' + group + ' no longer active — destroying PGM frame');
+      _destroyPGMGroup(group);
+    }
+  });
 }
 
 // ─── CONTEXT STRIP ────────────────────────────────────────────────────────────
@@ -645,83 +802,293 @@ function renderPGMStatus() {
 }
 
 // ─── PGM VISIBILITY ───────────────────────────────────────────────────────────
-// Shows/hides PGM iframes based on overlay flags in liveState.
-// Only the live iframe is visible; others stay loaded (SSE connected) for instant
-// re-take without reload latency.
+// All active group frames stay visible. Lifecycle is managed by _createPGMGroupFrame
+// and _destroyPGMGroup; this function just ensures any existing frame is shown.
 function renderPGMVisibility() {
-  OVERLAYS.forEach(function(o) {
-    var frame = document.getElementById('pgm-frame-' + o.key);
-    if (!frame) return;
-    var isLive = o.pgmKeys.some(function(f) { return !!liveState[f]; });
-    frame.style.visibility = isLive ? 'visible' : 'hidden';
+  document.querySelectorAll('#pgm-screen iframe').forEach(function(f) {
+    f.style.visibility = 'visible';
   });
 }
 
 // ─── OVERLAY BUTTONS ──────────────────────────────────────────────────────────
 function renderOvlButtons() {
-  OVERLAYS.forEach(function(o) {
-    var btn = document.querySelector('.ovl-btn[data-key="' + o.key + '"]');
-    if (!btn) return;
-    var isLive = o.pgmKeys.some(function(f) { return !!liveState[f]; });
-    btn.classList.toggle('live',     isLive);
-    btn.classList.toggle('selected', pvwSelection === o.key);
+  DL('renderOvlButtons enter — pvwSelection=' + pvwSelection);
+  try {
+    var totalBtns = document.querySelectorAll('.ovl-btn').length;
+    if (totalBtns !== OVERLAYS.length) {
+      console.error('[renderOvlButtons] BUTTON COUNT MISMATCH — expected=' + OVERLAYS.length + ' found=' + totalBtns);
+    }
+    OVERLAYS.forEach(function(o) {
+      var btn = document.querySelector('.ovl-btn[data-key="' + o.key + '"]');
+      if (!btn) { console.error('[renderOvlButtons] MISSING BUTTON for key=' + o.key); return; }
+      var isLive = o.pgmKeys.some(function(f) { return !!liveState[f]; });
+      btn.classList.toggle('live',     isLive);
+      btn.classList.toggle('selected', pvwSelection === o.key);
+    });
+  } catch(err) {
+    console.error('[renderOvlButtons EXCEPTION]', err);
+  }
+  DL('renderOvlButtons exit');
+}
+
+// ─── IFRAME MANAGEMENT ────────────────────────────────────────────────────────
+// One PVW iframe and one PGM iframe maximum at any time.
+// Old frame is destroyed before creating a new one — no hidden iframe pools,
+// no accumulated JS runtimes, timers, or SSE connections.
+
+var _pvwKey            = null;  // key of the currently mounted PVW iframe
+var _activeTransitionId = 0;    // incremented on every selectPVW click; stale transitions self-cancel
+
+function _destroyPVWFrame() {
+  var screen = document.getElementById('pvw-screen');
+  var old = screen && screen.querySelector('iframe');
+  if (old) {
+    DL('_destroyPVWFrame — removing ' + old.id);
+    old.src = 'about:blank';  // terminate any in-flight load before remove
+    old.remove();
+  }
+  _pvwKey = null;
+}
+
+// _createPVWFrame — two-phase handshake per transition.
+//
+// Architecture (phase order):
+//   1. install message listener BEFORE src set (no race)
+//   2. overlay boots, attaches its own listener, defines onStateUpdate
+//   3. overlay sends overlay-runtime-ready  ← "I can receive state now"
+//   4. director pushes initial state
+//   5. overlay calls onStateUpdate + render(), then sends overlay-ready via rAF
+//   6. director settles (resolves promise, cleans listeners/timers)
+//
+// overlay-runtime-ready is the safe synchronization point for state push.
+// iframe.onload is NOT safe — overlay scripts may not have run yet on all engines.
+//
+function _createPVWFrame(ovl, id) {
+  _destroyPVWFrame();
+  var screen = document.getElementById('pvw-screen');
+  if (!screen) {
+    console.error('[PVW#' + id + '] pvw-screen not found');
+    return Promise.resolve();
+  }
+  var pvwBody = document.getElementById('pvw-body');
+  DL('[PVW#' + id + '] _createPVWFrame BEGIN key=' + ovl.key +
+     ' pvwBody=' + (pvwBody ? pvwBody.offsetWidth : 'N/A') + 'x' + (pvwBody ? pvwBody.offsetHeight : 'N/A'));
+
+  var frame       = document.createElement('iframe');
+  frame.id        = 'pvw-frame-' + ovl.key;
+  frame.className = 'ovl-frame pvw-frame';
+  frame.style.visibility = 'visible';
+  screen.appendChild(frame);
+  _pvwKey = ovl.key;
+  DL('[PVW#' + id + '] iframe appended id=' + frame.id);
+
+  return new Promise(function(resolve) {
+    var settled    = false;
+    var statePushed = false;
+
+    function cleanup() {
+      window.removeEventListener('message', onMessage);
+      clearTimeout(timeoutHandle);
+      clearInterval(cancelPoll);
+    }
+
+    function settle(reason) {
+      if (settled) return;
+      settled = true;
+      _setLifecycleStage('[PVW#' + id + '] settled:' + reason);
+      DL('[PVW#' + id + '] settle(' + reason + ') — cleanup and resolve');
+      cleanup();
+      resolve();  // always resolve; selectPVW owns the stale-ID guard
+    }
+
+    // Cancel poll: if a newer transition started, resolve immediately.
+    var cancelPoll = setInterval(function() {
+      if (id !== _activeTransitionId) {
+        DL('[PVW#' + id + '] cancel poll — superseded by #' + _activeTransitionId);
+        settle('cancelled');
+      }
+    }, 50);
+
+    // Timeout: overlay never completed handshake. Resolve so queue never permanently deadlocks.
+    var timeoutHandle = setTimeout(function() {
+      console.warn('[PVW#' + id + '] TIMEOUT 5s — handshake incomplete for ' + ovl.key +
+                   ' statePushed=' + statePushed);
+      DL('[PVW#' + id + '] TIMEOUT 5s — overlay-ready never received for ' + ovl.key);
+      settle('timeout');
+    }, 5000);
+
+    // Single message handler for both phases of the handshake.
+    // Verifies source by direct contentWindow reference on every message.
+    function onMessage(e) {
+      if (!e.data || e.source !== frame.contentWindow) return;
+
+      if (e.data.type === 'overlay-runtime-ready') {
+        console.log('[PVW#' + id + '] runtime-ready received — pushing initial state');
+        _setLifecycleStage('[PVW#' + id + '] runtime-ready:' + ovl.key);
+        if (!statePushed) {
+          statePushed = true;
+          try {
+            var initialState = pvwStateFor(ovl);
+            frame.contentWindow.postMessage(initialState, '*');
+            console.log('[PVW#' + id + '] initial state pushed');
+            DL('[PVW#' + id + '] state pushed after runtime-ready — overlay will render then send overlay-ready');
+          } catch(pushErr) {
+            console.error('[PVW#' + id + '] state push FAILED: ' + pushErr.message);
+            DL('[PVW#' + id + '] state push FAILED: ' + pushErr.message);
+          }
+        } else {
+          DL('[PVW#' + id + '] runtime-ready received again — state already pushed, ignoring');
+        }
+        return;
+      }
+
+      if (e.data.type === 'overlay-ready') {
+        console.log('[PVW#' + id + '] overlay-ready received — statePushed=' + statePushed);
+        DL('[PVW#' + id + '] overlay-ready received settled=' + settled);
+        if (!statePushed) {
+          console.warn('[PVW#' + id + '] overlay-ready arrived before state pushed — overlay may render blank');
+        }
+        settle('overlay-ready');
+      }
+    }
+    window.addEventListener('message', onMessage);
+
+    // iframe.onload: lifecycle/HUD only — state push happens on overlay-runtime-ready instead.
+    frame.addEventListener('load', function() {
+      _setLifecycleStage('[PVW#' + id + '] iframe-load:' + ovl.key);
+      DL('[PVW#' + id + '] iframe load — contentWindow=' + (!!frame.contentWindow) +
+         ' waiting for overlay-runtime-ready before pushing state');
+      _dbgUpdateHUD();
+    });
+
+    // Set src LAST — listener is already attached above.
+    _setLifecycleStage('[PVW#' + id + '] src-set:' + ovl.key);
+    frame.src = ovl.src + QPVW;
+    DL('[PVW#' + id + '] src set → ' + frame.src);
   });
 }
 
-// ─── PGM IFRAME MANAGEMENT ────────────────────────────────────────────────────
-// PGM iframes load in normal mode (no ?pvw=1) — they run their own sse-client.js
-// and show exactly what OBS shows. Lazy-created on first TAKE, kept alive across
-// CUTs for instant re-take.
-function _ensurePGMFrame(ovl) {
-  if (document.getElementById('pgm-frame-' + ovl.key)) return;
+// _pgmFrames: { groupLetter: overlayKey } — one entry per active group (max 3).
+// Frames render in group order (A → B → C) so Group C sits on top of Group B on top of A.
+var _pgmFrames = {};
+var _PGM_GROUP_ORDER = ['A', 'B', 'C'];
+
+function _destroyPGMGroup(group) {
+  var old = document.getElementById('pgm-frame-group-' + group);
+  if (old) {
+    DL('_destroyPGMGroup — removing group=' + group + ' id=' + old.id);
+    old.src = 'about:blank';  // terminate SSE inside the frame before removal
+    old.remove();
+  }
+  delete _pgmFrames[group];
+}
+
+// Z-index per group ensures correct compositing order regardless of DOM insertion order.
+// Group A (full-frame overlays) sits behind B and C; Group C (data strip) is on top.
+var _PGM_Z = { A: 10, B: 20, C: 30 };
+
+function _createPGMGroupFrame(ovl) {
+  _destroyPGMGroup(ovl.group);
+  var screen = document.getElementById('pgm-screen');
+  if (!screen) { console.error('[_createPGMGroupFrame] pgm-screen not found'); return; }
   var frame       = document.createElement('iframe');
-  frame.id        = 'pgm-frame-' + ovl.key;
+  frame.id        = 'pgm-frame-group-' + ovl.group;
   frame.className = 'ovl-frame pgm-frame';
-  frame.src       = ovl.src + Q; // normal mode — sse-client.js runs inside
-  document.getElementById('pgm-screen').appendChild(frame);
+  frame.setAttribute('allowtransparency', 'true');  // belt-and-suspenders for older Safari
+  frame.style.visibility = 'visible';
+  frame.style.zIndex     = _PGM_Z[ovl.group];       // explicit stacking: A=10, B=20, C=30
+  frame.src       = ovl.src + Q;  // SSE mode — sse-client.js connects inside
+  // Also insert in DOM order A→B→C so stacking is correct even without explicit z-index.
+  var myOrder  = _PGM_GROUP_ORDER.indexOf(ovl.group);
+  var insertBefore = null;
+  for (var i = myOrder + 1; i < _PGM_GROUP_ORDER.length; i++) {
+    var later = document.getElementById('pgm-frame-group-' + _PGM_GROUP_ORDER[i]);
+    if (later) { insertBefore = later; break; }
+  }
+  insertBefore ? screen.insertBefore(frame, insertBefore) : screen.appendChild(frame);
+  _pgmFrames[ovl.group] = ovl.key;
+  DL('_createPGMGroupFrame — group=' + ovl.group + ' key=' + ovl.key + ' z=' + _PGM_Z[ovl.group] + ' total pgm-frames=' + document.querySelectorAll('.pgm-frame').length);
 }
 
 // ─── PVW OVERLAY SELECTOR ─────────────────────────────────────────────────────
-// Selects which overlay is shown in PVW.
-// PVW iframes are lazy-created on first click and load with ?pvw=1 so they do NOT
-// open an SSE connection. State is injected via postMessage from onStateUpdate.
-function selectPVW(key) {
-  pvwSelection = key;
-  _ctrlKey     = null; // force ctrl panel rebuild on overlay switch
+// id is assigned at click time (not run time) so cancel poll in _createPVWFrame
+// can detect when a newer transition has started and abort the current iframe load.
+async function selectPVW(key, id) {
+  console.log('[PVW#' + id + '] selectPVW ENTER key=' + key);
+  _setLifecycleStage('[PVW#' + id + '] enter:' + key);
+  DL('[PVW#' + id + '] selectPVW ENTER key=' + key + ' _pvwKey=' + _pvwKey +
+     ' pvwSelection=' + pvwSelection + ' _taking=' + _taking + ' activeId=' + _activeTransitionId);
+  try {
+    console.log('[PVW#' + id + '] assigning pvwSelection=' + key);
+    pvwSelection = key;
+    console.log('[PVW#' + id + '] pvwSelection assigned OK = ' + pvwSelection);
+    _ctrlKey     = null;
 
-  var ovl = OVERLAYS.find(function(o) { return o.key === key; });
+    var ovl = key ? OVERLAYS.find(function(o) { return o.key === key; }) : null;
+    console.log('[PVW#' + id + '] ovl resolved = ' + (ovl ? ovl.group + '/' + ovl.key : 'null') + ' (key=' + key + ')');
+    if (key && !ovl) {
+      console.error('[PVW#' + id + '] ABORT: missing ovl config for key=' + key);
+      _setLifecycleStage('[PVW#' + id + '] abort:unknown-key');
+      return;
+    }
 
-  // Lazy-create PVW iframe with ?pvw=1
-  if (key && ovl && !document.getElementById('pvw-frame-' + key)) {
-    var frame       = document.createElement('iframe');
-    frame.id        = 'pvw-frame-' + key;
-    frame.className = 'ovl-frame pvw-frame';
-    frame.src       = ovl.src + QPVW;
-    // Push initial state once iframe has loaded
-    frame.addEventListener('load', (function(f, o) {
-      return function() {
-        if (pvwSelection === o.key) pushToPVW(o);
-      };
-    }(frame, ovl)));
-    document.getElementById('pvw-screen').appendChild(frame);
+    if (key && ovl) {
+      if (_pvwKey === key) {
+        console.log('[PVW#' + id + '] same overlay (pvwKey=' + _pvwKey + ') — push only');
+        _setLifecycleStage('[PVW#' + id + '] same-overlay:push');
+        DL('[PVW#' + id + '] same overlay — pushing state, no iframe swap');
+        pushToPVW(ovl);
+      } else {
+        console.log('[PVW#' + id + '] calling _createPVWFrame — was pvwKey=' + _pvwKey);
+        await _createPVWFrame(ovl, id);
+        console.log('[PVW#' + id + '] _createPVWFrame returned — activeId=' + _activeTransitionId);
+
+        // Stale guard: if a newer selectPVW ran while we awaited _createPVWFrame, stop here.
+        if (id !== _activeTransitionId) {
+          console.log('[PVW#' + id + '] ABORT: stale — active is now #' + _activeTransitionId);
+          _setLifecycleStage('[PVW#' + id + '] abort:stale');
+          return;
+        }
+
+        // State was pushed on overlay-runtime-ready; overlay rendered; overlay-ready confirmed.
+        // SSE handler (onStateUpdate) will keep PVW current on every tick from here.
+        _setLifecycleStage('[PVW#' + id + '] iframe-ready:' + key);
+        console.log('[PVW#' + id + '] iframe-ready confirmed');
+        console.log('%c[PVW#' + id + '] overlay-ready confirmed — two-phase handshake complete BUILD_ID=' + BUILD_ID,
+                    'background:#002200;color:#00ff88;font-weight:bold');
+      }
+    } else {
+      console.log('[PVW#' + id + '] ABORT: key=' + key + ' ovl=' + ovl + ' — destroy path');
+      _setLifecycleStage('[PVW#' + id + '] destroy');
+      _destroyPVWFrame();
+    }
+
+    var emptyEl = document.getElementById('pvw-empty');
+    if (emptyEl) emptyEl.style.display = key ? 'none' : 'flex';
+
+    var cur = document.getElementById('pvw-current');
+    if (cur) {
+      cur.textContent = ovl ? ovl.label : '—';
+      cur.className   = 'monitor-current' + (key ? ' active' : '');
+    }
+
+    _setLifecycleStage('[PVW#' + id + '] applyScale:' + key);
+    applyScale();
+    renderOvlButtons();
+    updateTakeBtn();
+    renderCtrlPanel();
+    _setLifecycleStage('[PVW#' + id + '] COMPLETE:' + key);
+    console.log('[PVW#' + id + '] selectPVW COMPLETE pvwSelection=' + pvwSelection);
+  } catch(err) {
+    _setLifecycleStage('[PVW#' + id + '] EXCEPTION:' + err.message);
+    console.error('[PVW#' + id + '] selectPVW EXCEPTION key=' + key, err.message, err);
+  } finally {
+    console.log('[PVW#' + id + '] selectPVW FINALLY activeId=' + _activeTransitionId +
+                ' pvw-frames=' + document.querySelectorAll('.pvw-frame').length);
+    DL('[PVW#' + id + '] selectPVW FINALLY — activeId=' + _activeTransitionId +
+       ' pvw-frames=' + document.querySelectorAll('.pvw-frame').length);
+    _hudUpdate();
   }
-
-  // Show only the selected PVW frame
-  document.querySelectorAll('.pvw-frame').forEach(function(f) {
-    f.style.visibility = (f.id === 'pvw-frame-' + key) ? 'visible' : 'hidden';
-  });
-  document.getElementById('pvw-empty').style.display = key ? 'none' : 'flex';
-
-  var cur = document.getElementById('pvw-current');
-  if (cur) { cur.textContent = ovl ? ovl.label : '—'; cur.className = 'monitor-current' + (key ? ' active' : ''); }
-
-  renderOvlButtons();
-
-  // Push current state to already-loaded iframe immediately
-  if (ovl) pushToPVW(ovl);
-
-  updateTakeBtn();
-  renderCtrlPanel();
 }
 
 // ─── TAKE BUTTON STATE ────────────────────────────────────────────────────────
@@ -737,26 +1104,43 @@ function updateTakeBtn() {
 //   4. Fires SSE to all clients
 // On 200, applies an optimistic local update so director UI updates immediately
 // without waiting for the SSE round-trip (~50-200ms).
-async function take() {
-  if (_taking || !pvwSelection) return;
+async function _doTake() {
+  _setLifecycleStage('doTake:enter');
+  DL('_doTake() ENTER — _taking=' + _taking + ' pvwSelection=' + pvwSelection + ' scene=' + ((liveState.program||{}).scene||'null'));
+  if (_taking || !pvwSelection) {
+    _setLifecycleStage('doTake:BLOCKED _taking=' + _taking + ' pvwSelection=' + pvwSelection);
+    DL('_doTake() BLOCKED — _taking=' + _taking + ' pvwSelection=' + pvwSelection);
+    return;
+  }
   var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
-  if (!ovl) return;
-  _taking = true;
+  if (!ovl) { DL('_doTake() BLOCKED — no ovl found for key=' + pvwSelection); return; }
 
-  var btn = document.getElementById('take-btn');
-  btn.disabled = true;
+  _taking = true;
+  var btn = null;
+  var _takeTimer = setTimeout(function() {
+    console.error('[_doTake] SAFETY TIMEOUT 8s — forcing reset');
+    _taking = false;
+    if (btn) { btn.disabled = false; }
+  }, 8000);
 
   try {
+    btn = document.getElementById('take-btn');
+    if (!btn) { console.error('[_doTake] take-btn NOT in DOM'); }
+    else { btn.disabled = true; DL('_doTake() take-btn.disabled=true'); }
+
+    DL('_doTake() POSTing /broadcast/take scene=' + ovl.key);
     var r = await fetch('/broadcast/take', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({scene: ovl.key}),
       credentials: 'include',
     });
+    DL('_doTake() response status=' + r.status);
 
     if (r.status === 401 || r.status === 403) {
       document.getElementById('auth-notice').classList.add('visible');
       showStatus('Login required — see link below', false);
+      DL('_doTake() auth failure — will reset in finally');
       return;
     }
 
@@ -764,67 +1148,116 @@ async function take() {
       var msg = 'Server error (' + r.status + ')';
       try { var j = await r.json(); if (j.error) msg = j.error; } catch(_) {}
       showStatus(msg, false);
+      DL('_doTake() server error: ' + msg + ' — will reset in finally');
       return;
     }
 
     document.getElementById('auth-notice').classList.remove('visible');
     var result = await r.json();
+    DL('_doTake() success — takenAt=' + result.takenAt);
 
-    // Optimistic local update — mirrors what the server wrote to state.json
+    // Optimistic local update — clear same-group peers, set this overlay's flags.
+    // Other groups are untouched so they remain live.
+    OVERLAYS.forEach(function(o) {
+      if (o.group === ovl.group && o.key !== ovl.key) {
+        o.pgmKeys.forEach(function(f) { liveState[f] = false; });
+      }
+    });
     ovl.pvwFlags.forEach(function(f) { liveState[f] = true; });
-    liveState.program = { scene: ovl.key, takenAt: result.takenAt, cleanAt: (liveState.program || {}).cleanAt };
+    // Update program.groups — keeps local state consistent with server model
+    var _prevProg   = liveState.program || {};
+    var _newGroups  = Object.assign({}, _prevProg.groups || {});
+    _newGroups[ovl.group] = ovl.key;
+    liveState.program = { scene: ovl.key, groups: _newGroups, takenAt: result.takenAt, cleanAt: _prevProg.cleanAt };
+    DL('_doTake() optimistic — group=' + ovl.group + ' key=' + ovl.key + ' groups=' + JSON.stringify(_newGroups));
 
-    // Ensure PGM iframe exists and is scaled
-    _ensurePGMFrame(ovl);
+    _createPGMGroupFrame(ovl);
     applyScale();
 
-    renderPGMStatus();
-    renderPGMVisibility();
-    renderOvlButtons();
+    try { renderPGMStatus(); }   catch(e) { console.error('[_doTake renderPGMStatus]', e); }
+    try { renderPGMVisibility(); } catch(e) { console.error('[_doTake renderPGMVisibility]', e); }
+    try { renderOvlButtons(); }  catch(e) { console.error('[_doTake renderOvlButtons]', e); }
     showStatus('Taken live — ' + ovl.label, true);
+    DL('_doTake() SUCCESS complete');
 
   } catch(e) {
+    _setLifecycleStage('doTake:EXCEPTION');
+    console.error('[_doTake() EXCEPTION]', e.message, e);
     showStatus('Network error', false);
   } finally {
-    _taking      = false;
-    btn.disabled = false;
+    clearTimeout(_takeTimer);
+    _taking = false;
+    if (btn) { btn.disabled = false; }
+    _setLifecycleStage('doTake:finally-reset');
+    DL('_doTake() FINALLY — _taking=false btn.disabled=false');
   }
 }
+function take() { DL('take() enqueued'); _enqueue(_doTake); }
 
 // ─── CLEAN / CUT ─────────────────────────────────────────────────────────────
 // Calls /broadcast/clean which clears all director overlay flags atomically.
-async function goClean() {
+async function _doClean() {
+  // Determine which group to clean from the current PVW selection.
+  var ovl = pvwSelection ? OVERLAYS.find(function(o) { return o.key === pvwSelection; }) : null;
+  if (!ovl) { DL('_doClean() BLOCKED — no pvwSelection'); return; }
+  var group = ovl.group;
+  DL('_doClean() ENTER — group=' + group + ' pvwSelection=' + pvwSelection);
   try {
-    var r = await fetch('/broadcast/clean', {
+    var r = await fetch('/broadcast/clean_group', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: '{}',
+      body: JSON.stringify({group: group}),
       credentials: 'include',
     });
+    DL('_doClean() response status=' + r.status);
 
     if (r.status === 401 || r.status === 403) {
       document.getElementById('auth-notice').classList.add('visible');
       showStatus('Login required', false);
+      DL('_doClean() auth failure');
       return;
     }
-    if (!r.ok) { showStatus('Error (' + r.status + ')', false); return; }
+    if (!r.ok) {
+      showStatus('Error (' + r.status + ')', false);
+      DL('_doClean() server error ' + r.status);
+      return;
+    }
 
     document.getElementById('auth-notice').classList.remove('visible');
     var result = await r.json();
 
-    // Optimistic local update
-    OVERLAYS.forEach(function(o) { o.pgmKeys.forEach(function(f) { liveState[f] = false; }); });
-    liveState.program = { scene: null, takenAt: (liveState.program || {}).takenAt, cleanAt: result.cleanAt };
+    // Optimistic local update — clear only this group's flags; other groups untouched.
+    OVERLAYS.forEach(function(o) {
+      if (o.group === group) o.pgmKeys.forEach(function(f) { liveState[f] = false; });
+    });
+    // Update program.groups — remove this group; preserve others
+    var _cProg   = liveState.program || {};
+    var _cGroups = Object.assign({}, _cProg.groups || {});
+    delete _cGroups[group];
+    var _cScene  = _cProg.scene;
+    var _cSceneOvl = _cScene ? OVERLAYS.find(function(o) { return o.key === _cScene; }) : null;
+    var _newScene  = (_cSceneOvl && _cSceneOvl.group === group) ? null : _cScene;
+    liveState.program = { scene: _newScene, groups: _cGroups, takenAt: _cProg.takenAt, cleanAt: result.cleanAt };
+    _destroyPGMGroup(group);
+    DL('_doClean() optimistic — group=' + group + ' cleared. pgm-frames=' + document.querySelectorAll('.pgm-frame').length);
 
-    renderPGMStatus();
-    renderPGMVisibility();
-    renderOvlButtons();
-    showStatus('Clean — all overlays off', true);
+    try { renderPGMStatus(); }   catch(e) { console.error('[_doClean renderPGMStatus]', e); }
+    try { renderPGMVisibility(); } catch(e) { console.error('[_doClean renderPGMVisibility]', e); }
+    try { renderOvlButtons(); }  catch(e) { console.error('[_doClean renderOvlButtons]', e); }
+
+    var btnCount = document.querySelectorAll('.ovl-btn').length;
+    DL('_doClean() post-render btnCount=' + btnCount + ' (expected ' + OVERLAYS.length + ')');
+
+    showStatus('Group ' + group + ' clean — ' + ovl.label + ' off', true);
+    DL('_doClean() SUCCESS complete');
 
   } catch(e) {
+    console.error('[_doClean() EXCEPTION]', e.message, e);
     showStatus('Network error', false);
   }
+  DL('_doClean() EXIT');
 }
+function goClean() { DL('goClean() enqueued'); _enqueue(_doClean); }
 
 // ─── STATUS BAR ───────────────────────────────────────────────────────────────
 function showStatus(msg, ok) {
@@ -839,18 +1272,181 @@ function showStatus(msg, ok) {
 }
 
 // ─── SCALE — fit 1920×1080 iframes into monitor bodies ───────────────────────
-function applyScale() {
-  var pvwBody = document.getElementById('pvw-body');
-  if (!pvwBody) return;
-  var scale = pvwBody.offsetWidth / 1920;
-  document.querySelectorAll('.ovl-frame').forEach(function(el) {
-    el.style.transform = 'scale(' + scale + ')';
-  });
+
+// Apply scale to iframe's internal body — the actual render root in PVW context.
+// Host iframe transform alone can be composited separately by the browser, making
+// the content appear unscaled inside its own 1920×1080 viewport.
+function _applyScaleToBody(frame, scale) {
+  try {
+    var iDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+    if (!iDoc || !iDoc.body) {
+      DL('[SCALE-BODY] ' + frame.id + ' — no contentDocument.body (not loaded yet)');
+      return;
+    }
+    var body = iDoc.body;
+    var view = iDoc.defaultView;
+    var cs   = view ? view.getComputedStyle(body) : null;
+    DL('[SCALE-BODY] ' + frame.id +
+       ' tag=' + body.tagName + ' class="' + (body.className || '') + '"' +
+       ' offsetW=' + body.offsetWidth + ' offsetH=' + body.offsetHeight +
+       ' computedTransform="'  + (cs ? cs.transform       : 'no-view') + '"' +
+       ' computedOrigin="'     + (cs ? cs.transformOrigin : 'no-view') + '"');
+
+    body.style.transform       = 'scale(' + scale + ')';
+    body.style.transformOrigin = 'top left';
+
+    var csA = view ? view.getComputedStyle(body) : null;
+    DL('[SCALE-BODY] ' + frame.id + ' AFTER' +
+       ' computedTransform="' + (csA ? csA.transform : '?') + '"' +
+       ' offsetW=' + body.offsetWidth + ' offsetH=' + body.offsetHeight);
+
+    if (_dbgOn) body.style.outline = '3px solid blue';
+
+    // MutationObserver: detect if anything wipes the transform after we set it
+    if (window.MutationObserver && !frame._scaleObserver) {
+      var mo = new MutationObserver(function() {
+        if (body.style.transform !== 'scale(' + scale + ')') {
+          DL('[SCALE-BODY-MO] TRANSFORM WIPED on ' + frame.id + ' — restoring scale(' + scale + ')');
+          body.style.transform       = 'scale(' + scale + ')';
+          body.style.transformOrigin = 'top left';
+        }
+      });
+      mo.observe(body, { attributes: true, attributeFilter: ['style'] });
+      frame._scaleObserver = mo;
+    }
+  } catch(e) {
+    DL('[SCALE-BODY] ' + frame.id + ' EXCEPTION: ' + e.message);
+  }
 }
+
+function applyScale() {
+  // Stack trace: shows WHAT called applyScale() — verifies it's executing
+  console.trace('[applyScale] called from BUILD_ID=' + BUILD_ID);
+
+  var pvwBody = document.getElementById('pvw-body');
+  if (!pvwBody) { DL('applyScale — ABORT: pvwBody not in DOM'); return; }
+
+  var w     = pvwBody.offsetWidth;
+  var h     = pvwBody.offsetHeight;
+  var brc   = pvwBody.getBoundingClientRect();
+  var scale = w / 1920;
+  var frames = document.querySelectorAll('.ovl-frame');
+
+  DL('[SCALE] pvwBody.offsetW=' + w + ' offsetH=' + h +
+     ' bRect=' + Math.round(brc.width) + 'x' + Math.round(brc.height) +
+     ' → scale=' + scale.toFixed(6) + ' frames=' + frames.length);
+
+  if (w === 0) {
+    console.error('[SCALE] pvwBody.offsetWidth=0 — container is collapsed; transform will be scale(0)');
+  }
+
+  // Verify pvw-screen overflow — clipping prevents scaled content from showing
+  var pvwScreen = document.getElementById('pvw-screen');
+  if (pvwScreen) {
+    var scrBrc = pvwScreen.getBoundingClientRect();
+    var scrOvf = window.getComputedStyle(pvwScreen).overflow;
+    DL('[SCALE] pvwScreen overflow=' + scrOvf +
+       ' bRect=' + Math.round(scrBrc.width) + 'x' + Math.round(scrBrc.height));
+  }
+
+  frames.forEach(function(el) {
+    // Scale the host iframe element. The iframe is 1920×1080 in CSS; scaling by
+    // (monitorWidth/1920) makes it visually fill the monitor at the correct aspect ratio.
+    // Do NOT also scale contentDocument.body — that produces double-scaling (scale²).
+    var prev = el.style.transform || 'none';
+    el.style.transform       = 'scale(' + scale + ')';
+    el.style.transformOrigin = 'top left';
+    if (_dbgOn) el.style.outline = '3px solid red';
+    DL('[SCALE]   iframe ' + el.id + ': "' + prev + '" → "scale(' + scale.toFixed(5) + ')"' +
+       ' vis=' + el.style.visibility);
+  });
+
+  _dbgUpdateHUD();
+}
+
 window.addEventListener('resize', function() {
   clearTimeout(window._scaleTimer);
   window._scaleTimer = setTimeout(applyScale, 40);
 });
+
+// ─── PVW SCALE DEBUG HUD ──────────────────────────────────────────────────────
+var _dbgOn    = false;
+var _dbgTimer = null;
+
+function _dbgUpdateHUD() {
+  var hud = document.getElementById('pvw-dbg-hud');
+  if (!hud) return;
+
+  var pvwBody   = document.getElementById('pvw-body');
+  var pvwScreen = document.getElementById('pvw-screen');
+  if (!pvwBody || !pvwScreen) { hud.textContent = '(pvwBody not found)'; return; }
+
+  var brc    = pvwBody.getBoundingClientRect();
+  var scrBrc = pvwScreen.getBoundingClientRect();
+  var w      = pvwBody.offsetWidth;
+  var h      = pvwBody.offsetHeight;
+  var scale  = w / 1920;
+  var pvwFrames = document.querySelectorAll('#pvw-screen iframe');
+
+  var frameLines = [];
+  pvwFrames.forEach(function(f) {
+    var fr = f.getBoundingClientRect();
+    frameLines.push(
+      '  ' + f.id + '\n' +
+      '    visibility : ' + (f.style.visibility || 'css-class') + '\n' +
+      '    transform  : ' + (f.style.transform  || 'none') + '\n' +
+      '    bRect      : ' + Math.round(fr.width) + ' × ' + Math.round(fr.height) +
+                   ' @ (' + Math.round(fr.left) + ', ' + Math.round(fr.top) + ')\n' +
+      '    contentWin : ' + (!!f.contentWindow)
+    );
+  });
+  if (!frameLines.length) frameLines = ['  (none)'];
+
+  hud.textContent = [
+    '─── PVW SCALE DIAG (D to hide) ────',
+    'pvwBody  offsetW×H : ' + w + ' × ' + h,
+    'pvwBody  bRect     : ' + Math.round(brc.width) + ' × ' + Math.round(brc.height),
+    'pvwScreen bRect    : ' + Math.round(scrBrc.width) + ' × ' + Math.round(scrBrc.height),
+    'scale (W÷1920)     : ' + scale.toFixed(6),
+    'scaled 1920×1080   : ' + Math.round(1920*scale) + ' × ' + Math.round(1080*scale),
+    '_pvwKey            : ' + (_pvwKey || 'null'),
+    'pvwSelection       : ' + (pvwSelection || 'null'),
+    'pvw iframes        : ' + pvwFrames.length,
+    '',
+    'iframe details:',
+  ].concat(frameLines).join('\n');
+}
+
+function _dbgToggle() {
+  _dbgOn = !_dbgOn;
+  var hud = document.getElementById('pvw-dbg-hud');
+  if (hud) { hud.classList.toggle('on', _dbgOn); }
+  DL('DEBUG HUD ' + (_dbgOn ? 'ON — press D again to hide' : 'OFF'));
+
+  // Debug borders: yellow=pvwBody, orange=pvwScreen, red=iframe, blue=body (applied in applyScale/_applyScaleToBody)
+  var pvwBody   = document.getElementById('pvw-body');
+  var pvwScreen = document.getElementById('pvw-screen');
+  if (pvwBody)   pvwBody.style.outline   = _dbgOn ? '3px solid yellow' : '';
+  if (pvwScreen) pvwScreen.style.outline = _dbgOn ? '3px solid orange' : '';
+  if (!_dbgOn) {
+    // Remove debug borders from iframes and bodies when HUD is hidden
+    document.querySelectorAll('.ovl-frame').forEach(function(f) { f.style.outline = ''; });
+    document.querySelectorAll('.ovl-frame').forEach(function(f) {
+      try {
+        var b = f.contentDocument && f.contentDocument.body;
+        if (b) b.style.outline = '';
+      } catch(e) {}
+    });
+  }
+
+  if (_dbgOn) {
+    applyScale();  // re-apply so debug borders get drawn on iframes/bodies
+    _dbgUpdateHUD();
+    if (!_dbgTimer) _dbgTimer = setInterval(_dbgUpdateHUD, 300);
+  } else {
+    if (_dbgTimer) { clearInterval(_dbgTimer); _dbgTimer = null; }
+  }
+}
 
 // ─── INLINE OVERLAY CONTROLS ──────────────────────────────────────────────────
 function getCats() {
@@ -945,6 +1541,7 @@ async function postUpdate(obj) {
     });
     if (r.ok) {
       Object.assign(liveState, obj);
+      _pushCurrentPVW();  // reflect change in PVW immediately, before SSE round-trip
       renderCtrlPanel(); renderOvlButtons(); renderPGMStatus(); renderPGMVisibility();
     } else if (r.status === 401 || r.status === 403) {
       document.getElementById('auth-notice').classList.add('visible');
@@ -956,12 +1553,17 @@ async function postUpdate(obj) {
 }
 
 async function ctrlLbCat(cat) {
+  // Server /director/lb expects {category, override} — NOT {lbCategory}
   try {
     var r = await fetch('/director/lb', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({lbCategory: cat}), credentials:'include'
+      body: JSON.stringify({category: cat, override: true}), credentials:'include'
     });
-    if (r.ok) { liveState.lbCategory = cat; renderCtrlPanel(); }
+    if (r.ok) {
+      liveState.lbCategory = cat;
+      _pushCurrentPVW();  // push new category to PVW iframe immediately
+      renderCtrlPanel();
+    }
   } catch(e) { showStatus('Network error', false); }
 }
 function ctrlLbCount(n)   { postUpdate({lbDisplayCount: n}); }
@@ -983,12 +1585,14 @@ document.addEventListener('keydown', function(e) {
   if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); take(); }
   if (e.key === 'Escape') { e.preventDefault(); goClean(); }
+  if (e.key === 'd' || e.key === 'D') { _dbgToggle(); }
 });
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 // Build selector buttons. No iframes created at init — all lazy.
 // Initial SSE connection count: 1 (director's own).
 (function init() {
+  DL('init() — building overlay selector buttons');
   var selectorEl = document.getElementById('ovl-selector');
   OVERLAYS.forEach(function(ovl) {
     var btn = document.createElement('button');
@@ -996,13 +1600,96 @@ document.addEventListener('keydown', function(e) {
     btn.dataset.key = ovl.key;
     btn.textContent = ovl.label;
     btn.addEventListener('click', (function(key) {
-      return function() { selectPVW(key); };
+      return function() {
+        console.log('[CLICK] ' + key + ' — raw DOM event fired');
+        // Increment at click time — any in-flight _createPVWFrame cancel poll detects this immediately.
+        var id = ++_activeTransitionId;
+        var btnCount = document.querySelectorAll('.ovl-btn').length;
+        console.log('[CLICK] ' + key + ' id=#' + id + ' _taking=' + _taking +
+                    ' pvwSel=' + pvwSelection + ' btnCount=' + btnCount);
+        DL('[PVW#' + id + '] ovl-btn CLICK key=' + key);
+        _enqueue(function selectPVW_queued() { return selectPVW(key, id); });
+        console.log('[QUEUE] enqueue called for key=' + key + ' id=#' + id);
+      };
     }(ovl.key)));
     selectorEl.appendChild(btn);
+    DL('init() — listener attached for key=' + ovl.key + ' total buttons now=' + selectorEl.querySelectorAll('.ovl-btn').length);
   });
+  // Create debug HUD inside pvw-body
+  (function() {
+    var pvwBody = document.getElementById('pvw-body');
+    if (pvwBody) {
+      var hud = document.createElement('div');
+      hud.id = 'pvw-dbg-hud';
+      pvwBody.appendChild(hud);
+      DL('init() — debug HUD created (press D to show)');
+    }
+  }());
+
+  // ResizeObserver — fires whenever pvwBody dimensions change (flex reflow,
+  // font load, ctrl-panel open/close, viewport change). More reliable than
+  // window resize event alone for detecting when the monitor box changes size.
+  if (window.ResizeObserver) {
+    var _pvwBodyEl = document.getElementById('pvw-body');
+    if (_pvwBodyEl) {
+      var _pvwRO = new ResizeObserver(function(entries) {
+        var e0 = entries[0];
+        var w  = e0 && e0.contentRect ? e0.contentRect.width : '?';
+        var h  = e0 && e0.contentRect ? e0.contentRect.height : '?';
+        DL('[ResizeObserver] pvwBody=' + w + 'x' + h + ' — calling applyScale()');
+        applyScale();
+      });
+      _pvwRO.observe(_pvwBodyEl);
+      DL('init() — ResizeObserver attached to pvwBody');
+    }
+  } else {
+    DL('init() — ResizeObserver NOT supported; scale only updates on window resize');
+  }
+
+  // Measure pvwBody now so any layout issues are visible immediately in logs
+  (function() {
+    var pvwBody = document.getElementById('pvw-body');
+    if (pvwBody) {
+      DL('[INIT MEASURE] pvwBody.offsetWidth=' + pvwBody.offsetWidth +
+         ' offsetHeight=' + pvwBody.offsetHeight +
+         ' bRect=' + JSON.stringify(pvwBody.getBoundingClientRect()));
+    }
+  }());
+
   setTimeout(applyScale, 80);
+  DL('init() — calling fetchState() and connect()');
   fetchState();
   connect();
+  _setLifecycleStage('init-complete');
+  DL('init() — complete. total ovl-btn in DOM: ' + document.querySelectorAll('.ovl-btn').length);
+
+  // ─── WATCHDOG ──────────────────────────────────────────────────────────────
+  setInterval(function() {
+    var btnCount = document.querySelectorAll('.ovl-btn').length;
+    var takeBtnDisabled = (document.getElementById('take-btn') || {}).disabled;
+    // Also refresh HUD on every watchdog tick
+    _hudUpdate();
+    console.log('[WATCHDOG]', {
+      build:           BUILD_ID,
+      stage:           _lifecycleStage,
+      taking:          _taking,
+      pvw:             pvwSelection,
+      scene:           (liveState.program || {}).scene || null,
+      buttons:         btnCount,
+      takeBtnDisabled: takeBtnDisabled,
+      pvwFrames:       document.querySelectorAll('.pvw-frame').length,
+      pgmFrames:       document.querySelectorAll('.pgm-frame').length,
+      pgmGroups:       JSON.stringify(_pgmFrames),
+      sseState:        _es ? _es.readyState : 'null',
+    });
+    if (_taking) { console.warn('[WATCHDOG] _taking is TRUE — possible stuck lock! stage=' + _lifecycleStage); }
+    if (btnCount !== OVERLAYS.length) { console.error('[WATCHDOG] BUTTON COUNT WRONG — expected=' + OVERLAYS.length + ' got=' + btnCount); }
+    if (document.querySelectorAll('.pgm-frame').length > 3) { console.error('[WATCHDOG] MORE THAN 3 PGM FRAMES — iframe leak!'); }
+    // Deadlock detector: stage should never stay at src-set or iframe-load for >2s (one watchdog cycle)
+    if (/src-set:|iframe-load:/.test(_lifecycleStage)) {
+      console.warn('[WATCHDOG] POSSIBLE DEADLOCK — stage stuck at: ' + _lifecycleStage);
+    }
+  }, 2000);
 }());
 </script>
 </body>

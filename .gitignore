@@ -41,3 +41,40 @@ backups/
 *.log
 gunicorn_error.log
 gunicorn_access.log
+
+# Monorepo runtime artefacts (Phase B event store)
+audit/*.jsonl
+audit/*.idx
+audit/*.chain
+audit/*.sealed
+commands/*.jsonl
+commands/*.idx
+commands/*.chain
+wire/*.jsonl
+snapshots/periodic/
+snapshots/milestone/
+!audit/.keep
+!commands/.keep
+!wire/.keep
+!snapshots/.keep
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+.svelte-kit/
+dist/
+.turbo/
+
+# Generated contracts artefacts
+packages/contracts/python/strongpass_contracts/_generated/
+packages/contracts/ts/dist/
+
+# IDE
+.cursor/
+
+# Test artefacts
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

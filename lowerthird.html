@@ -119,17 +119,55 @@
 <div id="lower-thirds"></div>
 
 <script>
-(function(){
-  if(!/[?&]pvw=1/.test(location.search)) return;
-  // PVW mode: state arrives via postMessage from director — no SSE connection opened.
-  window.pvwMode = true;
-  document.currentScript.nextElementSibling.remove();
-  window.addEventListener('message', function(e){
-    if(typeof window.onStateUpdate==='function'){
-      try{ window.onStateUpdate(e.data); }catch(_){}
+window.PVW_MODE = /[?&]pvw=1/.test(location.search);
+
+if (window.PVW_MODE) {
+  window.DISABLE_SSE = true;
+  var _pvwReady = false;
+  var _PVW_NAME = 'lowerthird';
+
+  window.addEventListener('message', function(e) {
+    try {
+      if (typeof window.onStateUpdate === 'function') {
+        var keys = e.data ? Object.keys(e.data) : [];
+        console.log('[' + _PVW_NAME + '] onStateUpdate received — ' + keys.length + ' keys');
+        console.log('[' + _PVW_NAME + '] payload sample: ' + JSON.stringify(e.data).slice(0, 200));
+
+        console.log('[' + _PVW_NAME + '] render begin');
+        window.onStateUpdate(e.data);
+        console.log('[' + _PVW_NAME + '] render end');
+
+        (function() {
+          var root = document.body;
+          if (!root) { console.log('[' + _PVW_NAME + '] WARNING: document.body null'); return; }
+          var rect = root.getBoundingClientRect();
+          var cs   = window.getComputedStyle(root);
+          console.log('[' + _PVW_NAME + '] root rect=' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+                      ' visibility=' + cs.visibility + ' display=' + cs.display + ' opacity=' + cs.opacity);
+          var first = root.firstElementChild;
+          if (first) {
+            var fr = first.getBoundingClientRect();
+            console.log('[' + _PVW_NAME + '] first-child=' + first.tagName + (first.id ? '#'+first.id : '') +
+                        ' rect=' + Math.round(fr.width) + 'x' + Math.round(fr.height) +
+                        ' visibility=' + window.getComputedStyle(first).visibility);
+          } else {
+            console.log('[' + _PVW_NAME + '] WARNING: no first child in body');
+          }
+        }());
+
+        if (!_pvwReady) {
+          _pvwReady = true;
+          requestAnimationFrame(function() {
+            console.log('[' + _PVW_NAME + '] overlay-ready emitted (post-rAF paint)');
+            window.parent.postMessage({ type: 'overlay-ready' }, '*');
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[' + _PVW_NAME + '] postMessage error:', err);
     }
   });
-}());
+}
 </script>
 <script src="sse-client.js"></script>
 <script>
@@ -206,6 +244,12 @@ function render() {
 }
 
 window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
+
+// Two-phase handshake: signal runtime ready first, receive state, then emit overlay-ready after render.
+if (window.PVW_MODE) {
+  console.log('[lowerthird] overlay-runtime-ready sending');
+  window.parent.postMessage({ type: 'overlay-runtime-ready' }, '*');
+}
 </script>
 </body>
 </html>
