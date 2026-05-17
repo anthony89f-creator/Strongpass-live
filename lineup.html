@@ -206,6 +206,7 @@
 (function(){
   if(!/[?&]pvw=1/.test(location.search)) return;
   // PVW mode: state arrives via postMessage from director — no SSE connection opened.
+  window.pvwMode = true;
   document.currentScript.nextElementSibling.remove();
   window.addEventListener('message', function(e){
     if(typeof window.onStateUpdate==='function'){
@@ -308,12 +309,12 @@ function showCategory(index) {
     });
   }, 75);
 
-  // Progress bar
+  // Progress bar — not shown in PVW mode (no auto-advance in preview)
   clearTimeout(progressTimer);
   const bar = document.getElementById('progress-bar');
   bar.style.transition = 'none';
   bar.style.width      = '0%';
-  if (state.lineupAuto !== false) {
+  if (!window.pvwMode && state.lineupAuto !== false) {
     const dur = (state.lineupDuration || 5) * 1000;
     setTimeout(() => {
       bar.style.transition = `width ${dur}ms linear`;
@@ -325,6 +326,7 @@ function showCategory(index) {
 function startAuto() {
   clearInterval(autoTimer);
   if (state.lineupAuto === false) return;
+  if (window.pvwMode) return; // PVW: director controls category via lineupIndex; no auto-advance
   const dur = (state.lineupDuration || 5) * 1000;
   autoTimer = setInterval(() => {
     const cats = getCategoryData();

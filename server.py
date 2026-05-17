@@ -57,9 +57,13 @@ state_lock = threading.Lock()
 # Shared across all SSE threads and /state.json. Invalidated whenever raw_results,
 # athletes, or events tables change. Timer ticks that write the same score value
 # do NOT invalidate it (see change detection in _apply_judge_scores_to_raw_results).
-_results_lock  = threading.Lock()
-_results_cache = None   # (events_list, results_by_cat) tuple, or None if not yet built
-_results_dirty = True   # True → recompute before next use
+# TTL: 300s safety expiry ensures stale cache is never served indefinitely even if
+# _invalidate_results_cache() were somehow not called (e.g. after direct DB edit).
+_RESULTS_CACHE_TTL = 300  # seconds
+_results_lock      = threading.Lock()
+_results_cache     = None   # (events_list, results_by_cat) tuple, or None if not yet built
+_results_dirty     = True   # True → recompute before next use
+_results_built_at  = 0.0    # monotonic time of last cache build
 
 def _invalidate_results_cache():
     global _results_dirty
@@ -68,16 +72,18 @@ def _invalidate_results_cache():
         _sse_mod._results_version += 1
 
 def _get_cached_results():
-    """Return (events_list, results_by_cat), recomputing only when dirty. Thread-safe."""
-    global _results_cache, _results_dirty
+    """Return (events_list, results_by_cat), recomputing only when dirty or TTL expired. Thread-safe."""
+    global _results_cache, _results_dirty, _results_built_at
     with _results_lock:
-        if _results_dirty or _results_cache is None:
+        age = time.monotonic() - _results_built_at
+        if _results_dirty or _results_cache is None or age >= _RESULTS_CACHE_TTL:
             try:
                 evs, res = get_public_results()
             except Exception:
                 evs, res = [], {}
-            _results_cache = (evs, res)
-            _results_dirty = False
+            _results_cache    = (evs, res)
+            _results_dirty    = False
+            _results_built_at = time.monotonic()
         return _results_cache
 
 def _get_cached_standings(category=None):
@@ -1118,9 +1124,23 @@ def health():
         db_ok = "ok"
     except Exception:
         db_ok = "error"
+    program = load_state().get("program", {})
     resp = jsonify({"status": "ok", "db": db_ok, "restart_token": _RESTART_TOKEN,
-                    "sse_active": _sse_active, "threads": 32})
+                    "sse_active": _sse_active, "threads": 32,
+                    "program_scene": program.get("scene")})
     resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@app.route("/comp/api/program")
+def api_program():
+    """Current broadcast program state — which overlay is on air, when it was taken/cleaned."""
+    s = load_state()
+    program = s.get("program", {"scene": None, "takenAt": None, "cleanAt": None})
+    flags = {k: bool(s.get(k, False)) for k in _ALL_DIRECTOR_FLAGS}
+    resp = jsonify({"program": program, "flags": flags})
+    resp.headers["Cache-Control"] = "no-cache"
+    resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
 
 def _apply_judge_scores_to_raw_results(judge_payload=None):

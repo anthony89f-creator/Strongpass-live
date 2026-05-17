@@ -102,6 +102,7 @@
 (function(){
   if(!/[?&]pvw=1/.test(location.search)) return;
   // PVW mode: state arrives via postMessage from director — no SSE connection opened.
+  window.pvwMode = true;
   document.currentScript.nextElementSibling.remove();
   window.addEventListener('message', function(e){
     if(typeof window.onStateUpdate==='function'){
