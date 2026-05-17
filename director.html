@@ -11,208 +11,249 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 :root {
-  --red:#CC0000; --green:#00AA44; --green-bright:#00DD55;
-  --gold:#D4A017; --gold-light:#F5C842;
-  --bg:#0C0C0C; --surface:#161616; --surface2:#1E1E1E; --surface3:#252525;
-  --border:rgba(255,255,255,0.08); --text:#F0F0F0; --dim:#777;
+  --green:#00AA44; --green-bright:#00DD55;
+  --gold:#D4A017;  --gold-light:#F5C842;
+  --bg:#0A0A0A; --surface:#141414; --surface2:#1C1C1C; --surface3:#222;
+  --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666;
 }
 html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; overscroll-behavior:none; }
 
-/* ── HEADER ─────────────────────────────────────────────── */
+/* ── HEADER ─────────────────────────────────────────────────── */
 .header {
   background:var(--surface); border-bottom:1px solid var(--border);
-  padding:12px 20px; display:flex; align-items:center; justify-content:space-between;
-  position:sticky; top:0; z-index:100;
+  padding:10px 18px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:200;
 }
-.header-left { display:flex; align-items:center; gap:14px; }
+.header-left { display:flex; align-items:center; gap:12px; }
 .back-link {
-  background:var(--surface2); border:1px solid var(--border); border-radius:5px;
-  padding:6px 12px; font-size:11px; font-weight:800; letter-spacing:0.14em;
+  background:var(--surface2); border:1px solid var(--border); border-radius:4px;
+  padding:5px 11px; font-size:11px; font-weight:800; letter-spacing:0.14em;
   text-transform:uppercase; color:var(--dim); text-decoration:none; white-space:nowrap;
-  transition:color 0.15s,border-color 0.15s;
+  transition:color 0.15s, border-color 0.15s;
 }
-.back-link:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
-.header-logo { height:40px; width:auto; object-fit:contain; mix-blend-mode:lighten; }
-.header-title { font-size:18px; font-weight:900; letter-spacing:0.1em; text-transform:uppercase; color:#fff; line-height:1; }
-.header-sub   { font-size:10px; font-weight:600; letter-spacing:0.22em; color:var(--dim); text-transform:uppercase; margin-top:1px; }
-.header-right { display:flex; align-items:center; gap:6px; }
-.conn-dot  { width:8px; height:8px; border-radius:50%; background:#333; display:inline-block; }
+.back-link:hover { color:var(--text); border-color:rgba(255,255,255,0.18); }
+.header-logo { height:36px; width:auto; object-fit:contain; mix-blend-mode:lighten; }
+.header-title { font-size:16px; font-weight:900; letter-spacing:0.1em; text-transform:uppercase; color:#fff; line-height:1; }
+.header-sub   { font-size:9px;  font-weight:700; letter-spacing:0.24em; color:var(--dim); text-transform:uppercase; margin-top:2px; }
+.conn-dot { width:7px; height:7px; border-radius:50%; background:#2a2a2a; display:inline-block; }
 .conn-dot.ok { background:var(--green-bright); animation:pulse 2s infinite; }
-.conn-text { font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--dim); text-transform:uppercase; }
+.conn-text { font-size:11px; font-weight:700; letter-spacing:0.1em; color:var(--dim); text-transform:uppercase; margin-left:5px; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-/* ── MAIN ───────────────────────────────────────────────── */
-.main { padding:14px; max-width:980px; margin:0 auto; display:flex; flex-direction:column; gap:10px; }
+/* ── LAYOUT ─────────────────────────────────────────────────── */
+.main { padding:10px 14px; max-width:1500px; margin:0 auto; display:flex; flex-direction:column; gap:8px; }
 
-/* ── COMPETITION STRIP ──────────────────────────────────── */
+/* ── COMPETITION STRIP ──────────────────────────────────────── */
 .comp-strip {
-  background:var(--surface); border:1px solid var(--border); border-radius:6px;
-  padding:10px 16px; display:flex; align-items:center; gap:0; flex-wrap:wrap;
-  overflow:hidden;
+  display:flex; align-items:center; gap:0; flex-wrap:wrap; overflow:hidden;
+  background:var(--surface); border:1px solid var(--border); border-radius:4px;
+  padding:7px 14px;
 }
 .ctx-item {
-  font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
-  color:rgba(255,255,255,0.45); font-family:'Barlow',sans-serif; white-space:nowrap;
-  padding:2px 10px;
+  font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+  color:rgba(255,255,255,0.38); font-family:'Barlow',sans-serif; white-space:nowrap;
+  padding:1px 9px;
 }
-.ctx-item:first-child { padding-left:0; }
-.ctx-item.ctx-comp { color:var(--text); }
-.ctx-sep { color:rgba(255,255,255,0.15); font-size:14px; flex-shrink:0; }
+.ctx-item:first-child { padding-left:0; color:var(--text); }
+.ctx-sep { color:rgba(255,255,255,0.12); font-size:12px; }
 
-/* ── DIRECTOR SECTION ───────────────────────────────────── */
-.dir-section {
-  background:var(--surface); border:1px solid var(--border); border-radius:7px;
+/* ── MONITOR GRID ───────────────────────────────────────────── */
+.monitors {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+}
+
+/* Monitor chrome */
+.monitor {
+  display:flex; flex-direction:column;
+  background:var(--surface); border:1px solid var(--border); border-radius:4px;
   overflow:hidden;
 }
-.pgm-section { border-left:4px solid var(--green); }
-.pvw-section { border-left:4px solid var(--gold); }
+.pvw-monitor { border-top:3px solid var(--gold); }
+.pgm-monitor { border-top:3px solid var(--green); }
 
-.dir-section-head {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 14px;
+/* Monitor label bar */
+.monitor-head {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 12px;
   background:var(--surface2); border-bottom:1px solid var(--border);
+  flex-shrink:0;
 }
-.dir-indicator {
-  width:7px; height:7px; border-radius:50%; flex-shrink:0;
+.monitor-ind { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.pvw-ind { background:var(--gold); }
+.pgm-ind { background:var(--green-bright); animation:pulse 2s infinite; }
+.monitor-label {
+  font-size:10px; font-weight:900; letter-spacing:0.26em; text-transform:uppercase; color:var(--dim);
 }
-.pgm-indicator { background:var(--green-bright); animation:pulse 2s infinite; }
-.pvw-indicator { background:var(--gold); }
-.dir-label {
-  font-size:11px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim);
+.monitor-badge {
+  font-size:8px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase;
+  padding:2px 7px; border-radius:3px;
+  background:rgba(0,170,68,0.1); color:var(--green-bright);
+  border:1px solid rgba(0,170,68,0.2);
 }
-.dir-badge {
-  font-size:9px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase;
-  padding:2px 8px; border-radius:3px;
-  background:rgba(0,170,68,0.12); color:var(--green-bright);
-  border:1px solid rgba(0,170,68,0.25);
-}
-.dir-hint {
+.monitor-current {
   margin-left:auto;
-  font-size:10px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase;
-  color:rgba(255,255,255,0.18); font-family:'Barlow',sans-serif;
+  font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase;
+  color:rgba(255,255,255,0.28); font-family:'Barlow',sans-serif;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:50%;
+}
+.monitor-current.active { color:var(--gold-light); }
+
+/* 16:9 screen area */
+.monitor-body {
+  position:relative; width:100%; padding-bottom:56.25%;
+  background:#030303; flex-shrink:0;
+}
+.monitor-screen {
+  position:absolute; inset:0; overflow:hidden;
 }
 
-/* ── OVERLAY TILES ──────────────────────────────────────── */
-.tile-row {
-  display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:10px;
-}
-.pgm-tile, .pvw-tile {
-  border-radius:4px; border:1px solid;
-  font-size:12px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase;
-  text-align:center; display:flex; align-items:center; justify-content:center;
-  min-height:62px; padding:10px 8px;
-  position:relative; transition:all 0.14s;
-  line-height:1.2;
+/* All overlay iframes — 1920×1080, scaled down by JS */
+.ovl-frame {
+  position:absolute; top:0; left:0;
+  width:1920px; height:1080px;
+  transform-origin:top left;
+  border:none; pointer-events:none;
 }
 
-/* PGM — read-only state display */
-.pgm-tile.on  { background:rgba(0,170,68,0.1);  border-color:var(--green);  color:var(--green-bright); }
-.pgm-tile.off { background:var(--surface3);      border-color:var(--border); color:rgba(255,255,255,0.18); }
+/* PVW frames hidden by default; JS shows one at a time */
+.pvw-frame { visibility:hidden; }
 
-/* PVW — interactive, stageable */
-.pvw-tile { cursor:pointer; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
-.pvw-tile:active { transform:scale(0.96); }
-.pvw-tile.on  { background:rgba(212,160,23,0.1);  border-color:var(--gold);   color:var(--gold-light); }
-.pvw-tile.off { background:var(--surface3);        border-color:var(--border); color:rgba(255,255,255,0.32); }
-.pvw-tile:hover.off { border-color:rgba(255,255,255,0.2); color:rgba(255,255,255,0.6); }
-.pvw-tile:hover.on  { border-color:var(--gold-light); }
-
-/* Diff dots — signals which tiles will change on TAKE */
-.pvw-tile.diff::after {
-  content:''; position:absolute; top:6px; right:6px;
-  width:5px; height:5px; border-radius:50%;
+/* Empty state shown in PVW when nothing is selected */
+.monitor-empty {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:8px; color:rgba(255,255,255,0.1);
 }
-.pvw-tile.on.diff::after  { background:rgba(245,200,66,0.65); }
-.pvw-tile.off.diff::after { background:rgba(220,80,80,0.55); }
-
-/* ── SCENES ─────────────────────────────────────────────── */
-.scene-section .dir-section-head { border-bottom:none; }
-.scene-row {
-  display:flex; gap:8px; padding:10px; flex-wrap:wrap;
+.monitor-empty-icon {
+  font-size:28px; line-height:1;
 }
-.scene-btn {
-  flex:1; min-width:120px;
-  padding:13px 12px;
-  border-radius:4px; border:1px solid var(--border);
-  background:var(--surface3); color:rgba(255,255,255,0.4);
+.monitor-empty-label {
+  font-size:11px; font-weight:700; letter-spacing:0.3em; text-transform:uppercase;
+  font-family:'Barlow',sans-serif;
+}
+
+/* PGM clean indicator — shown when no overlays are live */
+.pgm-clean {
+  position:absolute; inset:0;
+  display:none; align-items:center; justify-content:center;
+  color:rgba(255,255,255,0.06);
+  font-size:13px; font-weight:700; letter-spacing:0.4em;
+  text-transform:uppercase; font-family:'Barlow',sans-serif;
+}
+.pgm-clean.visible { display:flex; }
+
+/* ── OVERLAY SELECTOR ───────────────────────────────────────── */
+.ovl-selector-wrap {
+  background:var(--surface); border:1px solid var(--border); border-radius:4px;
+  padding:10px;
+}
+.ovl-selector-label {
+  font-size:9px; font-weight:800; letter-spacing:0.28em; text-transform:uppercase;
+  color:var(--dim); font-family:'Barlow',sans-serif;
+  margin-bottom:8px;
+}
+.ovl-selector {
+  display:flex; gap:6px; flex-wrap:wrap;
+}
+.ovl-btn {
+  flex:1; min-width:100px;
+  padding:10px 10px; border-radius:3px;
+  border:1px solid var(--border); background:var(--surface3);
+  color:rgba(255,255,255,0.35);
   font-family:'Barlow Condensed',sans-serif;
-  font-size:13px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase;
-  cursor:pointer; transition:all 0.14s; -webkit-user-select:none; user-select:none;
-  touch-action:manipulation;
+  font-size:13px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase;
+  cursor:pointer; transition:all 0.12s; position:relative;
+  -webkit-user-select:none; user-select:none; touch-action:manipulation;
 }
-.scene-btn:hover  { border-color:rgba(255,255,255,0.2); color:var(--text); }
-.scene-btn:active { transform:scale(0.97); }
-.scene-btn.active {
+.ovl-btn:hover  { border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.7); }
+.ovl-btn:active { transform:scale(0.97); }
+/* Selected in PVW */
+.ovl-btn.selected {
   background:rgba(212,160,23,0.08); border-color:var(--gold); color:var(--gold-light);
 }
+/* Live in PGM — green dot top-right */
+.ovl-btn.live::after {
+  content:''; position:absolute; top:6px; right:6px;
+  width:5px; height:5px; border-radius:50%;
+  background:var(--green-bright);
+}
 
-/* ── ACTION ─────────────────────────────────────────────── */
-.action-area {
+/* ── ACTION STRIP ───────────────────────────────────────────── */
+.action-strip {
   display:flex; gap:8px; align-items:stretch;
 }
+
 #take-btn {
-  flex:3; padding:20px;
-  border-radius:5px; border:2px solid var(--border);
-  background:var(--surface2); color:rgba(255,255,255,0.2);
+  flex:4; padding:16px 24px;
+  border-radius:4px; border:2px solid var(--border);
+  background:var(--surface2); color:rgba(255,255,255,0.18);
   font-family:'Barlow Condensed',sans-serif;
-  font-size:26px; font-weight:900; letter-spacing:0.24em; text-transform:uppercase;
-  cursor:pointer; transition:all 0.18s;
-  -webkit-user-select:none; user-select:none; touch-action:manipulation;
+  font-size:24px; font-weight:900; letter-spacing:0.26em; text-transform:uppercase;
+  cursor:pointer; transition:all 0.16s;
+  -webkit-user-select:none; user-select:none;
 }
-#take-btn.live {
-  background:rgba(0,100,40,0.3); border-color:var(--green); color:var(--green-bright);
+#take-btn.ready {
+  background:rgba(0,90,36,0.35); border-color:var(--green); color:var(--green-bright);
 }
-#take-btn.live:hover { background:rgba(0,120,50,0.38); }
-#take-btn:active  { transform:scale(0.98); }
-#take-btn:disabled { opacity:0.4; cursor:not-allowed; }
+#take-btn.ready:hover { background:rgba(0,110,44,0.45); }
+#take-btn:active  { transform:scale(0.99); }
+#take-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
 
 #cut-btn {
-  flex:1; padding:20px 14px;
-  border-radius:5px; border:1px solid var(--border);
-  background:var(--surface2); color:rgba(255,255,255,0.3);
+  flex:1; padding:16px 12px;
+  border-radius:4px; border:1px solid var(--border);
+  background:var(--surface2); color:rgba(255,255,255,0.28);
   font-family:'Barlow Condensed',sans-serif;
-  font-size:15px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;
-  cursor:pointer; transition:all 0.14s;
-  -webkit-user-select:none; user-select:none; touch-action:manipulation;
+  font-size:14px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase;
+  cursor:pointer; transition:all 0.12s;
+  -webkit-user-select:none; user-select:none;
 }
-#cut-btn:hover  { border-color:rgba(255,255,255,0.2); color:rgba(255,255,255,0.55); }
+#cut-btn:hover { border-color:rgba(255,255,255,0.18); color:rgba(255,255,255,0.55); }
 #cut-btn:active { transform:scale(0.97); }
 
-/* ── STATUS / AUTH ──────────────────────────────────────── */
+#clean-btn {
+  flex:1; padding:16px 12px;
+  border-radius:4px; border:1px solid rgba(180,0,0,0.18);
+  background:rgba(140,0,0,0.05); color:rgba(210,70,70,0.5);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase;
+  cursor:pointer; transition:all 0.12s;
+  -webkit-user-select:none; user-select:none;
+}
+#clean-btn:hover { border-color:rgba(200,0,0,0.35); color:rgba(240,90,90,0.8); }
+#clean-btn:active { transform:scale(0.97); }
+
+/* ── STATUS / AUTH ──────────────────────────────────────────── */
 .status-bar {
   display:flex; align-items:center; justify-content:space-between;
-  padding:10px 14px;
-  background:var(--surface); border:1px solid var(--border); border-radius:6px;
-  font-size:12px; font-weight:600; letter-spacing:0.08em;
+  padding:8px 12px;
+  background:var(--surface); border:1px solid var(--border); border-radius:4px;
+  font-size:11px; font-weight:600; letter-spacing:0.08em;
   color:var(--dim); font-family:'Barlow',sans-serif;
 }
 .status-ok  { color:var(--green-bright); }
 .status-err { color:#FF5555; }
-.status-time { font-size:10px; opacity:0.55; font-variant-numeric:tabular-nums; }
+.status-time { font-size:10px; opacity:0.5; font-variant-numeric:tabular-nums; }
 
 .auth-notice {
-  display:none;
-  align-items:center; gap:10px;
-  padding:10px 14px;
-  background:rgba(204,0,0,0.06); border:1px solid rgba(204,0,0,0.2); border-radius:6px;
-  font-size:12px; font-weight:600; letter-spacing:0.08em;
-  color:rgba(255,100,100,0.85); font-family:'Barlow',sans-serif;
+  display:none; align-items:center; gap:10px;
+  padding:9px 12px;
+  background:rgba(180,0,0,0.06); border:1px solid rgba(180,0,0,0.2); border-radius:4px;
+  font-size:11px; font-weight:600; letter-spacing:0.08em;
+  color:rgba(255,100,100,0.8); font-family:'Barlow',sans-serif;
 }
-.auth-notice a {
-  color:rgba(255,150,150,0.9); text-decoration:underline; font-weight:700;
-}
+.auth-notice a { color:rgba(255,150,150,0.9); text-decoration:underline; font-weight:700; }
 .auth-notice.visible { display:flex; }
 
-/* ── RESPONSIVE ─────────────────────────────────────────── */
-@media(max-width:700px) {
-  .tile-row { grid-template-columns:repeat(2,1fr); }
-  .scene-row { gap:6px; }
-  .scene-btn { font-size:12px; min-width:90px; }
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+@media(max-width:800px) {
+  .monitors { grid-template-columns:1fr; }
   #take-btn { font-size:20px; }
 }
-@media(max-width:420px) {
-  .tile-row { grid-template-columns:repeat(2,1fr); }
-  .action-area { flex-direction:column; }
+@media(max-width:500px) {
+  .ovl-btn { font-size:11px; min-width:80px; }
+  .action-strip { flex-wrap:wrap; }
+  #take-btn { flex-basis:100%; }
 }
 </style>
 </head>
@@ -227,7 +268,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
       <div class="header-sub">Preview / Program</div>
     </div>
   </div>
-  <div class="header-right">
+  <div style="display:flex;align-items:center">
     <span class="conn-dot" id="conn-dot"></span>
     <span class="conn-text" id="conn-text">Connecting</span>
   </div>
@@ -235,9 +276,9 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 
 <div class="main">
 
-  <!-- Competition context strip -->
+  <!-- Competition context -->
   <div class="comp-strip">
-    <span class="ctx-item ctx-comp" id="ctx-comp">—</span>
+    <span class="ctx-item" id="ctx-comp">—</span>
     <span class="ctx-sep">·</span>
     <span class="ctx-item" id="ctx-event">—</span>
     <span class="ctx-sep">·</span>
@@ -246,268 +287,385 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
     <span class="ctx-item" id="ctx-cat">—</span>
   </div>
 
-  <!-- PROGRAM — what is live now -->
-  <div class="dir-section pgm-section">
-    <div class="dir-section-head">
-      <span class="dir-indicator pgm-indicator"></span>
-      <span class="dir-label">Program</span>
-      <span class="dir-badge">Live</span>
+  <!-- PVW + PGM monitors -->
+  <div class="monitors">
+
+    <!-- PREVIEW monitor -->
+    <div class="monitor pvw-monitor">
+      <div class="monitor-head">
+        <span class="monitor-ind pvw-ind"></span>
+        <span class="monitor-label">Preview</span>
+        <span class="monitor-current" id="pvw-current">—</span>
+      </div>
+      <div class="monitor-body" id="pvw-body">
+        <div class="monitor-screen" id="pvw-screen">
+          <!-- PVW overlay iframes injected by JS -->
+        </div>
+        <div class="monitor-empty" id="pvw-empty">
+          <div class="monitor-empty-icon">▷</div>
+          <div class="monitor-empty-label">Select an overlay below</div>
+        </div>
+      </div>
     </div>
-    <div class="tile-row" id="pgm-tiles"></div>
+
+    <!-- PROGRAM monitor -->
+    <div class="monitor pgm-monitor">
+      <div class="monitor-head">
+        <span class="monitor-ind pgm-ind"></span>
+        <span class="monitor-label">Program</span>
+        <span class="monitor-badge">Live</span>
+        <span class="monitor-current" id="pgm-current">Clean</span>
+      </div>
+      <div class="monitor-body" id="pgm-body">
+        <div class="monitor-screen" id="pgm-screen">
+          <!-- PGM overlay iframes injected by JS — all stacked, self-manage visibility -->
+        </div>
+        <div class="pgm-clean" id="pgm-clean">CLEAN</div>
+      </div>
+    </div>
+
+  </div><!-- /monitors -->
+
+  <!-- Overlay selector — click to load into PVW -->
+  <div class="ovl-selector-wrap">
+    <div class="ovl-selector-label">Preview select</div>
+    <div class="ovl-selector" id="ovl-selector">
+      <!-- Buttons injected by JS -->
+    </div>
   </div>
 
-  <!-- PREVIEW — what the director is staging -->
-  <div class="dir-section pvw-section">
-    <div class="dir-section-head">
-      <span class="dir-indicator pvw-indicator"></span>
-      <span class="dir-label">Preview</span>
-      <span class="dir-hint">Tap tiles to stage · Take to go live</span>
-    </div>
-    <div class="tile-row" id="pvw-tiles"></div>
-  </div>
-
-  <!-- SCENES — preset overlay combinations -->
-  <div class="dir-section scene-section">
-    <div class="dir-section-head">
-      <span class="dir-label">Scenes</span>
-    </div>
-    <div class="scene-row">
-      <button class="scene-btn" data-scene="clean"       onclick="loadScene('clean')">Clean</button>
-      <button class="scene-btn" data-scene="leaderboard" onclick="loadScene('leaderboard')">Leaderboard</button>
-      <button class="scene-btn" data-scene="h2h"         onclick="loadScene('h2h')">Head to Head</button>
-      <button class="scene-btn" data-scene="lineup"      onclick="loadScene('lineup')">Lineup</button>
-    </div>
-  </div>
-
-  <!-- ACTION — take / cut -->
-  <div class="action-area">
+  <!-- TAKE / CUT / CLEAN -->
+  <div class="action-strip">
     <button id="take-btn" onclick="take()">TAKE</button>
     <button id="cut-btn"  onclick="take()">CUT</button>
+    <button id="clean-btn" onclick="goClean()">◼ CLEAN</button>
   </div>
 
-  <!-- Auth notice — shown when TAKE returns 401 -->
+  <!-- Auth notice -->
   <div class="auth-notice" id="auth-notice">
-    <span>Operator login required to take live —</span>
+    <span>Operator login required —</span>
     <a href="/comp/login" target="_blank">Log in at /comp/login</a>
   </div>
 
-  <!-- Status bar -->
+  <!-- Status -->
   <div class="status-bar">
-    <span id="status-text">Ready — connect to /stream to start</span>
+    <span id="status-text">Ready</span>
     <span id="status-time" class="status-time"></span>
   </div>
 
 </div><!-- /main -->
 
 <script>
-// ─── OVERLAY DEFINITIONS ───────────────────────────────────────────────────────
-// Order determines tile display order (left→right, top→bottom in 4-column grid)
-const OVERLAYS = [
-  { key:'leaderboard',       label:'Leaderboard'  },
-  { key:'h2h',               label:'Head to Head' },
-  { key:'lineup',            label:'Lineup'       },
-  { key:'lowerThirdVisible', label:'Lower Third'  },
-  { key:'repsVisible',       label:'Reps Counter' },
-  { key:'lightsVisible',     label:'Lights'       },
-  { key:'champion',          label:'Champion'     },
-  { key:'eventBarVisible',   label:'Event Bar'    },
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+// Token passed through to iframes so they can authenticate with /stream
+var _token = new URLSearchParams(window.location.search).get('token') || '';
+var Q      = _token ? ('?token=' + encodeURIComponent(_token)) : '';
+
+// Overlay definitions.
+// pvwFlags: flags forced true in PVW iframe injection.
+// pgmKeys:  flags checked to determine if this overlay is live in PGM.
+// takeFlags: flags set true on TAKE; everything else in ALL_FLAGS is set false.
+var OVERLAYS = [
+  { key:'leaderboard', label:'Leaderboard',  src:'/leaderboard.html', pvwFlags:['leaderboard','eventBarVisible'], pgmKeys:['leaderboard'] },
+  { key:'h2h',         label:'Head To Head', src:'/h2h.html',         pvwFlags:['h2h'],                          pgmKeys:['h2h'] },
+  { key:'lineup',      label:'Lineup',       src:'/lineup.html',      pvwFlags:['lineup'],                       pgmKeys:['lineup'] },
+  { key:'lowerthird',  label:'Lower Third',  src:'/lowerthird.html',  pvwFlags:['lowerThirdVisible'],            pgmKeys:['lowerThirdVisible'] },
+  { key:'reps',        label:'Reps / Lights',src:'/reps.html',        pvwFlags:['repsVisible','lightsVisible'],  pgmKeys:['repsVisible','lightsVisible'] },
+  { key:'champion',    label:'Champion',     src:'/champion.html',    pvwFlags:['champion'],                     pgmKeys:['champion'] },
 ];
 
-// Scene presets — keyed by overlay flag; unspecified flags are set false
-const SCENES = {
-  clean: {
-    leaderboard:false, h2h:false, lineup:false, lowerThirdVisible:false,
-    repsVisible:false,  lightsVisible:false, champion:false, eventBarVisible:false,
-  },
-  leaderboard: {
-    leaderboard:true, h2h:false, lineup:false, lowerThirdVisible:false,
-    repsVisible:false,  lightsVisible:false, champion:false, eventBarVisible:true,
-  },
-  h2h: {
-    leaderboard:false, h2h:true, lineup:false, lowerThirdVisible:false,
-    repsVisible:false,  lightsVisible:false, champion:false, eventBarVisible:false,
-  },
-  lineup: {
-    leaderboard:false, h2h:false, lineup:true, lowerThirdVisible:false,
-    repsVisible:false,  lightsVisible:false, champion:false, eventBarVisible:false,
-  },
-};
+// All overlay visibility flags managed by director TAKE/CLEAN
+var ALL_FLAGS = ['leaderboard','eventBarVisible','h2h','lineup','lowerThirdVisible','repsVisible','lightsVisible','champion'];
 
-// ─── STATE ─────────────────────────────────────────────────────────────────────
-var liveState      = {};
-var pvwState       = {};
-var pvwInitialized = false;
+// ─── STATE ────────────────────────────────────────────────────────────────────
+var liveState    = {};
+var pvwSelection = null;   // key of overlay currently shown in PVW
 
-// ─── SSE CONNECTION ────────────────────────────────────────────────────────────
+// ─── SSE CONNECTION (director page) ──────────────────────────────────────────
 var _es = null, _retryTimer = null, _retryMs = 1000;
 
 function setConn(ok) {
-  document.getElementById('conn-dot').className  = 'conn-dot' + (ok ? ' ok' : '');
+  document.getElementById('conn-dot').className    = 'conn-dot' + (ok ? ' ok' : '');
   document.getElementById('conn-text').textContent = ok ? 'Connected' : 'Disconnected';
   document.getElementById('conn-text').style.color = ok ? 'var(--green-bright)' : '#FF5555';
 }
-
 function connect() {
   if (_es) { _es.close(); _es = null; }
-  _es = new EventSource('/stream');
-  _es.onopen = function()    { _retryMs = 1000; setConn(true); };
-  _es.onmessage = function(e){ try { onStateUpdate(JSON.parse(e.data)); } catch(_){} };
-  _es.onerror = function()   {
+  var url = '/stream' + (Q ? Q.replace('?','?') : (Q || ''));
+  _es = new EventSource('/stream' + Q);
+  _es.onopen    = function()  { _retryMs = 1000; setConn(true); };
+  _es.onmessage = function(e) { try { onStateUpdate(JSON.parse(e.data)); } catch(_) {} };
+  _es.onerror   = function()  {
     setConn(false); _es.close(); _es = null;
     _retryTimer = setTimeout(connect, _retryMs);
     _retryMs    = Math.min(_retryMs * 2, 30000);
   };
 }
-
 function disconnect() {
   if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
   if (_es)         { _es.close(); _es = null; }
 }
-
 function fetchState() {
-  fetch('/state.json?t=' + Date.now(), {cache:'no-store'})
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){ if (d) onStateUpdate(d); })
-    .catch(function(){});
+  fetch('/state.json?t=' + Date.now(), { cache:'no-store' })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) { if (d) onStateUpdate(d); })
+    .catch(function() {});
 }
-
-// Release SSE thread on tab hide; reconnect and sync on return
-window.addEventListener('pagehide',   disconnect);
-window.addEventListener('pageshow',   function(e){ if (e.persisted) { connect(); fetchState(); } });
+window.addEventListener('pagehide', disconnect);
+window.addEventListener('pageshow', function(e) { if (e.persisted) { connect(); fetchState(); } });
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden) { if (!_es) connect(); fetchState(); }
 });
 
-// ─── STATE UPDATE ──────────────────────────────────────────────────────────────
+// ─── STATE UPDATE ─────────────────────────────────────────────────────────────
 function onStateUpdate(d) {
   Object.assign(liveState, d);
-  renderPGM();
   renderCtxStrip();
-  // Initialise PVW from live state on first data received — no accidental changes on load
-  if (!pvwInitialized) {
-    OVERLAYS.forEach(function(o){ pvwState[o.key] = !!liveState[o.key]; });
-    pvwInitialized = true;
-    renderPVW();
+  renderPGMStatus();
+  renderOvlButtons();
+  // If a PVW overlay is selected, refresh it with latest live data
+  if (pvwSelection) {
+    var frame = document.getElementById('pvw-frame-' + pvwSelection);
+    var ovl   = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
+    if (frame && ovl && frame._ready) refreshPVW(frame, ovl.pvwFlags);
   }
 }
 
-// ─── RENDER ────────────────────────────────────────────────────────────────────
-function renderPGM() {
+// ─── CONTEXT STRIP ────────────────────────────────────────────────────────────
+function renderCtxStrip() {
+  var s = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v || '—'; };
+  s('ctx-comp',  liveState.compName      || liveState.compEventName || '');
+  s('ctx-event', liveState.compEventName || liveState.eventName     || '');
+  s('ctx-heat',  liveState.compHeat                                 || '');
+  s('ctx-cat',   liveState.compCategory  || liveState.category      || '');
+}
+
+// ─── PGM STATUS ──────────────────────────────────────────────────────────────
+function renderPGMStatus() {
+  var live = OVERLAYS.filter(function(o) {
+    return o.pgmKeys.some(function(f) { return !!liveState[f]; });
+  });
+  var label   = live.length ? live.map(function(o) { return o.label; }).join(' + ') : 'Clean';
+  var current = document.getElementById('pgm-current');
+  if (current) { current.textContent = label; current.className = 'monitor-current' + (live.length ? ' active' : ''); }
+  var cleanEl = document.getElementById('pgm-clean');
+  if (cleanEl) cleanEl.classList.toggle('visible', live.length === 0);
+}
+
+// ─── OVERLAY BUTTONS ─────────────────────────────────────────────────────────
+function renderOvlButtons() {
   OVERLAYS.forEach(function(o) {
-    var el = document.getElementById('pgm-' + o.key);
-    if (el) el.className = 'pgm-tile ' + (!!liveState[o.key] ? 'on' : 'off');
+    var btn = document.querySelector('.ovl-btn[data-key="' + o.key + '"]');
+    if (!btn) return;
+    var isLive = o.pgmKeys.some(function(f) { return !!liveState[f]; });
+    btn.classList.toggle('live',     isLive);
+    btn.classList.toggle('selected', pvwSelection === o.key);
   });
 }
 
-function renderPVW() {
+// ─── PVW IFRAME INJECTION ─────────────────────────────────────────────────────
+// After a PVW iframe loads, we override its window.onStateUpdate so it always
+// receives the flagged overlay as visible — regardless of live state.json flags.
+// Same-origin iframes allow direct contentWindow property access.
+function injectPVWOverride(frame, flags) {
+  try {
+    var cw = frame.contentWindow;
+    if (!cw || typeof cw.onStateUpdate !== 'function') return;
+    // Store original handler once; don't re-wrap on repeated calls
+    if (!frame._origUpdate) frame._origUpdate = cw.onStateUpdate;
+    var orig = frame._origUpdate;
+    cw.onStateUpdate = function(d) {
+      var p = Object.assign({}, d);
+      flags.forEach(function(f) { p[f] = true; });
+      orig.call(cw, p);
+    };
+  } catch(e) {}
+}
+
+function refreshPVW(frame, flags) {
+  injectPVWOverride(frame, flags);
+  try {
+    // Re-dispatch current live state with forced flags so PVW renders latest data
+    if (frame.contentWindow && typeof frame.contentWindow.onStateUpdate === 'function') {
+      frame.contentWindow.onStateUpdate(Object.assign({}, liveState));
+    }
+  } catch(e) {}
+}
+
+// ─── OVERLAY SELECTOR ─────────────────────────────────────────────────────────
+function selectPVW(key) {
+  pvwSelection = key;
+
+  // Visibility: show selected iframe, hide others
   OVERLAYS.forEach(function(o) {
-    var el   = document.getElementById('pvw-' + o.key);
-    if (!el) return;
-    var isOn = !!pvwState[o.key];
-    var diff = isOn !== !!liveState[o.key];
-    el.className = 'pvw-tile ' + (isOn ? 'on' : 'off') + (diff ? ' diff' : '');
+    var f = document.getElementById('pvw-frame-' + o.key);
+    if (f) f.style.visibility = (o.key === key) ? 'visible' : 'hidden';
   });
+
+  // Empty state placeholder
+  document.getElementById('pvw-empty').style.display = key ? 'none' : 'flex';
+
+  // Update PVW header label
+  var ovl = OVERLAYS.find(function(o) { return o.key === key; });
+  var cur = document.getElementById('pvw-current');
+  if (cur) { cur.textContent = ovl ? ovl.label : '—'; cur.className = 'monitor-current' + (key ? ' active' : ''); }
+
+  // Update button selection state
+  renderOvlButtons();
+
+  // Inject force-visible and trigger render if frame is already loaded
+  if (key && ovl) {
+    var frame = document.getElementById('pvw-frame-' + key);
+    if (frame && frame._ready) refreshPVW(frame, ovl.pvwFlags);
+  }
+
   updateTakeBtn();
 }
 
-function renderCtxStrip() {
-  var set = function(id, val) {
-    var el = document.getElementById(id);
-    if (el) el.textContent = val || '—';
-  };
-  set('ctx-comp',  liveState.compName     || liveState.compEventName || '—');
-  set('ctx-event', liveState.compEventName || liveState.eventName    || '—');
-  set('ctx-heat',  liveState.compHeat                                || '—');
-  set('ctx-cat',   liveState.compCategory  || liveState.category     || '—');
-}
-
+// ─── TAKE BUTTON STATE ────────────────────────────────────────────────────────
 function updateTakeBtn() {
-  var hasDiff = OVERLAYS.some(function(o){ return !!pvwState[o.key] !== !!liveState[o.key]; });
-  document.getElementById('take-btn').classList.toggle('live', hasDiff);
+  document.getElementById('take-btn').classList.toggle('ready', pvwSelection !== null);
 }
 
-// ─── ACTIONS ───────────────────────────────────────────────────────────────────
-function pvwToggle(key) {
-  pvwState[key] = !pvwState[key];
-  // Deactivate scene buttons — PVW no longer matches any preset
-  document.querySelectorAll('.scene-btn').forEach(function(b){ b.classList.remove('active'); });
-  renderPVW();
-}
-
-function loadScene(name) {
-  var scene = SCENES[name];
-  if (!scene) return;
-  OVERLAYS.forEach(function(o){ pvwState[o.key] = !!scene[o.key]; });
-  document.querySelectorAll('.scene-btn').forEach(function(b){ b.classList.remove('active'); });
-  var btn = document.querySelector('.scene-btn[data-scene="' + name + '"]');
-  if (btn) btn.classList.add('active');
-  renderPVW();
-}
-
+// ─── TAKE ─────────────────────────────────────────────────────────────────────
 async function take() {
+  if (!pvwSelection) return;
+  var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
+  if (!ovl) return;
+
+  // Build payload: selected overlay's flags ON, everything else OFF
+  var payload = {};
+  ALL_FLAGS.forEach(function(f) { payload[f] = false; });
+  ovl.pvwFlags.forEach(function(f) { payload[f] = true; });
+
   var btn = document.getElementById('take-btn');
   btn.disabled = true;
-
-  var payload = {};
-  OVERLAYS.forEach(function(o){ payload[o.key] = !!pvwState[o.key]; });
-
   try {
     var r = await fetch('/update', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload),
-      credentials:'include',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
     });
-
     if (r.status === 401 || r.status === 403 || (r.redirected && r.url.indexOf('login') !== -1)) {
       document.getElementById('auth-notice').classList.add('visible');
       showStatus('Login required — see link below', false);
     } else if (r.ok) {
       document.getElementById('auth-notice').classList.remove('visible');
-      // Optimistically update live state — SSE will confirm within ~100ms
       Object.assign(liveState, payload);
-      Object.assign(pvwState,  payload);
-      renderPGM();
-      renderPVW();
-      showStatus('Taken live', true);
+      renderPGMStatus();
+      renderOvlButtons();
+      showStatus('Taken live — ' + ovl.label, true);
     } else {
       showStatus('Server error (' + r.status + ')', false);
     }
   } catch(e) {
-    showStatus('Network error — is the server running?', false);
+    showStatus('Network error', false);
   } finally {
     btn.disabled = false;
   }
 }
 
+// ─── CLEAN ────────────────────────────────────────────────────────────────────
+async function goClean() {
+  var payload = {};
+  ALL_FLAGS.forEach(function(f) { payload[f] = false; });
+  try {
+    var r = await fetch('/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (r.ok) {
+      Object.assign(liveState, payload);
+      renderPGMStatus();
+      renderOvlButtons();
+      showStatus('Clean — all overlays off', true);
+    } else {
+      showStatus('Error (' + r.status + ')', false);
+    }
+  } catch(e) {
+    showStatus('Network error', false);
+  }
+}
+
+// ─── STATUS BAR ───────────────────────────────────────────────────────────────
 function showStatus(msg, ok) {
   var el   = document.getElementById('status-text');
   var time = document.getElementById('status-time');
   el.textContent = msg;
   el.className   = ok ? 'status-ok' : 'status-err';
-  var now  = new Date();
-  time.textContent =
-    String(now.getHours()).padStart(2,'0')   + ':' +
-    String(now.getMinutes()).padStart(2,'0') + ':' +
-    String(now.getSeconds()).padStart(2,'0');
+  var n = new Date();
+  time.textContent = String(n.getHours()).padStart(2,'0') + ':' +
+                     String(n.getMinutes()).padStart(2,'0') + ':' +
+                     String(n.getSeconds()).padStart(2,'0');
 }
 
-// ─── INIT — build tile DOM once ─────────────────────────────────────────────
-(function buildTiles() {
-  // PGM tiles — read-only
-  document.getElementById('pgm-tiles').innerHTML = OVERLAYS.map(function(o) {
-    return '<div class="pgm-tile off" id="pgm-' + o.key + '">' + o.label + '</div>';
-  }).join('');
+// ─── SCALE IFRAMES TO FIT MONITORS ───────────────────────────────────────────
+function applyScale() {
+  var pvwBody = document.getElementById('pvw-body');
+  if (!pvwBody) return;
+  var scale = pvwBody.offsetWidth / 1920;
+  document.querySelectorAll('.ovl-frame').forEach(function(el) {
+    el.style.transform = 'scale(' + scale + ')';
+  });
+}
+window.addEventListener('resize', function() {
+  clearTimeout(window._scaleTimer);
+  window._scaleTimer = setTimeout(applyScale, 40);
+});
 
-  // PVW tiles — clickable
-  document.getElementById('pvw-tiles').innerHTML = OVERLAYS.map(function(o) {
-    return '<div class="pvw-tile off" id="pvw-' + o.key + '" onclick="pvwToggle(\'' + o.key + '\')">' + o.label + '</div>';
-  }).join('');
+// ─── BUILD IFRAMES AND SELECTOR BUTTONS ──────────────────────────────────────
+(function init() {
+  var pvwScreen  = document.getElementById('pvw-screen');
+  var pgmScreen  = document.getElementById('pgm-screen');
+  var selectorEl = document.getElementById('ovl-selector');
+
+  OVERLAYS.forEach(function(ovl) {
+    var src = ovl.src + Q;
+
+    // PVW iframe — hidden until selected; injection happens on load
+    var pvwFrame       = document.createElement('iframe');
+    pvwFrame.id        = 'pvw-frame-' + ovl.key;
+    pvwFrame.className = 'ovl-frame pvw-frame';
+    pvwFrame.src       = src;
+    pvwFrame._ready    = false;
+    pvwFrame._origUpdate = null;
+    pvwFrame.addEventListener('load', (function(frame, o) {
+      return function() {
+        frame._ready = true;
+        // If this overlay is currently selected in PVW, inject immediately
+        if (pvwSelection === o.key) refreshPVW(frame, o.pvwFlags);
+      };
+    }(pvwFrame, ovl)));
+    pvwScreen.appendChild(pvwFrame);
+
+    // PGM iframe — always visible, self-manages via its own SSE + sse-client.js
+    var pgmFrame       = document.createElement('iframe');
+    pgmFrame.id        = 'pgm-frame-' + ovl.key;
+    pgmFrame.className = 'ovl-frame';
+    pgmFrame.src       = src;
+    pgmScreen.appendChild(pgmFrame);
+
+    // Overlay selector button
+    var btn = document.createElement('button');
+    btn.className    = 'ovl-btn';
+    btn.dataset.key  = ovl.key;
+    btn.textContent  = ovl.label;
+    btn.addEventListener('click', (function(key) {
+      return function() { selectPVW(key); };
+    }(ovl.key)));
+    selectorEl.appendChild(btn);
+  });
+
+  // Apply scale after layout — iframes are 1920px wide, need scaling to fit
+  setTimeout(applyScale, 80);
+
+  // Kick off director SSE + state fetch
+  fetchState();
+  connect();
 }());
-
-// ─── START ────────────────────────────────────────────────────────────────────
-fetchState();
-connect();
 </script>
 </body>
 </html>
