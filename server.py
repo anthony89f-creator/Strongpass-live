@@ -1132,9 +1132,12 @@ def health():
     return resp
 
 
-@app.route("/comp/api/program")
-def api_program():
-    """Current broadcast program state — which overlay is on air, when it was taken/cleaned."""
+@app.route("/broadcast/state")
+def broadcast_state():
+    """Read-only view of current broadcast program state.
+    Which overlay is on air, when it was taken/cleaned, and all director flag values.
+    Requires only beta auth (same as /state.json and /health) — no comp session needed.
+    """
     s = load_state()
     program = s.get("program", {"scene": None, "takenAt": None, "cleanAt": None})
     flags = {k: bool(s.get(k, False)) for k in _ALL_DIRECTOR_FLAGS}
