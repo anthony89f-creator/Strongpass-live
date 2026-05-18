@@ -1,5 +1,27 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-E (2026-05-18) — pvwDrop: trim postMessage payload per overlay
+
+### Improved: pvwStateFor() — per-overlay field drop list
+
+Added `pvwDrop` optional field to OVERLAYS registry. When present, these liveState fields
+are deleted from the postMessage payload before it is structured-cloned and sent to the PVW
+iframe. The deletion happens after the `lbStandings` drop and before flag overrides.
+
+Overlays marked `pvwDrop: ['athletes']`: h2h, lowerthird, champion, reps.
+Not set on: leaderboard (primary render source), lineup (uses athletes as fallback).
+
+Rationale: `state.athletes` is ~20 objects × ~10 fields each. On every SSE tick (1-3/sec),
+`pvwStateFor()` calls `Object.assign({}, liveState)` which shallow-clones all top-level
+fields — but structured-clone (used by postMessage) deep-copies nested objects. For overlays
+that never reference `athletes`, this is 200-600 wasted property copies per second. At idle
+or during active athlete scoring, this compounds on every tick.
+
+Implementation: one `(ovl.pvwDrop || []).forEach(...)` after the existing lbStandings guard.
+Safe default: `pvwDrop` omitted means no additional drops — existing behaviour preserved.
+
+---
+
 ## BUILD-20260518-D (2026-05-18) — Registry foundations + render efficiency
 
 ### Improved: OVERLAYS registry — added hasControls field (Phase 4 foundation)

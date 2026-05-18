@@ -143,8 +143,9 @@ Builds the state object sent to a PVW iframe:
 1. Clones `liveState`
 2. Deletes `results` (large, not needed for rendering)
 3. Deletes `lbStandings` **unless overlay is `lineup`** (lineup needs cross-category athletes)
-4. Sets all overlay visibility flags to `false`
-5. Sets this overlay's `pvwFlags` to `true`
+4. Deletes fields listed in overlay's `pvwDrop` registry field (per-overlay trimming — e.g. `athletes` for h2h, lowerthird, champion, reps)
+5. Sets all overlay visibility flags to `false`
+6. Sets this overlay's `pvwFlags` to `true`
 
 This ensures the PVW overlay renders as if it were the only thing on air.
 
