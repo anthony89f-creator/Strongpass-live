@@ -100,7 +100,53 @@ All `/broadcast/*` and `/update` routes require `session.get("comp_ok")`. They r
 
 ---
 
-## Deployment Workflow
+## Staging Environment
+
+| Item | Value |
+|---|---|
+| URL | `http://staging.strongpass.live` (HTTP; add SSL with certbot) |
+| Direct | `http://<server-ip>:8081` (works immediately, no DNS required) |
+| App path | `/opt/strongpass/staging/` |
+| Service | `strongpass-staging.service` |
+| Gunicorn | port `8081` (production owns `8080`) |
+| COMP_PASSWORD | `staging` (test credential — not production) |
+| BETA_TOKEN | unset (open access) |
+| DB | `/opt/strongpass/staging/comp.db` (isolated from production) |
+
+**Initial staging deploy** (run once from your local machine):
+
+```bash
+# 1. Push local commits to GitHub
+git push origin main
+
+# 2. Deploy staging on the VPS (first time or re-deploy)
+ssh root@strongpass.live "bash -s" < infra/scripts/deploy-staging.sh
+
+# 3. (Optional) Add SSL
+ssh root@strongpass.live "certbot --nginx -d staging.strongpass.live --email your@email.com --agree-tos -n"
+```
+
+**DNS prerequisite** (before staging.strongpass.live works):
+Add an A record: `staging.strongpass.live` → same IP as `strongpass.live`
+
+**Update staging** (after new local commits + GitHub push):
+```bash
+git push origin main
+ssh root@strongpass.live "bash -s" < infra/scripts/deploy-staging.sh
+```
+
+**Staging verification checklist:**
+1. `http://staging.strongpass.live/` — home.html loads, SSE dot turns green
+2. `/control.html` — Competition Engine tab, Data Source tab visible
+3. `/director.html` — Director panel loads, build ID in title
+4. `/director.html` → click Leaderboard → TAKE → PGM shows "ON AIR"
+5. `/comp/run` — competition engine runs, enter score → SSE propagates to director
+6. `/broadcast/take` with `COMP_PASSWORD=staging` → returns 200
+7. Console: zero runtime errors in director and overlays
+
+---
+
+## Production Deployment Workflow
 
 ```bash
 # Edit files locally
@@ -110,11 +156,11 @@ scp ~/Desktop/files/director.html root@strongpass.live:/opt/strongpass/current/
 # Deploy multiple files
 scp ~/Desktop/files/{director.html,lineup.html,server.py} root@strongpass.live:/opt/strongpass/current/
 
-# Reload (zero-downtime)
+# Reload (zero-downtime — NEVER systemctl restart)
 ssh root@strongpass.live "systemctl reload strongpass"
 
 # Verify build
-# Open director in browser → title bar shows "Director [BUILD-20260517-C]"
+# Open director in browser → title bar shows current BUILD_ID
 # Runtime HUD (top-right corner) shows same build ID
 ```
 

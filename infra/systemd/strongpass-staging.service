@@ -1,0 +1,29 @@
+[Unit]
+Description=StrongPass Competition Engine — STAGING
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/strongpass/staging
+ExecStart=/opt/strongpass/staging/venv/bin/gunicorn -c /opt/strongpass/staging/gunicorn-staging.conf.py server:app
+Restart=always
+RestartSec=5
+
+# ── Staging credentials — NOT production values ───────────────────────────────
+# BETA_TOKEN empty = no beta gate (staging is open for testing)
+Environment="BETA_TOKEN="
+Environment="SECRET_KEY=staging-dev-key-not-secret"
+
+# COMP_PASSWORD = simple test password so TAKE/CUT/CLEAN work in staging
+Environment="COMP_PASSWORD=staging"
+
+# Proxy
+Environment="PROXY_ALLOWLIST="
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=strongpass-staging
+
+[Install]
+WantedBy=multi-user.target
