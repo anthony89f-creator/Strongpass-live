@@ -1,5 +1,107 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-B (2026-05-18) — Overlay registry + operator polish
+
+### Fixed: pgmChanged undeclared variable in onStateUpdate PGM reconstruction
+
+`var pgmChanged = false` was missing before the `_PGM_GROUP_ORDER.forEach` block in
+`onStateUpdate`. The variable was set inside the callback and read after it — in non-strict
+mode this created an implicit global; in strict mode it would throw ReferenceError.
+
+---
+
+### Refactored: All OVERLAYS.find() hot-path calls replaced with OVL_BY_KEY
+
+O(1) registry lookup introduced in BUILD-20260518-B now used consistently:
+- `selectPVW()`: overlay resolution at transition time
+- `_doTake()`: overlay lookup before POST
+- `_doClean()`: overlay lookup for group determination (×1 direct, ×1 scene-check)
+- `onStateUpdate()` PGM loop: group-frame creation
+
+Remaining `OVERLAYS.find` is the fallback group search in `onStateUpdate` (finds by group+pgmKey
+properties, not by key — OVL_BY_KEY does not apply there).
+
+---
+
+### Removed: _applyScaleToBody() dead code with unconnected MutationObserver
+
+`_applyScaleToBody()` was retained as reference after the double-scaling fix in BUILD-20260517-B
+but was never called from `applyScale()`. It contained a `MutationObserver` stored at
+`frame._scaleObserver` that was never `.disconnect()`ed when frames were destroyed — a memory
+leak pattern if the function had been called. Removed entirely.
+
+---
+
+### Improved: applyScale() debug operations gated behind DEBUG flag
+
+`getBoundingClientRect()` and `getComputedStyle()` were called unconditionally on every
+`applyScale()` invocation (ResizeObserver, window resize, every TAKE/CUT/CLN, init).
+These force layout reflow even when the results are only used for DL() debug logs.
+Both calls now execute only when `DEBUG=true` (`?debug=1`). The `var prev` variable
+(only used in a DL() log) was also removed from the frames loop.
+
+---
+
+### Improved: _enqueue() console.logs gated behind DL()
+
+The "accepted/running/done" queue slot logs ran on every overlay button click and every
+TAKE/CUT/CLN operation regardless of debug mode. Now gated behind DL(). Error paths
+(fn rejected, fn threw, prev-slot rejected) remain unconditional.
+
+---
+
+### Improved: selectPVW() intermediate console.logs reduced
+
+Removed 8 intermediate console.log calls from selectPVW() that logged internal state
+transitions ("assigning pvwSelection", "pvwSelection assigned OK", "ovl resolved",
+"calling _createPVWFrame", "_createPVWFrame returned", "iframe-ready confirmed",
+"ABORT: key=... destroy path", "selectPVW COMPLETE", "selectPVW FINALLY").
+Kept: EXCEPTION (error), ABORT stale/unknown-key (error), green overlay-ready
+confirmed (styled success, useful at a glance). All removed logs remain as DL() if
+DEBUG=true.
+
+---
+
+### Improved: postUpdate() no longer calls renderPGMStatus/renderPGMVisibility
+
+`postUpdate()` handles ctrl-panel actions (leaderboard count, lineup index, etc.) that
+update `liveState` fields unrelated to PGM iframe presence. Calling `renderPGMStatus()`
+and `renderPGMVisibility()` on every ctrl action was redundant — SSE echo handles those
+after the server processes the update. Removed from `postUpdate()`; both functions still
+called from `onStateUpdate`, `_doTake`, `_doClean`, `_doCleanAll`.
+
+---
+
+### Added: Per-group status strip between monitors and overlay selector
+
+New `#group-strip` element shows A/B/C group live state at a glance. Each pill shows:
+- Group letter badge
+- Overlay name (or "Clear")
+- Red dot + highlighted border when live
+
+Populated by `renderGroupStrip()`, called from `onStateUpdate`, `_doTake`, `_doClean`,
+`_doCleanAll`, and `init()`.
+
+---
+
+### Added: Group badge on overlay selector buttons
+
+Each `.ovl-btn` now has `data-group="A|B|C"` set at init. CSS `::before` renders the
+group letter as a small badge in the bottom-left corner of each button, giving the
+operator immediate visual grouping context without needing to memorise which overlays
+share mutual-exclusion groups.
+
+---
+
+### Added: Dynamic CUT label showing target group
+
+`updateCutBtn()` sets the CUT button text to "CUT A", "CUT B", or "CUT C" based on the
+current PVW selection's group. Falls back to plain "CUT" when no overlay is selected.
+Called alongside `updateTakeBtn()` in `selectPVW()` and after optimistic updates in
+`_doTake`, `_doClean`, `_doCleanAll`.
+
+---
+
 ## BUILD-20260518-A (2026-05-18) — Stabilisation pass
 
 ### Fixed: console.trace() in applyScale() causing severe console noise

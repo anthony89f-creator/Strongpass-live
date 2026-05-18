@@ -312,6 +312,45 @@ body {
   content: ''; position: absolute; top: 4px; right: 4px;
   width: 4px; height: 4px; border-radius: 50%; background: var(--red-bright);
 }
+/* Group badge — bottom-left corner of each overlay button */
+.ovl-btn::before {
+  content: attr(data-group);
+  position: absolute; bottom: 3px; left: 4px;
+  font-size: 7px; font-weight: 900; letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.15); font-family: 'Barlow', sans-serif;
+  pointer-events: none;
+}
+
+/* ── GROUP STATUS STRIP ──────────────────────────────────────────────────── */
+.group-strip {
+  flex-shrink: 0; height: 18px;
+  display: flex; align-items: stretch; gap: 3px;
+}
+.grp-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
+  padding: 0 8px; min-width: 70px;
+}
+.grp-pill.live {
+  background: rgba(187,30,0,0.08);
+  border-color: rgba(187,30,0,0.3);
+}
+.grp-pill-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); flex-shrink: 0;
+}
+.grp-pill.live .grp-pill-dot { background: var(--red-bright); }
+.grp-pill-label {
+  font-size: 8px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.25); font-family: 'Barlow', sans-serif; white-space: nowrap;
+}
+.grp-pill.live .grp-pill-label { color: rgba(255,255,255,0.6); }
+.grp-pill-name {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: rgba(255,255,255,0.18); font-family: 'Barlow Condensed', sans-serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.grp-pill.live .grp-pill-name { color: var(--red-mid); }
 
 /* ── INLINE OVERLAY CONTROLS ────────────────────────────────────────────── */
 /* Contextual controls appear below selector when an overlay with controls is selected */
@@ -503,6 +542,9 @@ body {
 
   </div><!-- /monitors-section -->
 
+  <!-- Per-group live state strip -->
+  <div class="group-strip" id="group-strip"></div>
+
   <!-- Overlay selector -->
   <div class="ovl-selector-wrap">
     <div class="ovl-selector-label">Preview Select</div>
@@ -529,7 +571,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-A';
+var BUILD_ID = 'BUILD-20260518-B';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
@@ -561,6 +603,13 @@ var OVERLAYS = [
   { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', pvwFlags:['champion'],                    pgmKeys:['champion'] },
   { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
 ];
+
+// O(1) overlay lookup by key — avoids repeated OVERLAYS.find() at every transition.
+var OVL_BY_KEY = (function() {
+  var m = {};
+  OVERLAYS.forEach(function(o) { m[o.key] = o; });
+  return m;
+}());
 
 // ─── INSTRUMENTATION ─────────────────────────────────────────────────────────
 var DL = (function() {
@@ -613,19 +662,19 @@ var _queueSeq   = 0;  // monotonic counter to identify queue slots in logs
 function _enqueue(fn) {
   var seq = ++_queueSeq;
   var label = fn.name || 'anonymous';
-  console.log('[QUEUE] accepted seq=' + seq + ' fn=' + label);
+  DL('[QUEUE] accepted seq=' + seq + ' fn=' + label);
   _queue = _queue.then(
     function() {
-      console.log('[QUEUE] running seq=' + seq + ' fn=' + label);
+      DL('[QUEUE] running seq=' + seq + ' fn=' + label);
       try {
         var ret = fn();
         if (ret && typeof ret.then === 'function') {
           return ret.then(
-            function()  { console.log('[QUEUE] done seq=' + seq); },
+            function()  { DL('[QUEUE] done seq=' + seq); },
             function(e) { console.error('[QUEUE] fn rejected seq=' + seq, e); }
           );
         }
-        console.log('[QUEUE] done (sync) seq=' + seq);
+        DL('[QUEUE] done (sync) seq=' + seq);
       } catch(e) {
         console.error('[QUEUE] fn threw seq=' + seq, e);
       }
@@ -721,7 +770,7 @@ function pushToPVW(ovl) {
 // the change right away rather than on the next SSE tick (~100-500ms later).
 function _pushCurrentPVW() {
   if (!pvwSelection) return;
-  var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
+  var ovl = OVL_BY_KEY[pvwSelection];
   if (ovl) pushToPVW(ovl);
 }
 
@@ -740,9 +789,10 @@ function onStateUpdate(d) {
   try { renderPGMVisibility(); } catch(e) { console.error('[Director renderPGMVisibility EXCEPTION]', e); }
   try { renderOvlButtons(); }  catch(e) { console.error('[Director renderOvlButtons EXCEPTION]', e); }
   try { renderCtrlPanel(); }   catch(e) { console.error('[Director renderCtrlPanel EXCEPTION]', e); }
+  try { renderGroupStrip(); }  catch(e) { console.error('[Director renderGroupStrip EXCEPTION]', e); }
   // Push to active PVW via postMessage
   if (pvwSelection) {
-    var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
+    var ovl = OVL_BY_KEY[pvwSelection];
     if (ovl) { try { pushToPVW(ovl); } catch(e) { console.error('[Director pushToPVW from SSE EXCEPTION]', e); } }
   }
   // Reconstruct PGM iframes per group. Primary source: program.groups (server-tracked
@@ -750,6 +800,7 @@ function onStateUpdate(d) {
   // states where groups key is absent). Never create more than one frame per group.
   var _programGroups = (liveState.program && liveState.program.groups) || null;
 
+  var pgmChanged = false;
   _PGM_GROUP_ORDER.forEach(function(group) {
     var wantedKey;
     if (_programGroups) {
@@ -764,17 +815,18 @@ function onStateUpdate(d) {
 
     var currentKey = _pgmFrames[group] || null;
     if (wantedKey && currentKey !== wantedKey) {
-      var ovl = OVERLAYS.find(function(o) { return o.key === wantedKey; });
+      var ovl = OVL_BY_KEY[wantedKey];
       if (ovl) {
         DL('onStateUpdate: group=' + group + ' want=' + wantedKey + ' have=' + (currentKey||'none') + ' — creating PGM frame');
         _createPGMGroupFrame(ovl);
-        applyScale();
+        pgmChanged = true;
       }
     } else if (!wantedKey && currentKey) {
       DL('onStateUpdate: group=' + group + ' no longer active — destroying PGM frame');
       _destroyPGMGroup(group);
     }
   });
+  if (pgmChanged) applyScale();
 }
 
 // ─── CONTEXT STRIP ────────────────────────────────────────────────────────────
@@ -1019,18 +1071,14 @@ function _createPGMGroupFrame(ovl) {
 // id is assigned at click time (not run time) so cancel poll in _createPVWFrame
 // can detect when a newer transition has started and abort the current iframe load.
 async function selectPVW(key, id) {
-  console.log('[PVW#' + id + '] selectPVW ENTER key=' + key);
   _setLifecycleStage('[PVW#' + id + '] enter:' + key);
   DL('[PVW#' + id + '] selectPVW ENTER key=' + key + ' _pvwKey=' + _pvwKey +
      ' pvwSelection=' + pvwSelection + ' _taking=' + _taking + ' activeId=' + _activeTransitionId);
   try {
-    console.log('[PVW#' + id + '] assigning pvwSelection=' + key);
     pvwSelection = key;
-    console.log('[PVW#' + id + '] pvwSelection assigned OK = ' + pvwSelection);
     _ctrlKey     = null;
 
-    var ovl = key ? OVERLAYS.find(function(o) { return o.key === key; }) : null;
-    console.log('[PVW#' + id + '] ovl resolved = ' + (ovl ? ovl.group + '/' + ovl.key : 'null') + ' (key=' + key + ')');
+    var ovl = key ? OVL_BY_KEY[key] : null;
     if (key && !ovl) {
       console.error('[PVW#' + id + '] ABORT: missing ovl config for key=' + key);
       _setLifecycleStage('[PVW#' + id + '] abort:unknown-key');
@@ -1039,31 +1087,24 @@ async function selectPVW(key, id) {
 
     if (key && ovl) {
       if (_pvwKey === key) {
-        console.log('[PVW#' + id + '] same overlay (pvwKey=' + _pvwKey + ') — push only');
         _setLifecycleStage('[PVW#' + id + '] same-overlay:push');
         DL('[PVW#' + id + '] same overlay — pushing state, no iframe swap');
         pushToPVW(ovl);
       } else {
-        console.log('[PVW#' + id + '] calling _createPVWFrame — was pvwKey=' + _pvwKey);
         await _createPVWFrame(ovl, id);
-        console.log('[PVW#' + id + '] _createPVWFrame returned — activeId=' + _activeTransitionId);
 
         // Stale guard: if a newer selectPVW ran while we awaited _createPVWFrame, stop here.
         if (id !== _activeTransitionId) {
-          console.log('[PVW#' + id + '] ABORT: stale — active is now #' + _activeTransitionId);
+          DL('[PVW#' + id + '] ABORT: stale — active is now #' + _activeTransitionId);
           _setLifecycleStage('[PVW#' + id + '] abort:stale');
           return;
         }
 
-        // State was pushed on overlay-runtime-ready; overlay rendered; overlay-ready confirmed.
-        // SSE handler (onStateUpdate) will keep PVW current on every tick from here.
         _setLifecycleStage('[PVW#' + id + '] iframe-ready:' + key);
-        console.log('[PVW#' + id + '] iframe-ready confirmed');
         console.log('%c[PVW#' + id + '] overlay-ready confirmed — two-phase handshake complete BUILD_ID=' + BUILD_ID,
                     'background:#002200;color:#00ff88;font-weight:bold');
       }
     } else {
-      console.log('[PVW#' + id + '] ABORT: key=' + key + ' ovl=' + ovl + ' — destroy path');
       _setLifecycleStage('[PVW#' + id + '] destroy');
       _destroyPVWFrame();
     }
@@ -1077,19 +1118,16 @@ async function selectPVW(key, id) {
       cur.className   = 'monitor-current' + (key ? ' active' : '');
     }
 
-    _setLifecycleStage('[PVW#' + id + '] applyScale:' + key);
+    _setLifecycleStage('[PVW#' + id + '] COMPLETE:' + key);
     applyScale();
     renderOvlButtons();
     updateTakeBtn();
+    updateCutBtn();
     renderCtrlPanel();
-    _setLifecycleStage('[PVW#' + id + '] COMPLETE:' + key);
-    console.log('[PVW#' + id + '] selectPVW COMPLETE pvwSelection=' + pvwSelection);
   } catch(err) {
     _setLifecycleStage('[PVW#' + id + '] EXCEPTION:' + err.message);
     console.error('[PVW#' + id + '] selectPVW EXCEPTION key=' + key, err.message, err);
   } finally {
-    console.log('[PVW#' + id + '] selectPVW FINALLY activeId=' + _activeTransitionId +
-                ' pvw-frames=' + document.querySelectorAll('.pvw-frame').length);
     DL('[PVW#' + id + '] selectPVW FINALLY — activeId=' + _activeTransitionId +
        ' pvw-frames=' + document.querySelectorAll('.pvw-frame').length);
     _hudUpdate();
@@ -1099,6 +1137,30 @@ async function selectPVW(key, id) {
 // ─── TAKE BUTTON STATE ────────────────────────────────────────────────────────
 function updateTakeBtn() {
   document.getElementById('take-btn').classList.toggle('ready', pvwSelection !== null);
+}
+
+function updateCutBtn() {
+  var ovl = pvwSelection ? OVL_BY_KEY[pvwSelection] : null;
+  var btn = document.getElementById('cut-btn');
+  if (btn) btn.textContent = ovl ? 'CUT ' + ovl.group : 'CUT';
+}
+
+function renderGroupStrip() {
+  var strip = document.getElementById('group-strip');
+  if (!strip) return;
+  var groups = (liveState.program && liveState.program.groups) || {};
+  strip.innerHTML = '';
+  _PGM_GROUP_ORDER.forEach(function(g) {
+    var key  = groups[g] || null;
+    var ovl  = key ? OVL_BY_KEY[key] : null;
+    var pill = document.createElement('div');
+    pill.className = 'grp-pill' + (key ? ' live' : '');
+    var dot   = document.createElement('div');  dot.className = 'grp-pill-dot';
+    var label = document.createElement('div');  label.className = 'grp-pill-label';  label.textContent = g;
+    var name  = document.createElement('div');  name.className = 'grp-pill-name';    name.textContent = ovl ? ovl.label : 'Clear';
+    pill.appendChild(dot); pill.appendChild(label); pill.appendChild(name);
+    strip.appendChild(pill);
+  });
 }
 
 // ─── TAKE — transition PVW selection to program ──────────────────────────────
@@ -1117,7 +1179,7 @@ async function _doTake() {
     DL('_doTake() BLOCKED — _taking=' + _taking + ' pvwSelection=' + pvwSelection);
     return;
   }
-  var ovl = OVERLAYS.find(function(o) { return o.key === pvwSelection; });
+  var ovl = OVL_BY_KEY[pvwSelection];
   if (!ovl) { DL('_doTake() BLOCKED — no ovl found for key=' + pvwSelection); return; }
 
   _taking = true;
@@ -1182,6 +1244,8 @@ async function _doTake() {
     try { renderPGMStatus(); }   catch(e) { console.error('[_doTake renderPGMStatus]', e); }
     try { renderPGMVisibility(); } catch(e) { console.error('[_doTake renderPGMVisibility]', e); }
     try { renderOvlButtons(); }  catch(e) { console.error('[_doTake renderOvlButtons]', e); }
+    try { renderGroupStrip(); }  catch(e) {}
+    try { updateCutBtn(); }      catch(e) {}
     showStatus('Taken live — ' + ovl.label, true);
     DL('_doTake() SUCCESS complete');
 
@@ -1203,7 +1267,7 @@ function take() { DL('take() enqueued'); _enqueue(_doTake); }
 // Calls /broadcast/clean which clears all director overlay flags atomically.
 async function _doClean() {
   // Determine which group to clean from the current PVW selection.
-  var ovl = pvwSelection ? OVERLAYS.find(function(o) { return o.key === pvwSelection; }) : null;
+  var ovl = pvwSelection ? OVL_BY_KEY[pvwSelection] : null;
   if (!ovl) { DL('_doClean() BLOCKED — no pvwSelection'); return; }
   var group = ovl.group;
   DL('_doClean() ENTER — group=' + group + ' pvwSelection=' + pvwSelection);
@@ -1240,7 +1304,7 @@ async function _doClean() {
     var _cGroups = Object.assign({}, _cProg.groups || {});
     delete _cGroups[group];
     var _cScene  = _cProg.scene;
-    var _cSceneOvl = _cScene ? OVERLAYS.find(function(o) { return o.key === _cScene; }) : null;
+    var _cSceneOvl = _cScene ? OVL_BY_KEY[_cScene] : null;
     var _newScene  = (_cSceneOvl && _cSceneOvl.group === group) ? null : _cScene;
     liveState.program = { scene: _newScene, groups: _cGroups, takenAt: _cProg.takenAt, cleanAt: result.cleanAt };
     _destroyPGMGroup(group);
@@ -1249,6 +1313,8 @@ async function _doClean() {
     try { renderPGMStatus(); }   catch(e) { console.error('[_doClean renderPGMStatus]', e); }
     try { renderPGMVisibility(); } catch(e) { console.error('[_doClean renderPGMVisibility]', e); }
     try { renderOvlButtons(); }  catch(e) { console.error('[_doClean renderOvlButtons]', e); }
+    try { renderGroupStrip(); }  catch(e) {}
+    try { updateCutBtn(); }      catch(e) {}
 
     var btnCount = document.querySelectorAll('.ovl-btn').length;
     DL('_doClean() post-render btnCount=' + btnCount + ' (expected ' + OVERLAYS.length + ')');
@@ -1298,6 +1364,8 @@ async function _doCleanAll() {
     try { renderPGMStatus(); }     catch(e) { console.error('[_doCleanAll renderPGMStatus]', e); }
     try { renderPGMVisibility(); } catch(e) {}
     try { renderOvlButtons(); }    catch(e) { console.error('[_doCleanAll renderOvlButtons]', e); }
+    try { renderGroupStrip(); }    catch(e) {}
+    try { updateCutBtn(); }        catch(e) {}
     showStatus('All groups clean', true);
     DL('_doCleanAll() SUCCESS');
   } catch(e) {
@@ -1321,89 +1389,35 @@ function showStatus(msg, ok) {
 
 // ─── SCALE — fit 1920×1080 iframes into monitor bodies ───────────────────────
 
-// Apply scale to iframe's internal body — the actual render root in PVW context.
-// Host iframe transform alone can be composited separately by the browser, making
-// the content appear unscaled inside its own 1920×1080 viewport.
-function _applyScaleToBody(frame, scale) {
-  try {
-    var iDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
-    if (!iDoc || !iDoc.body) {
-      DL('[SCALE-BODY] ' + frame.id + ' — no contentDocument.body (not loaded yet)');
-      return;
-    }
-    var body = iDoc.body;
-    var view = iDoc.defaultView;
-    var cs   = view ? view.getComputedStyle(body) : null;
-    DL('[SCALE-BODY] ' + frame.id +
-       ' tag=' + body.tagName + ' class="' + (body.className || '') + '"' +
-       ' offsetW=' + body.offsetWidth + ' offsetH=' + body.offsetHeight +
-       ' computedTransform="'  + (cs ? cs.transform       : 'no-view') + '"' +
-       ' computedOrigin="'     + (cs ? cs.transformOrigin : 'no-view') + '"');
-
-    body.style.transform       = 'scale(' + scale + ')';
-    body.style.transformOrigin = 'top left';
-
-    var csA = view ? view.getComputedStyle(body) : null;
-    DL('[SCALE-BODY] ' + frame.id + ' AFTER' +
-       ' computedTransform="' + (csA ? csA.transform : '?') + '"' +
-       ' offsetW=' + body.offsetWidth + ' offsetH=' + body.offsetHeight);
-
-    if (_dbgOn) body.style.outline = '3px solid blue';
-
-    // MutationObserver: detect if anything wipes the transform after we set it
-    if (window.MutationObserver && !frame._scaleObserver) {
-      var mo = new MutationObserver(function() {
-        if (body.style.transform !== 'scale(' + scale + ')') {
-          DL('[SCALE-BODY-MO] TRANSFORM WIPED on ' + frame.id + ' — restoring scale(' + scale + ')');
-          body.style.transform       = 'scale(' + scale + ')';
-          body.style.transformOrigin = 'top left';
-        }
-      });
-      mo.observe(body, { attributes: true, attributeFilter: ['style'] });
-      frame._scaleObserver = mo;
-    }
-  } catch(e) {
-    DL('[SCALE-BODY] ' + frame.id + ' EXCEPTION: ' + e.message);
-  }
-}
-
 function applyScale() {
   var pvwBody = document.getElementById('pvw-body');
   if (!pvwBody) { DL('applyScale — ABORT: pvwBody not in DOM'); return; }
 
   var w     = pvwBody.offsetWidth;
-  var h     = pvwBody.offsetHeight;
-  var brc   = pvwBody.getBoundingClientRect();
   var scale = w / 1920;
   var frames = document.querySelectorAll('.ovl-frame');
-
-  DL('[SCALE] pvwBody.offsetW=' + w + ' offsetH=' + h +
-     ' bRect=' + Math.round(brc.width) + 'x' + Math.round(brc.height) +
-     ' → scale=' + scale.toFixed(6) + ' frames=' + frames.length);
 
   if (w === 0) {
     console.error('[SCALE] pvwBody.offsetWidth=0 — container is collapsed; transform will be scale(0)');
   }
 
-  // Verify pvw-screen overflow — clipping prevents scaled content from showing
-  var pvwScreen = document.getElementById('pvw-screen');
-  if (pvwScreen) {
-    var scrBrc = pvwScreen.getBoundingClientRect();
-    var scrOvf = window.getComputedStyle(pvwScreen).overflow;
-    DL('[SCALE] pvwScreen overflow=' + scrOvf +
-       ' bRect=' + Math.round(scrBrc.width) + 'x' + Math.round(scrBrc.height));
+  if (DEBUG) {
+    var brc = pvwBody.getBoundingClientRect();
+    DL('[SCALE] pvwBody.offsetW=' + w + ' offsetH=' + pvwBody.offsetHeight +
+       ' bRect=' + Math.round(brc.width) + 'x' + Math.round(brc.height) +
+       ' → scale=' + scale.toFixed(6) + ' frames=' + frames.length);
+    var pvwScreen = document.getElementById('pvw-screen');
+    if (pvwScreen) {
+      var scrOvf = window.getComputedStyle(pvwScreen).overflow;
+      DL('[SCALE] pvwScreen overflow=' + scrOvf);
+    }
   }
 
   frames.forEach(function(el) {
-    // Scale the host iframe element. The iframe is 1920×1080 in CSS; scaling by
-    // (monitorWidth/1920) makes it visually fill the monitor at the correct aspect ratio.
-    // Do NOT also scale contentDocument.body — that produces double-scaling (scale²).
-    var prev = el.style.transform || 'none';
     el.style.transform       = 'scale(' + scale + ')';
     el.style.transformOrigin = 'top left';
     if (_dbgOn) el.style.outline = '3px solid red';
-    DL('[SCALE]   iframe ' + el.id + ': "' + prev + '" → "scale(' + scale.toFixed(5) + ')"' +
-       ' vis=' + el.style.visibility);
+    DL('[SCALE]   iframe ' + el.id + ' → scale(' + scale.toFixed(5) + ')');
   });
 
   _dbgUpdateHUD();
@@ -1471,7 +1485,7 @@ function _dbgToggle() {
   if (_dbgOn) _hudUpdate();
   DL('DEBUG HUD ' + (_dbgOn ? 'ON — press D again to hide' : 'OFF'));
 
-  // Debug borders: yellow=pvwBody, orange=pvwScreen, red=iframe, blue=body (applied in applyScale/_applyScaleToBody)
+  // Debug borders: yellow=pvwBody, orange=pvwScreen, red=iframe
   var pvwBody   = document.getElementById('pvw-body');
   var pvwScreen = document.getElementById('pvw-screen');
   if (pvwBody)   pvwBody.style.outline   = _dbgOn ? '3px solid yellow' : '';
@@ -1590,7 +1604,7 @@ async function postUpdate(obj) {
     if (r.ok) {
       Object.assign(liveState, obj);
       _pushCurrentPVW();  // reflect change in PVW immediately, before SSE round-trip
-      renderCtrlPanel(); renderOvlButtons(); renderPGMStatus(); renderPGMVisibility();
+      renderCtrlPanel(); renderOvlButtons();
     } else if (r.status === 401 || r.status === 403) {
       document.getElementById('auth-notice').classList.add('visible');
       showStatus('Login required', false);
@@ -1644,20 +1658,16 @@ document.addEventListener('keydown', function(e) {
   var selectorEl = document.getElementById('ovl-selector');
   OVERLAYS.forEach(function(ovl) {
     var btn = document.createElement('button');
-    btn.className   = 'ovl-btn';
-    btn.dataset.key = ovl.key;
-    btn.textContent = ovl.label;
+    btn.className        = 'ovl-btn';
+    btn.dataset.key      = ovl.key;
+    btn.dataset.group    = ovl.group;
+    btn.textContent      = ovl.label;
     btn.addEventListener('click', (function(key) {
       return function() {
-        console.log('[CLICK] ' + key + ' — raw DOM event fired');
         // Increment at click time — any in-flight _createPVWFrame cancel poll detects this immediately.
         var id = ++_activeTransitionId;
-        var btnCount = document.querySelectorAll('.ovl-btn').length;
-        console.log('[CLICK] ' + key + ' id=#' + id + ' _taking=' + _taking +
-                    ' pvwSel=' + pvwSelection + ' btnCount=' + btnCount);
         DL('[PVW#' + id + '] ovl-btn CLICK key=' + key);
         _enqueue(function selectPVW_queued() { return selectPVW(key, id); });
-        console.log('[QUEUE] enqueue called for key=' + key + ' id=#' + id);
       };
     }(ovl.key)));
     selectorEl.appendChild(btn);
@@ -1705,6 +1715,7 @@ document.addEventListener('keydown', function(e) {
   }());
 
   setTimeout(applyScale, 80);
+  renderGroupStrip();
   DL('init() — calling fetchState() and connect()');
   fetchState();
   connect();
