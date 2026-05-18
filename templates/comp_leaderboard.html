@@ -8,203 +8,464 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
+/* ═══════════════════════════════════════════════════════════════════════════
+   STRONGPASS ARENA LEADERBOARD
+   55" display — broadcast-grade — 15-30ft viewing distance
+   GPU: animations use only transform + opacity
+   DOM: version-gated updates; dirty-skip on no-change ticks
+   Sticky: rank + athlete columns survive horizontal scroll
+═══════════════════════════════════════════════════════════════════════════ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
 :root {
-  --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#222;
-  --border:rgba(255,255,255,0.10); --text:#F0F0F0; --dim:#999;
-  --gold:#F5C842; --gold-dim:rgba(245,200,66,0.12); --gold-border:rgba(245,200,66,0.3);
-  --silver:#C8C8C8; --bronze:#CD7F32; --blue:#4488FF;
-  --red-border:rgba(187,30,0,0.4);
-}
-html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+  /* — Surface — */
+  --bg:        #03030A;
+  --surface:   #070710;
+  --surface2:  #0D0D1C;
+  --surface3:  #111122;
 
-/* ── TOPBAR ── */
+  /* — Borders — */
+  --border:    rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.13);
+
+  /* — Text — */
+  --text:  #F0F0FA;
+  --dim:   #55557A;
+  --dim2:  #8888AA;
+
+  /* — Rank colors — */
+  --gold:          #F5C218;
+  --gold-glow:     rgba(245,194,24,0.28);
+  --gold-bg:       rgba(245,194,24,0.055);
+  --gold-border:   rgba(245,194,24,0.55);
+
+  --silver:        #C0C8DC;
+  --silver-bg:     rgba(192,200,220,0.05);
+  --silver-border: rgba(192,200,220,0.38);
+
+  --bronze:        #C88B28;
+  --bronze-bg:     rgba(200,139,40,0.06);
+  --bronze-border: rgba(200,139,40,0.42);
+
+  /* — Accent — */
+  --blue:    #00BBFF;
+  --blue-bg: rgba(0,187,255,0.09);
+
+  /* — Typography scale — arena-grade — */
+  --t-rank-top:  64px;   /* gold/silver/bronze rank numerals */
+  --t-rank:      50px;   /* other rank numerals */
+  --t-name:      42px;   /* athlete name */
+  --t-raw:       28px;   /* raw event score */
+  --t-unit:      16px;   /* units (kg, m, s) */
+  --t-pts:       18px;   /* points label */
+  --t-total:     46px;   /* total points */
+  --t-header:    12px;   /* column header caps */
+
+  /* — Layout — */
+  --row-h:     96px;
+  --rank-w:    88px;
+  --name-w:    290px;
+  --total-w:   108px;
+  --ev-min:    154px;
+  --strip:     5px;      /* left rank indicator width */
+  --topbar-h:  53px;     /* updated by JS on load */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  min-height: 100vh;
+  /* Subtle crosshatch — broadcast texture, near-invisible, no repaint cost */
+  background-image:
+    repeating-linear-gradient(-45deg, transparent, transparent 3px,
+      rgba(255,255,255,0.007) 3px, rgba(255,255,255,0.007) 4px);
+}
+
+/* ── TOPBAR ───────────────────────────────────────────────────────────────── */
 .topbar {
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:10px 2%; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background: rgba(7,7,16,0.96);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
-.topbar a { color:var(--dim); text-decoration:none; font-size:14px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; transition:color 0.1s; }
-.topbar a:hover { color:var(--text); }
-.topbar-nav-group { display:flex; align-items:center; gap:14px; }
-.topbar-nav-group .sep { color:rgba(255,255,255,0.15); user-select:none; }
-.topbar-title { font-size:18px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; letter-spacing:0.05em; }
+.topbar a {
+  color: var(--dim2); text-decoration: none;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; transition: color 0.15s;
+}
+.topbar a:hover { color: var(--text); }
+.topbar-nav-group { display: flex; align-items: center; gap: 14px; }
+.topbar-nav-group .sep { color: var(--border-hi); user-select: none; }
+.topbar-title {
+  font-size: 18px; font-weight: 900; text-transform: uppercase;
+  color: var(--blue); margin-right: auto; letter-spacing: 0.05em;
+}
 
-/* ── MAIN ── */
-.main { padding:16px 2%; max-width:none; width:100%; display:flex; flex-direction:column; gap:14px; }
+/* ── MAIN ─────────────────────────────────────────────────────────────────── */
+.main { padding: 18px 2%; width: 100%; display: flex; flex-direction: column; gap: 16px; }
 
-/* ── CATEGORY TABS ── */
-.filter-row { display:flex; gap:8px; flex-wrap:wrap; }
+/* ── CATEGORY TABS ────────────────────────────────────────────────────────── */
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .filter-btn {
-  padding:10px 22px; border-radius:8px; border:1px solid var(--border);
-  background:var(--surface); color:var(--dim);
-  font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800;
-  letter-spacing:0.06em; text-transform:uppercase; text-decoration:none;
-  transition:all 0.15s;
+  padding: 10px 22px; border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--surface); color: var(--dim2);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.filter-btn:hover { color:var(--text); border-color:rgba(255,255,255,0.22); }
-.filter-btn.active { background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
-
-/* ── OVERALL SIMPLE VIEW ── */
-.section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-.lb-row { display:flex; align-items:center; min-height:66px; border-bottom:1px solid var(--border); padding:10px 0; }
-.lb-row:last-child { border-bottom:none; }
-.lb-row.pos-1 { border-left:3px solid rgba(245,200,66,0.7); }
-.lb-row.pos-2 { border-left:3px solid rgba(200,200,200,0.5); }
-.lb-row.pos-3 { border-left:3px solid rgba(205,127,50,0.5); }
-.lb-rank { width:64px; text-align:center; font-size:28px; font-weight:900; color:var(--dim); flex-shrink:0; }
-.lb-row.pos-1 .lb-rank { color:var(--gold); }
-.lb-row.pos-2 .lb-rank { color:var(--silver); }
-.lb-row.pos-3 .lb-rank { color:var(--bronze); }
-.lb-info { flex:1; padding:0 16px; min-width:0; }
-.lb-name { font-size:26px; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lb-cat { font-size:13px; color:var(--dim); font-family:'Barlow',sans-serif; margin-top:2px; }
-.lb-score { padding-right:28px; font-size:30px; font-weight:900; color:var(--dim); white-space:nowrap; }
-.lb-row.pos-1 .lb-score { color:var(--gold); }
-.lb-row.pos-2 .lb-score { color:var(--silver); }
-.lb-row.pos-3 .lb-score { color:var(--bronze); }
-.empty { padding:40px; text-align:center; color:var(--dim); font-family:'Barlow',sans-serif; font-size:15px; }
-
-/* ── DETAILED MATRIX TABLE ──
-   Column order: Rank | Athlete | Ev1 | Ev2 | ... | EvN | Total
-   Total is on the FAR RIGHT — shows running progression left → right */
-.results-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.ev-table-header, .ev-table-row {
-  display:flex; align-items:stretch; min-width:700px;
-  border:1px solid var(--border); margin-bottom:2px; overflow:hidden; border-radius:6px;
+.filter-btn:hover { color: var(--text); border-color: var(--border-hi); background: var(--surface2); }
+.filter-btn.active {
+  background: var(--blue-bg); border-color: rgba(0,187,255,0.3);
+  color: var(--blue);
 }
-.ev-table-header { background:var(--surface2); margin-bottom:8px; border-radius:8px; }
-.ev-table-row:hover { background:rgba(255,255,255,0.02); }
-.ev-table-row.rank-1 { border-left:3px solid rgba(245,200,66,0.6); }
-.ev-table-row.rank-2 { border-left:3px solid rgba(200,200,200,0.4); }
-.ev-table-row.rank-3 { border-left:3px solid rgba(205,127,50,0.4); }
 
-/* ── RANK COLUMN ── */
-.ev-head-rank { width:52px; min-width:52px; flex-shrink:0; padding:12px 6px; border-right:1px solid var(--border); }
+/* Live indicator — right side of filter row */
+.live-pill {
+  display: flex; align-items: center; gap: 6px; margin-left: auto;
+  padding: 5px 12px; border-radius: 3px;
+  border: 1px solid rgba(0,187,255,0.18);
+  background: rgba(0,187,255,0.05);
+}
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: blink 2s infinite; flex-shrink: 0; }
+.live-text { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue); }
+@keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.45;transform:scale(0.8)} }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   OVERALL VIEW — full-width ranked slabs
+   No category selected; sorted by total points across all events
+════════════════════════════════════════════════════════════════════════════ */
+.overall-table { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+
+.overall-row {
+  display: flex; align-items: stretch; min-height: 100px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-left: var(--strip) solid rgba(255,255,255,0.06);
+  background: var(--surface);
+  position: relative; overflow: hidden;
+  /* GPU layer: no reflow on hover — only background changes */
+  transition: border-color 0.15s;
+  cursor: default;
+}
+.overall-row:hover { border-color: var(--border-hi); }
+
+.overall-row.r1 { border-left-color: var(--gold-border);   background: var(--gold-bg);   }
+.overall-row.r2 { border-left-color: var(--silver-border); background: var(--silver-bg); }
+.overall-row.r3 { border-left-color: var(--bronze-border); background: var(--bronze-bg); }
+
+/* Watermark rank number — absolute, behind all content */
+.overall-row::before {
+  content: attr(data-rank);
+  position: absolute; right: 16px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 180px; font-weight: 900; letter-spacing: -0.05em;
+  font-family: 'Barlow Condensed', sans-serif; line-height: 1;
+  color: rgba(255,255,255,0.022);
+  pointer-events: none; user-select: none;
+  z-index: 0;
+}
+
+/* Rank numeral */
+.ov-rank {
+  width: 110px; min-width: 110px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--t-rank-top); font-weight: 900; letter-spacing: -0.02em;
+  color: var(--dim); position: relative; z-index: 1;
+}
+.overall-row.r1 .ov-rank { color: var(--gold);   text-shadow: 0 0 28px var(--gold-glow); }
+.overall-row.r2 .ov-rank { color: var(--silver); }
+.overall-row.r3 .ov-rank { color: var(--bronze); }
+
+/* Athlete info */
+.ov-info {
+  flex: 1; padding: 0 24px; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  position: relative; z-index: 1;
+}
+.ov-name {
+  font-size: var(--t-name); font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.02em; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ov-cat {
+  font-size: 14px; font-weight: 500; color: var(--dim2);
+  font-family: 'Barlow', sans-serif; margin-top: 4px; letter-spacing: 0.04em;
+}
+
+/* Score */
+.ov-score {
+  padding-right: 40px; display: flex; flex-direction: column;
+  align-items: flex-end; justify-content: center;
+  flex-shrink: 0; position: relative; z-index: 1;
+}
+.ov-score-val {
+  font-size: 56px; font-weight: 900; line-height: 1;
+  letter-spacing: -0.02em; color: var(--dim);
+}
+.overall-row.r1 .ov-score-val { color: var(--gold);   }
+.overall-row.r2 .ov-score-val { color: var(--silver); }
+.overall-row.r3 .ov-score-val { color: var(--bronze); }
+.ov-score-unit {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--dim); margin-top: 3px;
+}
+
+.empty {
+  padding: 60px; text-align: center;
+  color: var(--dim); font-family: 'Barlow', sans-serif; font-size: 16px;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   DETAILED MATRIX VIEW — left-to-right event progression
+   Sticky rank + athlete columns  |  horizontal scroll for wide event tables
+   Event cell: raw score (large) above points (gold) + per-event rank
+════════════════════════════════════════════════════════════════════════════ */
+
+/* Scroll container */
+.results-table {
+  width: 100%; overflow-x: auto; overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  /* Promote to own compositor layer — prevents scroll jank */
+  transform: translateZ(0);
+}
+
+/* ── HEADER ROW ── */
+.ev-table-header {
+  display: flex; align-items: stretch;
+  min-width: max-content;
+  background: var(--surface2);
+  border-bottom: 2px solid var(--border-hi);
+  position: sticky; top: var(--topbar-h); z-index: 10;
+}
+
+.th-rank {
+  width: var(--rank-w); min-width: var(--rank-w); flex-shrink: 0;
+  position: sticky; left: 0; z-index: 12;
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  /* Left strip placeholder to keep alignment */
+  border-left: var(--strip) solid transparent;
+}
+.th-name {
+  width: var(--name-w); min-width: 200px; flex-shrink: 0;
+  position: sticky; left: var(--rank-w); z-index: 12;
+  background: var(--surface2);
+  padding: 12px 20px;
+  font-size: var(--t-header); font-weight: 900;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim2);
+  display: flex; align-items: center;
+  border-right: 2px solid var(--border-hi);
+}
+.th-events { display: flex; flex: 1; }
+.th-event {
+  flex: 1; min-width: var(--ev-min);
+  padding: 12px 16px;
+  font-size: var(--t-header); font-weight: 900;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--dim2); display: flex; align-items: center;
+  border-right: 1px solid var(--border); line-height: 1.3;
+}
+.th-event:last-child { border-right: 1px solid var(--border); }
+.th-total {
+  width: var(--total-w); min-width: var(--total-w); flex-shrink: 0;
+  border-left: 2px solid var(--border-hi);
+  padding: 12px;
+  font-size: var(--t-header); font-weight: 900;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--gold); display: flex; align-items: center; justify-content: center;
+}
+
+/* ── DATA ROWS ── */
+.ev-table-row {
+  display: flex; align-items: stretch;
+  min-height: var(--row-h); min-width: max-content;
+  border-bottom: 1px solid var(--border);
+  /* CSS custom property for sticky-cell background inheritance */
+  --row-bg: var(--surface);
+  background: var(--row-bg);
+  /* Rank accent strip on left */
+  border-left: var(--strip) solid rgba(255,255,255,0.05);
+  transition: border-color 0.15s;
+}
+.ev-table-row:last-child { border-bottom: none; }
+
+/* Rank color assignments */
+.ev-table-row.rank-1 { border-left-color: var(--gold-border);   --row-bg: var(--gold-bg);   }
+.ev-table-row.rank-2 { border-left-color: var(--silver-border); --row-bg: var(--silver-bg); }
+.ev-table-row.rank-3 { border-left-color: var(--bronze-border); --row-bg: var(--bronze-bg); }
+
+/* Sticky rank column */
 .ev-rank {
-  width:52px; min-width:52px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center;
-  font-size:22px; font-weight:900; color:var(--dim);
-  border-right:1px solid var(--border);
+  width: var(--rank-w); min-width: var(--rank-w); flex-shrink: 0;
+  position: sticky; left: 0; z-index: 4;
+  background: var(--row-bg); /* inherits via CSS custom property */
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--t-rank); font-weight: 900; letter-spacing: -0.02em;
+  color: var(--dim);
+  border-right: 1px solid var(--border);
 }
-.ev-rank.r1 { color:var(--gold); }
-.ev-rank.r2 { color:var(--silver); }
-.ev-rank.r3 { color:var(--bronze); }
+.ev-rank.r1 { font-size: var(--t-rank-top); color: var(--gold);   text-shadow: 0 0 22px var(--gold-glow); }
+.ev-rank.r2 { font-size: var(--t-rank-top); color: var(--silver); }
+.ev-rank.r3 { font-size: var(--t-rank-top); color: var(--bronze); }
 
-/* ── ATHLETE COLUMN ── */
-.ev-head-name {
-  width:220px; min-width:180px; padding:12px 16px; border-right:1px solid var(--border);
-  font-size:12px; font-weight:900; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim);
-  display:flex; align-items:center;
-}
+/* Sticky athlete name column */
 .ev-name-col {
-  width:220px; min-width:180px; padding:14px 16px;
-  font-size:21px; font-weight:800; text-transform:uppercase;
-  border-right:1px solid var(--border);
-  display:flex; align-items:center;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  width: var(--name-w); min-width: 200px; flex-shrink: 0;
+  position: sticky; left: var(--rank-w); z-index: 4;
+  background: var(--row-bg);
+  padding: 16px 20px;
+  display: flex; flex-direction: column; justify-content: center;
+  border-right: 2px solid var(--border-hi);
+  /* Right shadow to signal scroll depth */
+  box-shadow: 4px 0 12px rgba(0,0,0,0.35);
+}
+.ev-name-text {
+  font-size: var(--t-name); font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.02em; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ── EVENT COLUMNS (middle) ── */
-.ev-head-events { flex:1; display:flex; }
-.ev-head-event {
-  flex:1; min-width:150px; padding:10px 12px; text-align:left;
-  border-right:1px solid var(--border);
-  font-size:13px; font-weight:900; letter-spacing:0.07em; text-transform:uppercase;
-  color:rgba(255,255,255,0.75); line-height:1.25;
-  display:flex; align-items:center;
-}
-.ev-head-event:last-child { border-right:1px solid var(--border); }
-.ev-events { flex:1; display:flex; }
+/* Event data columns */
+.ev-events { display: flex; flex: 1; }
 .ev-event-cell {
-  flex:1; min-width:150px; padding:12px 14px;
-  border-right:1px solid var(--border);
-  display:flex; flex-direction:row; align-items:center; flex-wrap:wrap;
-  gap:6px;
+  flex: 1; min-width: var(--ev-min);
+  padding: 14px 16px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; justify-content: center; gap: 5px;
 }
-.ev-event-cell:last-child { border-right:1px solid var(--border); }
+.ev-event-cell:last-child { border-right: 1px solid var(--border); }
 
-/* ── TOTAL COLUMN (far right) ── */
-.ev-head-total {
-  width:90px; min-width:80px; flex-shrink:0; padding:12px 10px; border-left:1px solid var(--border);
-  font-size:12px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase;
-  color:var(--gold); text-align:center; display:flex; align-items:center; justify-content:center;
-}
-.ev-total-col {
-  width:90px; min-width:80px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; flex-direction:column;
-  border-left:1px solid var(--border); padding:10px 6px; gap:2px;
-}
-.ev-total-pts { font-size:26px; font-weight:900; color:var(--gold); line-height:1; }
-.ev-total-lbl { font-size:10px; color:var(--dim); letter-spacing:0.16em; text-transform:uppercase; font-family:'Barlow',sans-serif; }
-
-/* ── CELL CONTENT — inline horizontal layout ──
-   Format: "300kg × 8  ·  20 pts  ·  #1"
-   Raw result is primary, points secondary, rank tertiary */
+/* Cell content — stacked: raw value on top, points + rank below */
 .cell-raw {
-  font-size:18px; font-weight:800; color:var(--text); line-height:1;
-  white-space:nowrap;
+  font-size: var(--t-raw); font-weight: 800; color: var(--text);
+  line-height: 1; white-space: nowrap;
 }
-.cell-unit { font-size:13px; font-weight:700; color:var(--dim); margin-left:1px; }
-.cell-dot { color:rgba(255,255,255,0.18); font-size:13px; flex-shrink:0; }
+.cell-unit { font-size: var(--t-unit); font-weight: 600; color: var(--dim2); margin-left: 2px; }
+.cell-pts-row { display: flex; align-items: center; gap: 8px; }
 .cell-pts {
-  font-size:14px; font-weight:900; color:rgba(245,200,66,0.65); line-height:1;
-  white-space:nowrap;
+  font-size: var(--t-pts); font-weight: 900;
+  color: rgba(245,194,24,0.55); line-height: 1; white-space: nowrap;
 }
-.cell-pts.top { color:var(--gold); }
-.cell-rank { font-size:12px; font-weight:700; color:var(--dim); white-space:nowrap; font-family:'Barlow',sans-serif; }
+.cell-pts.top { color: var(--gold); }
+.cell-ev-rank {
+  font-size: 12px; font-weight: 700; color: var(--dim);
+  font-family: 'Barlow', sans-serif;
+}
 .cell-dns {
-  font-size:13px; font-weight:800; letter-spacing:0.1em; color:var(--blue);
-  background:rgba(68,136,255,0.1); padding:3px 8px; border-radius:3px;
+  font-size: 14px; font-weight: 800; letter-spacing: 0.1em;
+  color: var(--blue); background: rgba(0,187,255,0.1);
+  padding: 4px 10px; border-radius: 3px; align-self: flex-start;
 }
 .cell-dnf {
-  font-size:13px; font-weight:800; letter-spacing:0.1em; color:#FF4422;
-  background:rgba(255,68,34,0.1); padding:3px 8px; border-radius:3px;
+  font-size: 14px; font-weight: 800; letter-spacing: 0.1em;
+  color: #FF3322; background: rgba(255,51,34,0.1);
+  padding: 4px 10px; border-radius: 3px; align-self: flex-start;
 }
-.cell-empty { font-size:18px; color:rgba(255,255,255,0.12); }
+.cell-empty { font-size: 22px; color: rgba(255,255,255,0.1); }
 
-@media(max-width:700px) {
-  .main { padding:10px 3%; }
-  .lb-row { min-height:54px; }
-  .lb-rank { width:46px; font-size:22px; }
-  .lb-name { font-size:20px; }
-  .lb-score { font-size:22px; padding-right:14px; }
-  .filter-btn { font-size:13px; padding:8px 14px; }
+/* Total column — far right, gold */
+.ev-total-col {
+  width: var(--total-w); min-width: var(--total-w); flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-left: 2px solid var(--border-hi);
+  padding: 10px 8px; gap: 2px;
+}
+.ev-total-pts {
+  font-size: var(--t-total); font-weight: 900; color: var(--gold);
+  line-height: 1; letter-spacing: -0.02em;
+}
+.ev-total-lbl {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--dim); font-family: 'Barlow', sans-serif;
+}
+
+/* ── ROW ENTRANCE — GPU-only (transform + opacity) ── */
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ev-table-row, .overall-row {
+  animation: row-in 0.28s cubic-bezier(0.22,1,0.36,1) both;
+}
+/* Staggered cascade — first 10 rows */
+.ev-table-row:nth-child(2),  .overall-row:nth-child(2)  { animation-delay: 0.04s; }
+.ev-table-row:nth-child(3),  .overall-row:nth-child(3)  { animation-delay: 0.08s; }
+.ev-table-row:nth-child(4),  .overall-row:nth-child(4)  { animation-delay: 0.12s; }
+.ev-table-row:nth-child(5),  .overall-row:nth-child(5)  { animation-delay: 0.16s; }
+.ev-table-row:nth-child(6),  .overall-row:nth-child(6)  { animation-delay: 0.20s; }
+.ev-table-row:nth-child(7),  .overall-row:nth-child(7)  { animation-delay: 0.24s; }
+.ev-table-row:nth-child(8),  .overall-row:nth-child(8)  { animation-delay: 0.27s; }
+.ev-table-row:nth-child(9),  .overall-row:nth-child(9)  { animation-delay: 0.30s; }
+.ev-table-row:nth-child(10), .overall-row:nth-child(10) { animation-delay: 0.33s; }
+.ev-table-row:nth-child(n+11), .overall-row:nth-child(n+11) { animation-delay: 0.36s; }
+
+/* ── MOBILE — collapse to operator-scale ── */
+@media (max-width: 700px) {
+  :root {
+    --t-rank-top: 44px; --t-rank: 36px; --t-name: 28px;
+    --t-raw: 22px;  --t-pts: 15px;  --t-total: 32px;
+    --row-h: 72px;  --rank-w: 64px;  --name-w: 200px; --total-w: 88px;
+  }
+  .main { padding: 10px 3%; }
+  .ov-score-val { font-size: 38px; }
+  .ov-name      { font-size: 28px; }
+  .ov-rank      { width: 80px; min-width: 80px; }
+  .filter-btn   { font-size: 13px; padding: 8px 14px; }
+  .live-pill    { display: none; }
 }
 </style>
 </head>
 <body>
+
 <div class="topbar">
   <span class="topbar-title">Leaderboard</span>
   <a href="/">← Home</a>
   <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run">Run</a></span>
   <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
 </div>
+
 <div class="main">
+
   <div class="filter-row">
     <a href="/comp/leaderboard" class="filter-btn {% if not selected_cat %}active{% endif %}">Overall</a>
     {% for cat in category_order %}
     <a href="/comp/leaderboard?category={{ cat }}" class="filter-btn {% if selected_cat==cat %}active{% endif %}">{{ cat }}</a>
     {% endfor %}
+    <div class="live-pill">
+      <div class="live-dot"></div>
+      <span class="live-text">Live</span>
+    </div>
   </div>
 
   {% if selected_cat and detailed_rows %}
-  <!-- Per-event matrix — Rank | Athlete | Ev1 | Ev2 | ... | Total -->
+  <!-- Per-event matrix — Rank | Athlete | Ev1 | Ev2 | … | Total -->
   <div class="results-table" id="results-table">
+
     <div class="ev-table-header">
-      <div class="ev-head-rank"></div>
-      <div class="ev-head-name">Athlete</div>
-      <div class="ev-head-events">
+      <div class="th-rank"></div>
+      <div class="th-name">Athlete</div>
+      <div class="th-events">
         {% for ev in events_list %}
-        <div class="ev-head-event">{{ ev.name }}</div>
+        <div class="th-event">{{ ev.name }}</div>
         {% endfor %}
       </div>
-      <div class="ev-head-total">Total</div>
+      <div class="th-total">Total</div>
     </div>
+
     {% for r in detailed_rows %}
     {% set rnk = r.overall_rank %}
     <div class="ev-table-row {% if rnk==1 %}rank-1{% elif rnk==2 %}rank-2{% elif rnk==3 %}rank-3{% endif %}">
       <div class="ev-rank {% if rnk==1 %}r1{% elif rnk==2 %}r2{% elif rnk==3 %}r3{% endif %}">{{ rnk }}</div>
-      <div class="ev-name-col">{{ r.name }}</div>
+      <div class="ev-name-col"><div class="ev-name-text">{{ r.name }}</div></div>
       <div class="ev-events">
         {% for ed in r.event_data %}
         <div class="ev-event-cell">
@@ -222,9 +483,10 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
             {% else %}
               <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">{{ unit }}</span></span>
             {% endif %}
-            <span class="cell-dot">·</span>
-            <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}&thinsp;pts</span>
-            {% if ed.rank %}<span class="cell-dot">·</span><span class="cell-rank">#{{ ed.rank }}</span>{% endif %}
+            <div class="cell-pts-row">
+              <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}&thinsp;pts</span>
+              {% if ed.rank %}<span class="cell-ev-rank">#{{ ed.rank }}</span>{% endif %}
+            </div>
           {% else %}
             <span class="cell-empty">—</span>
           {% endif %}
@@ -237,24 +499,29 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
       </div>
     </div>
     {% endfor %}
+
     {% if not detailed_rows %}
     <div class="empty">No results entered yet.</div>
     {% endif %}
+
   </div>
 
   {% else %}
-  <!-- Overall view: simple ranked list -->
-  <div class="section" id="results-table">
+  <!-- Overall ranked list -->
+  <div class="overall-table" id="results-table">
     {% if athletes %}
     {% for a in athletes %}
     {% set pos = loop.index %}
-    <div class="lb-row {% if pos==1 %}pos-1{% elif pos==2 %}pos-2{% elif pos==3 %}pos-3{% endif %}">
-      <div class="lb-rank">{{ pos }}</div>
-      <div class="lb-info">
-        <div class="lb-name">{{ a.name }}</div>
-        <div class="lb-cat">{{ a.category }}</div>
+    <div class="overall-row {% if pos==1 %}r1{% elif pos==2 %}r2{% elif pos==3 %}r3{% endif %}" data-rank="{{ pos }}">
+      <div class="ov-rank">{{ pos }}</div>
+      <div class="ov-info">
+        <div class="ov-name">{{ a.name }}</div>
+        <div class="ov-cat">{{ a.category }}</div>
       </div>
-      <div class="lb-score">{{ a.score }}</div>
+      <div class="ov-score">
+        <span class="ov-score-val">{{ a.score }}</span>
+        <span class="ov-score-unit">pts</span>
+      </div>
     </div>
     {% endfor %}
     {% else %}
@@ -262,19 +529,37 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
     {% endif %}
   </div>
   {% endif %}
-</div>
+
+</div><!-- /main -->
+
 <script>
 var EVENT_TYPES_UNITS = {{ event_types | tojson }};
 
-(function() {
+(function () {
+  /* Only the per-category detailed view gets JS-driven live updates.
+     Overall view (/comp/leaderboard with no category) is served by Jinja
+     and reloads via the SSE restart-token gate below.             */
   var CAT = {{ selected_cat | tojson }};
-  if (!CAT) return;
-  var lastVersion = null;
+
+  var lastVersion      = null;
   var _lastRestartToken = null;
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  /* ── Measure topbar height so sticky table header aligns correctly ── */
+  (function () {
+    var tb = document.querySelector('.topbar');
+    if (tb) {
+      document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+    }
+  }());
+
+  /* ── HTML escape helper ── */
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  /* ── Number formatters ── */
   function fmtPts(v) { return v === Math.floor(v) ? Math.floor(v) : v; }
   function fmtRaw(v) {
     if (v === null || v === undefined) return '';
@@ -282,104 +567,149 @@ var EVENT_TYPES_UNITS = {{ event_types | tojson }};
     return isNaN(n) ? '' : (n % 1 === 0 ? String(Math.floor(n)) : n.toFixed(2).replace(/\.?0+$/, ''));
   }
 
-  /* Build inline cell HTML: "300kg × 8 · 20 pts · #1" */
+  /* ── Cell builder ──────────────────────────────────────────────────
+     Produces innerHTML for .ev-event-cell
+     Layout:
+       [line 1] raw value + unit  (cell-raw)
+       [line 2] N pts · #rank     (cell-pts-row)
+  ─────────────────────────────────────────────────────────────────── */
   function fmtCell(ed) {
     if (ed.result_type === 'dns') return '<span class="cell-dns">DNS</span>';
     if (ed.result_type === 'dnf') return '<span class="cell-dnf">DNF</span>';
-    if (ed.raw_value === null || ed.raw_value === undefined) return '<span class="cell-empty">—</span>';
-
-    var unit  = (EVENT_TYPES_UNITS[ed.event_type] || {}).unit || '';
-    var raw   = fmtRaw(ed.raw_value);
-    var rawHtml;
-
-    if (ed.event_type === 'weight_reps' && ed.tiebreak !== null && ed.tiebreak !== undefined) {
-      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit">kg</span>&thinsp;×&thinsp;' + fmtRaw(ed.tiebreak) + '</span>';
-    } else if (ed.event_type === 'object' && ed.tiebreak !== null && ed.tiebreak !== undefined) {
-      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit"> in </span>' + parseFloat(ed.tiebreak).toFixed(1) + '<span class="cell-unit">s</span></span>';
-    } else {
-      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit">' + escHtml(unit) + '</span></span>';
+    if (ed.raw_value === null || ed.raw_value === undefined) {
+      return '<span class="cell-empty">—</span>';
     }
 
-    var topCls  = ed.rank === 1 ? ' top' : '';
-    var ptsHtml = '<span class="cell-dot">·</span><span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + '&thinsp;pts</span>';
-    var rnkHtml = ed.rank ? '<span class="cell-dot">·</span><span class="cell-rank">#' + ed.rank + '</span>' : '';
-    return rawHtml + ptsHtml + rnkHtml;
+    var unit = (EVENT_TYPES_UNITS[ed.event_type] || {}).unit || '';
+    var raw  = fmtRaw(ed.raw_value);
+    var rawHtml;
+
+    if (ed.event_type === 'weight_reps' && ed.tiebreak != null) {
+      rawHtml = '<span class="cell-raw">' + raw +
+                '<span class="cell-unit">kg</span>&thinsp;×&thinsp;' +
+                fmtRaw(ed.tiebreak) + '</span>';
+    } else if (ed.event_type === 'object' && ed.tiebreak != null) {
+      rawHtml = '<span class="cell-raw">' + raw +
+                '<span class="cell-unit"> in </span>' +
+                parseFloat(ed.tiebreak).toFixed(1) +
+                '<span class="cell-unit">s</span></span>';
+    } else {
+      rawHtml = '<span class="cell-raw">' + raw +
+                '<span class="cell-unit">' + esc(unit) + '</span></span>';
+    }
+
+    var topCls  = (ed.rank === 1) ? ' top' : '';
+    var ptsHtml = '<span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + '&thinsp;pts</span>';
+    var rnkHtml = ed.rank
+      ? '<span class="cell-ev-rank">#' + ed.rank + '</span>'
+      : '';
+
+    return rawHtml +
+           '<div class="cell-pts-row">' + ptsHtml + rnkHtml + '</div>';
   }
 
+  /* ── Table renderer ─────────────────────────────────────────────────
+     Replaces #results-table innerHTML.
+     Version-gated: skips write if data.version hasn't advanced.
+     Row entrance animations replay on every rebuild (CSS animation).
+  ─────────────────────────────────────────────────────────────────── */
   function renderTable(data) {
     if (lastVersion !== null && data.version <= lastVersion) return;
     lastVersion = data.version;
+
     var tableEl = document.getElementById('results-table');
     if (!tableEl) return;
 
-    /* Header: Rank | Athlete | Events... | Total */
-    var evHeads = data.events.map(function(e) {
-      return '<div class="ev-head-event">' + escHtml(e.name) + '</div>';
+    /* Header */
+    var evHeads = data.events.map(function (e) {
+      return '<div class="th-event">' + esc(e.name) + '</div>';
     }).join('');
-    var header = '<div class="ev-table-header">' +
-      '<div class="ev-head-rank"></div>' +
-      '<div class="ev-head-name">Athlete</div>' +
-      '<div class="ev-head-events">' + evHeads + '</div>' +
-      '<div class="ev-head-total">Total</div>' +
+
+    var header =
+      '<div class="ev-table-header">' +
+        '<div class="th-rank"></div>' +
+        '<div class="th-name">Athlete</div>' +
+        '<div class="th-events">' + evHeads + '</div>' +
+        '<div class="th-total">Total</div>' +
       '</div>';
 
-    var rows = data.rows.map(function(r) {
-      var rnk = r.overall_rank;
-      var rnkCls = rnk <= 3 ? 'rank-' + rnk : '';
-      var rankIconCls = rnk <= 3 ? 'r' + rnk : '';
-      var evCells = r.event_data.map(function(ed) {
+    /* Rows */
+    var rows = data.rows.map(function (r) {
+      var rnk     = r.overall_rank;
+      var rnkCls  = rnk <= 3 ? 'rank-' + rnk : '';
+      var iconCls = rnk <= 3 ? 'r' + rnk : '';
+
+      var evCells = r.event_data.map(function (ed) {
         return '<div class="ev-event-cell">' + fmtCell(ed) + '</div>';
       }).join('');
-      /* Total on far right */
-      var totalHtml = '<div class="ev-total-col"><div class="ev-total-pts">' + fmtPts(r.total_points) + '</div><div class="ev-total-lbl">pts</div></div>';
-      return '<div class="ev-table-row ' + rnkCls + '">' +
-        '<div class="ev-rank ' + rankIconCls + '">' + rnk + '</div>' +
-        '<div class="ev-name-col">' + escHtml(r.name) + '</div>' +
-        '<div class="ev-events">' + evCells + '</div>' +
-        totalHtml +
+
+      var total =
+        '<div class="ev-total-col">' +
+          '<div class="ev-total-pts">' + fmtPts(r.total_points) + '</div>' +
+          '<div class="ev-total-lbl">pts</div>' +
         '</div>';
+
+      return '<div class="ev-table-row ' + rnkCls + '">' +
+               '<div class="ev-rank ' + iconCls + '">' + rnk + '</div>' +
+               '<div class="ev-name-col"><div class="ev-name-text">' + esc(r.name) + '</div></div>' +
+               '<div class="ev-events">' + evCells + '</div>' +
+               total +
+             '</div>';
     }).join('');
 
-    tableEl.className = 'results-table';
-    tableEl.innerHTML = header + (rows || '<div class="empty">No results entered yet.</div>');
+    var empty = rows ? '' : '<div class="empty">No results entered yet.</div>';
+
+    /* Single DOM write — row-in animations replay automatically */
+    tableEl.className  = 'results-table';
+    tableEl.innerHTML  = header + (rows || empty);
   }
 
-  /* Debounce: coalesce rapid SSE ticks into one fetch 250ms after last tick */
+  /* ── Debounce: coalesce rapid SSE ticks → one fetch per 250ms window ── */
   var _fetchTimer = null;
   function scheduleFetch() {
+    if (!CAT) return;  /* overall view: no JS fetch needed */
     if (_fetchTimer) clearTimeout(_fetchTimer);
-    _fetchTimer = setTimeout(function() {
+    _fetchTimer = setTimeout(function () {
       _fetchTimer = null;
       fetch('/comp/api/leaderboard?category=' + encodeURIComponent(CAT) + '&detailed=1')
-        .then(function(r) { return r.json(); })
+        .then(function (r) { return r.json(); })
         .then(renderTable)
-        .catch(function() {});
+        .catch(function () {});
     }, 250);
   }
 
+  /* ── SSE connection ── */
   var _es = null;
   function connect() {
     _es = new EventSource('/stream');
-    _es.onmessage = function(evt) {
+    _es.onmessage = function (evt) {
       try {
         var msg = JSON.parse(evt.data);
+
+        /* Server restart: if token changed, reload immediately */
         if (msg.restart_token !== undefined) {
           if (_lastRestartToken !== null && msg.restart_token !== _lastRestartToken) {
-            lastVersion = null; scheduleFetch();
+            location.reload(); return;
           }
           _lastRestartToken = msg.restart_token;
         }
+
+        /* Version gate: seed on first tick; skip if not newer */
         if (msg.results_version !== undefined) {
-          if (lastVersion === null) { lastVersion = msg.results_version; return; }
+          if (lastVersion === null) {
+            lastVersion = msg.results_version; return; /* seed: skip initial fetch */
+          }
           if (msg.results_version <= lastVersion) return;
         }
-      } catch(e) {}
+      } catch (e) {}
       scheduleFetch();
     };
-    _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
+    _es.onerror = function () { _es.close(); setTimeout(connect, 5000); };
   }
+
   connect();
-  window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
+  window.addEventListener('pagehide', function () { if (_es) { _es.close(); _es = null; } });
+
 }());
 </script>
 </body>
