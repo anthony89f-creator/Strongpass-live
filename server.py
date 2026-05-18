@@ -1358,13 +1358,14 @@ def director_set_lb():
 #   B — lower slot (lowerthird / champion): only one active at a time
 #   C — data strip (reps / lights): only one active at a time
 _OVERLAY_GROUPS = {
-    "leaderboard": {"flag": "leaderboard",      "group": "A"},
-    "h2h":         {"flag": "h2h",              "group": "A"},
-    "lineup":      {"flag": "lineup",           "group": "A"},
-    "lowerthird":  {"flag": "lowerThirdVisible", "group": "B"},
-    "champion":    {"flag": "champion",          "group": "B"},
-    "reps":        {"flag": "repsVisible",       "group": "C"},
-    "lights":      {"flag": "lightsVisible",     "group": "C"},
+    "leaderboard": {"flag": "leaderboard",       "group": "A"},
+    "h2h":         {"flag": "h2h",               "group": "A"},
+    "lineup":      {"flag": "lineup",            "group": "A"},
+    "lowerthird":  {"flag": "lowerThirdVisible",  "group": "B"},
+    "manuallower": {"flag": "manualVisible",      "group": "B"},
+    "champion":    {"flag": "champion",           "group": "B"},
+    "reps":        {"flag": "repsVisible",        "group": "C"},
+    "lights":      {"flag": "lightsVisible",      "group": "C"},
 }
 _ALL_DIRECTOR_FLAGS = [info["flag"] for info in _OVERLAY_GROUPS.values()]
 
@@ -2599,7 +2600,8 @@ def _init_state_file():
                     changed = True
         # Director overlay defaults — backfill so SSE payload always carries these
         for key, default in [("lbFrozen", False), ("lbDisplayCount", 10),
-                             ("lbCategoryOverride", False), ("lbCategory", "all")]:
+                             ("lbCategoryOverride", False), ("lbCategory", "all"),
+                             ("manualVisible", False), ("manualLine1", ""), ("manualLine2", ""), ("manualScore", "")]:
             if key not in s:
                 s[key] = default
                 changed = True

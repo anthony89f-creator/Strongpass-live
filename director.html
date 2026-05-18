@@ -653,7 +653,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260519-A';
+var BUILD_ID = 'BUILD-20260519-B';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
@@ -838,8 +838,9 @@ function pvwStateFor(ovl) {
   // Strip large fields not needed for overlay rendering — avoids postMessage
   // structured-clone of 126KB+ results payload on every SSE tick.
   delete s.results;
-  // lineup PVW needs lbStandings to enumerate all categories' athletes (state.athletes is single-category only).
-  if (ovl.key !== 'lineup') delete s.lbStandings;
+  // lineup PVW needs lbStandings; leaderboard PVW needs lbAthletes. All others get neither.
+  if (ovl.key !== 'lineup')      delete s.lbStandings;
+  if (ovl.key !== 'leaderboard') delete s.lbAthletes;
   // Drop per-overlay fields the overlay never renders — avoids cloning ~200 properties per tick.
   (ovl.pvwDrop || []).forEach(function(f) { delete s[f]; });
   _ALL_OVL_FLAGS.forEach(function(f) { s[f] = false; });
@@ -978,7 +979,13 @@ function renderPGMVisibility() {
 }
 
 // ─── OVERLAY BUTTONS ──────────────────────────────────────────────────────────
+var _lastOvlBtnKey = null;
 function renderOvlButtons() {
+  var key = pvwSelection + '|' + OVERLAYS.map(function(o) {
+    return o.pgmKeys.some(function(f) { return !!liveState[f]; }) ? '1' : '0';
+  }).join('');
+  if (key === _lastOvlBtnKey) return;
+  _lastOvlBtnKey = key;
   DL('renderOvlButtons — pvwSelection=' + pvwSelection);
   try {
     OVERLAYS.forEach(function(o) {
@@ -1768,17 +1775,17 @@ async function postUpdate(obj) {
 }
 
 async function ctrlLbCat(cat) {
-  // Server /director/lb expects {category, override} — NOT {lbCategory}
+  // Optimistic update — reflect selection immediately so the operator sees instant response.
+  // The server confirms and delivers the actual lbAthletes payload via SSE shortly after.
+  liveState.lbCategory = cat;
+  _pushCurrentPVW();
+  renderCtrlPanel();
   try {
     var r = await fetch('/director/lb', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({category: cat, override: true}), credentials:'include'
     });
-    if (r.ok) {
-      liveState.lbCategory = cat;
-      _pushCurrentPVW();  // push new category to PVW iframe immediately
-      renderCtrlPanel();
-    }
+    if (!r.ok) { showStatus('Error ' + r.status, false); }
   } catch(e) { showStatus('Network error', false); }
 }
 function ctrlLbCount(n)   { postUpdate({lbDisplayCount: n}); }
