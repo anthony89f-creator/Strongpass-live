@@ -129,7 +129,9 @@ body {
 
 .mon-ind { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
 .pvw-ind { background: rgba(212,160,23,0.6); }
-.pgm-ind { background: var(--red-bright); animation: live-pulse 1s ease-in-out infinite; }
+/* Dot is dim when nothing is live; pulse only activates on on-air */
+.pgm-ind { background: rgba(255,68,34,0.25); transition: background 0.3s; }
+.pgm-monitor.on-air .pgm-ind { background: var(--red-bright); animation: live-pulse 1s ease-in-out infinite; }
 @keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .mon-label {
@@ -139,12 +141,15 @@ body {
 .pvw-monitor .mon-label { color: rgba(212,160,23,0.65); }
 .pgm-monitor .mon-label { color: rgba(255,68,34,0.7); }
 
+/* Badge is hidden when clean; only shown when on-air class is active */
 .live-badge {
+  display: none;
   font-size: 8px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
   font-family: 'Barlow', sans-serif; color: var(--red-bright);
   background: rgba(187,30,0,0.1); border: 1px solid rgba(187,30,0,0.2);
   padding: 2px 5px; border-radius: 2px;
 }
+.pgm-monitor.on-air .live-badge { display: inline-block; }
 
 /* 16:9 — width is set by flex, height follows via aspect-ratio */
 .monitor-body {
@@ -200,17 +205,17 @@ body {
   border-top: 1px solid rgba(255,255,255,0.04);
 }
 .mfoot-tag {
-  font-size: 9px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.14); flex-shrink: 0;
+  font-size: 10px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.18); flex-shrink: 0;
 }
 /* className set by JS: 'monitor-current' or 'monitor-current active' */
 .monitor-current {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pvw-monitor .monitor-current.active { color: var(--gold-light); }
-.pgm-monitor .monitor-current.active { color: var(--red-mid); }
+.pgm-monitor .monitor-current.active { color: var(--red-mid); font-weight: 800; }
 
 /* ── TRANSITION SPINE ───────────────────────────────────────────────────── */
 /* The control column between PVW and PGM */
@@ -329,26 +334,28 @@ body {
 }
 .grp-pill {
   display: flex; align-items: center; gap: 5px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
+  background: transparent; border: 1px solid rgba(255,255,255,0.03); border-radius: 2px;
   padding: 0 8px; min-width: 70px;
+  opacity: 0.4; transition: opacity 0.2s, background 0.2s, border-color 0.2s;
 }
 .grp-pill.live {
   background: rgba(187,30,0,0.08);
   border-color: rgba(187,30,0,0.3);
+  opacity: 1;
 }
 .grp-pill-dot {
   width: 4px; height: 4px; border-radius: 50%;
-  background: rgba(255,255,255,0.1); flex-shrink: 0;
+  background: rgba(255,255,255,0.12); flex-shrink: 0;
 }
 .grp-pill.live .grp-pill-dot { background: var(--red-bright); }
 .grp-pill-label {
   font-size: 8px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
-  color: rgba(255,255,255,0.25); font-family: 'Barlow', sans-serif; white-space: nowrap;
+  color: rgba(255,255,255,0.3); font-family: 'Barlow', sans-serif; white-space: nowrap;
 }
 .grp-pill.live .grp-pill-label { color: rgba(255,255,255,0.6); }
 .grp-pill-name {
   font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: rgba(255,255,255,0.18); font-family: 'Barlow Condensed', sans-serif;
+  color: rgba(255,255,255,0.22); font-family: 'Barlow Condensed', sans-serif;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .grp-pill.live .grp-pill-name { color: var(--red-mid); }
@@ -572,7 +579,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-E';
+var BUILD_ID = 'BUILD-20260518-F';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {

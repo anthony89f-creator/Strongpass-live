@@ -1,5 +1,32 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-F (2026-05-18) — Phase 2 UX: on-air indicator accuracy
+
+### Fixed: PGM monitor indicators only active when live (Phase 2)
+
+Three UX problems where the PGM monitor showed "live" signals regardless of actual on-air state:
+
+1. **pgm-ind dot** — the red pulsing dot animated continuously, even when PGM was clean.
+   Fix: `animation` moved to `.pgm-monitor.on-air .pgm-ind`. When clean, dot is dim
+   (`rgba(255,68,34,0.25)`) with CSS `transition` for smooth state change.
+
+2. **"LIVE" badge** — the red "Live" text badge was statically present in the monitor head at
+   all times. Fix: `display:none` by default; `display:inline-block` via
+   `.pgm-monitor.on-air .live-badge`. No JS change — purely CSS-driven by the existing
+   `.on-air` class that `renderPGMStatus()` already toggles.
+
+3. **Group strip non-live pills** — idle group pills (A/B/C Clear) were rendered at full
+   visual weight, adding noise when all groups are clean. Fix: `opacity:0.4` and transparent
+   background by default; `opacity:1` and red background when `.live`. Transition: 0.2s.
+
+### Improved: Monitor footer readability
+
+`mfoot-tag` ("PVW" / "PGM" labels): 9px → 10px, opacity 0.14 → 0.18.
+`monitor-current` (overlay name in footer): 12px → 13px. PGM active state gets `font-weight:800`
+for higher contrast when on air — reads better at monitor distance.
+
+---
+
 ## BUILD-20260518-E (2026-05-18) — pvwDrop: trim postMessage payload per overlay
 
 ### Improved: pvwStateFor() — per-overlay field drop list
