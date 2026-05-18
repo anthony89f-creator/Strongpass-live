@@ -591,7 +591,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-J';
+var BUILD_ID = 'BUILD-20260518-K';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
@@ -616,15 +616,16 @@ var QPVW   = _token ? ('?pvw=1&token=' + encodeURIComponent(_token)) : '?pvw=1';
 // pvwDrop:       liveState fields to omit from postMessage payload for this overlay.
 // hasControls:   true if this overlay has a ctrl panel in the director.
 // ctrlStateKeys: liveState fields that drive the ctrl panel dirty-check for this overlay.
+// ctrlBuilder:   function() → HTML string; called by renderCtrlPanel when dirty-check misses.
 // Groups enforce mutual exclusion: A=full-frame, B=lower-slot, C=data-strip.
 // Multiple groups can be live simultaneously — one overlay per group at most.
 var OVERLAYS = [
-  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', hasControls:true,  ctrlStateKeys:['lbCategory','lbDisplayCount','lbFrozen','categories'],           pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
-  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', hasControls:true,  ctrlStateKeys:['h2hLeft','h2hRight'],                                            pvwDrop:['athletes'], pvwFlags:['h2h'],     pgmKeys:['h2h'] },
-  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', hasControls:true,  ctrlStateKeys:['lineupIndex','lineupAuto','lineupDuration','categories'],         pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
-  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', hasControls:false,                                                                                  pvwDrop:['athletes'], pvwFlags:['lowerThirdVisible'], pgmKeys:['lowerThirdVisible'] },
-  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', hasControls:false,                                                                                  pvwDrop:['athletes'], pvwFlags:['champion'],         pgmKeys:['champion'] },
-  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', hasControls:false,                                                                                  pvwDrop:['athletes'], pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
+  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', hasControls:true,  ctrlStateKeys:['lbCategory','lbDisplayCount','lbFrozen','categories'],   ctrlBuilder:buildLbCtrls,    pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
+  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', hasControls:true,  ctrlStateKeys:['h2hLeft','h2hRight'],                                    ctrlBuilder:buildH2HCtrls,   pvwDrop:['athletes'], pvwFlags:['h2h'],     pgmKeys:['h2h'] },
+  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', hasControls:true,  ctrlStateKeys:['lineupIndex','lineupAuto','lineupDuration','categories'], ctrlBuilder:buildLineupCtrls, pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
+  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', hasControls:false,                                                                                                       pvwDrop:['athletes'], pvwFlags:['lowerThirdVisible'], pgmKeys:['lowerThirdVisible'] },
+  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', hasControls:false,                                                                                                       pvwDrop:['athletes'], pvwFlags:['champion'],         pgmKeys:['champion'] },
+  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', hasControls:false,                                                                                                       pvwDrop:['athletes'], pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
 ];
 
 // O(1) overlay lookup by key — avoids repeated OVERLAYS.find() at every transition.
@@ -1588,10 +1589,7 @@ function renderCtrlPanel() {
   }).join('|');
   if (key === _ctrlKey) return;
   _ctrlKey = key;
-  var html = '';
-  if      (pvwSelection === 'leaderboard') html = buildLbCtrls();
-  else if (pvwSelection === 'lineup')      html = buildLineupCtrls();
-  else if (pvwSelection === 'h2h')         html = buildH2HCtrls();
+  var html = selOvl && selOvl.ctrlBuilder ? selOvl.ctrlBuilder() : '';
   panel.innerHTML = html;
   panel.classList.toggle('open', !!html);
 }

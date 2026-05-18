@@ -1,5 +1,36 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-K (2026-05-18) — Phase 4: ctrlBuilder in overlay registry
+
+### Improved: ctrl panel builder dispatch — registry-based (Phase 4)
+
+Added `ctrlBuilder` function reference to OVERLAYS entries for leaderboard, h2h, lineup.
+`renderCtrlPanel()` now dispatches via `selOvl.ctrlBuilder()` rather than an `if/else if`
+chain keyed on `pvwSelection` string.
+
+Before:
+```js
+if      (pvwSelection === 'leaderboard') html = buildLbCtrls();
+else if (pvwSelection === 'lineup')      html = buildLineupCtrls();
+else if (pvwSelection === 'h2h')         html = buildH2HCtrls();
+```
+
+After:
+```js
+var html = selOvl && selOvl.ctrlBuilder ? selOvl.ctrlBuilder() : '';
+```
+
+`buildLbCtrls`, `buildLineupCtrls`, `buildH2HCtrls` are `function` declarations (hoisted),
+so referencing them in the OVERLAYS array literal is safe.
+
+Adding a new overlay with ctrl panel controls now requires only:
+1. Add `hasControls:true, ctrlStateKeys:[...], ctrlBuilder:buildXxxCtrls` to OVERLAYS
+2. Define `function buildXxxCtrls() { ... }`
+
+No changes to `renderCtrlPanel()` dispatch logic needed.
+
+---
+
 ## BUILD-20260518-J (2026-05-18) — Phase 2 polish: readability at distance
 
 ### Improved: BUILD_ID header readability
