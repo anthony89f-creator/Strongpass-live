@@ -233,6 +233,18 @@ When an overlay is in PVW, the ctrl panel renders overlay-specific controls:
 
 After any `/update` call succeeds, director calls `_pushCurrentPVW()` to reflect the change in the PVW iframe immediately without waiting for the SSE echo.
 
+### Overlay Registry Ctrl Panel Fields
+
+Each overlay in OVERLAYS has optional ctrl panel registry fields:
+
+| Field | Type | Used by |
+|---|---|---|
+| `hasControls` | `bool` | `renderCtrlPanel()` — early return if false |
+| `ctrlStateKeys` | `[str]` | `renderCtrlPanel()` — dirty-check key construction |
+| `ctrlBuilder` | `function` | `renderCtrlPanel()` — HTML builder dispatch |
+
+Adding an overlay with controls only requires adding these fields to its OVERLAYS entry + defining the builder function. `renderCtrlPanel()` dispatches via `selOvl.ctrlBuilder()`.
+
 ---
 
 ## Keyboard Shortcuts (director.html)

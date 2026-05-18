@@ -5,8 +5,8 @@
 ```
 page load
   │
-  ├─ BUILD_ID = 'BUILD-20260518-C'
-  ├─ document.title = 'Director [BUILD-20260518-C]'
+  ├─ BUILD_ID = 'BUILD-20260518-K'
+  ├─ document.title = 'Director [BUILD-20260518-K]'
   ├─ console.log [Director BOOT] (visible immediately)
   │
   ├─ init()
