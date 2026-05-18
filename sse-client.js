@@ -6,10 +6,7 @@
   'use strict';
 
   // DISABLE_SSE is set by the PVW bootstrap block in each overlay before this runs.
-  if (window.DISABLE_SSE) {
-    console.log('[SSE] disabled in PVW mode');
-    return;
-  }
+  if (window.DISABLE_SSE) { return; }
 
   var RETRY_BASE = 1000;
   var RETRY_MAX  = 30000;

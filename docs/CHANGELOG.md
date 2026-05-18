@@ -1,5 +1,25 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-H (2026-05-18) — Phase 3: console noise reduction
+
+### Improved: Handshake-complete log gated behind DEBUG (Phase 3)
+
+The green `[PVW#N] overlay-ready confirmed` styled console.log fired unconditionally on
+every successful PVW frame load — once per overlay button click during a show. Not an error;
+not actionable by the operator. Moved to `DL()` which only fires with `?debug=1`.
+
+The `_lifecycleStage` tracker already captures this state (`iframe-ready:key`), and the
+runtime HUD (press D) surfaces it without polluting the console.
+
+### Improved: sse-client.js — removed PVW-mode log (Phase 3)
+
+`[SSE] disabled in PVW mode` console.log fired every time a PVW overlay iframe loaded
+(on every overlay button click). Overlays are same-origin, so this message appeared in the
+director's DevTools console on each switch — pure noise with no diagnostic value.
+`[PGM] live SSE active` retained (fires once per TAKE; confirms SSE handshake succeeded).
+
+---
+
 ## BUILD-20260518-G (2026-05-18) — Phase 2 UX: keyboard hints + label polish
 
 ### Added: keyboard shortcut hints on TAKE and CUT buttons (Phase 2)

@@ -591,7 +591,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-G';
+var BUILD_ID = 'BUILD-20260518-H';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
@@ -1136,8 +1136,7 @@ async function selectPVW(key, id) {
         }
 
         _setLifecycleStage('[PVW#' + id + '] iframe-ready:' + key);
-        console.log('%c[PVW#' + id + '] overlay-ready confirmed — two-phase handshake complete BUILD_ID=' + BUILD_ID,
-                    'background:#002200;color:#00ff88;font-weight:bold');
+        DL('[PVW#' + id + '] overlay-ready confirmed — two-phase handshake complete key=' + key);
       }
     } else {
       _setLifecycleStage('[PVW#' + id + '] destroy');
