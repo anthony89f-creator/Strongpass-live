@@ -40,14 +40,6 @@
   .main { padding:32px 40px; max-width:1200px; margin:0 auto; }
   .section-title { font-size:11px; font-weight:800; letter-spacing:0.28em; text-transform:uppercase; color:var(--dim); margin-bottom:16px; }
 
-  .sync-bar {
-    background:rgba(0,180,60,0.08); border:1px solid rgba(0,180,60,0.2);
-    border-radius:8px; padding:10px 16px; display:flex; align-items:center; gap:10px;
-    margin-bottom:24px;
-  }
-  .sync-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; flex-shrink:0; }
-  .sync-text { font-size:12px; font-weight:700; letter-spacing:0.1em; color:var(--green); text-transform:uppercase; }
-  .sync-sub  { font-size:11px; color:var(--dim); font-family:'Barlow',sans-serif; margin-left:auto; }
 
   .launch-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   @media(max-width:700px) { .launch-grid { grid-template-columns:1fr; } }
@@ -109,12 +101,6 @@
 
 <div class="main">
 
-  <div class="sync-bar">
-    <div class="sync-dot"></div>
-    <div class="sync-text">Overlays Synced</div>
-    <div class="sync-sub">Competition data feeds automatically into OBS overlays</div>
-  </div>
-
   <div class="section-title">Choose Your View</div>
   <div class="launch-grid">
 
@@ -130,7 +116,6 @@
         <a href="/comp/heats" class="launch-link" target="_blank">Heats ↗</a>
         <a href="/comp/athletes" class="launch-link">Athletes</a>
         <a href="/comp/leaderboard" class="launch-link">Leaderboard</a>
-        <a href="/control.html" class="launch-link" target="_blank">Data Panel ↗</a>
       </div>
     </div>
 
@@ -141,6 +126,7 @@
       <div class="launch-desc">Take overlays on-air, cut between graphics, monitor live program state. OBS overlay control for leaderboard, H2H, lineup, reps and lights.</div>
       <a href="/director.html" target="_blank" rel="noopener" class="launch-cta">Open Director ↗</a>
       <div class="launch-links">
+        <a href="/control.html" class="launch-link" target="_blank">Data Panel ↗</a>
         <a href="/judge-master.html" class="launch-link" target="_blank">Judge Master ↗</a>
         <a href="/comp/arena" class="launch-link" target="_blank">Arena Screen ↗</a>
         <a href="/leaderboard.html" class="launch-link" target="_blank">Leaderboard OBS ↗</a>

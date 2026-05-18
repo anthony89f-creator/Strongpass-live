@@ -10,99 +10,76 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#202020;
-  --border:rgba(255,255,255,0.09); --text:#F0F0F0; --dim:#888;
-  --gold:#F5C842; --silver:#C8C8C8; --bronze:#CD7F32; --blue:#0088FF;
+  --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#222;
+  --border:rgba(255,255,255,0.10); --text:#F0F0F0; --dim:#999;
+  --gold:#F5C842; --gold-dim:rgba(245,200,66,0.12); --gold-border:rgba(245,200,66,0.3);
+  --silver:#C8C8C8; --bronze:#CD7F32; --blue:#4488FF;
+  --red-border:rgba(187,30,0,0.4);
 }
 html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
 
 /* ── TOPBAR ── */
 .topbar {
   background:var(--surface); border-bottom:1px solid var(--border);
-  padding:10px 2%; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:10px 2%; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
 }
-.topbar a { color:var(--dim); text-decoration:none; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+.topbar a { color:var(--dim); text-decoration:none; font-size:14px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; transition:color 0.1s; }
 .topbar a:hover { color:var(--text); }
-.topbar-nav-group { display:flex; align-items:center; gap:16px; }
-.topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
-.topbar-title { font-size:17px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; letter-spacing:0.06em; }
+.topbar-nav-group { display:flex; align-items:center; gap:14px; }
+.topbar-nav-group .sep { color:rgba(255,255,255,0.15); user-select:none; }
+.topbar-title { font-size:18px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; letter-spacing:0.05em; }
 
-/* ── MAIN — full width ── */
+/* ── MAIN ── */
 .main { padding:16px 2%; max-width:none; width:100%; display:flex; flex-direction:column; gap:14px; }
 
-/* ── CATEGORY FILTER TABS ── */
+/* ── CATEGORY TABS ── */
 .filter-row { display:flex; gap:8px; flex-wrap:wrap; }
 .filter-btn {
   padding:10px 22px; border-radius:8px; border:1px solid var(--border);
   background:var(--surface); color:var(--dim);
   font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800;
   letter-spacing:0.06em; text-transform:uppercase; text-decoration:none;
-  transition:all 0.15s; cursor:pointer;
+  transition:all 0.15s;
 }
-.filter-btn:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
-.filter-btn.active { background:rgba(245,200,66,0.1); border-color:rgba(245,200,66,0.35); color:var(--gold); }
+.filter-btn:hover { color:var(--text); border-color:rgba(255,255,255,0.22); }
+.filter-btn.active { background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
 
-/* ── OVERALL VIEW (simple list) ── */
+/* ── OVERALL SIMPLE VIEW ── */
 .section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-.lb-row {
-  display:flex; align-items:center; min-height:62px;
-  border-bottom:1px solid var(--border); padding:10px 0;
-}
+.lb-row { display:flex; align-items:center; min-height:66px; border-bottom:1px solid var(--border); padding:10px 0; }
 .lb-row:last-child { border-bottom:none; }
 .lb-row.pos-1 { border-left:3px solid rgba(245,200,66,0.7); }
 .lb-row.pos-2 { border-left:3px solid rgba(200,200,200,0.5); }
 .lb-row.pos-3 { border-left:3px solid rgba(205,127,50,0.5); }
-.lb-rank { width:60px; text-align:center; font-size:26px; font-weight:900; color:var(--dim); flex-shrink:0; }
+.lb-rank { width:64px; text-align:center; font-size:28px; font-weight:900; color:var(--dim); flex-shrink:0; }
 .lb-row.pos-1 .lb-rank { color:var(--gold); }
 .lb-row.pos-2 .lb-rank { color:var(--silver); }
 .lb-row.pos-3 .lb-rank { color:var(--bronze); }
 .lb-info { flex:1; padding:0 16px; min-width:0; }
-.lb-name { font-size:24px; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lb-cat { font-size:12px; color:var(--dim); font-family:'Barlow',sans-serif; margin-top:2px; }
-.lb-score { padding-right:24px; font-size:28px; font-weight:900; color:var(--dim); white-space:nowrap; }
+.lb-name { font-size:26px; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lb-cat { font-size:13px; color:var(--dim); font-family:'Barlow',sans-serif; margin-top:2px; }
+.lb-score { padding-right:28px; font-size:30px; font-weight:900; color:var(--dim); white-space:nowrap; }
 .lb-row.pos-1 .lb-score { color:var(--gold); }
 .lb-row.pos-2 .lb-score { color:var(--silver); }
 .lb-row.pos-3 .lb-score { color:var(--bronze); }
 .empty { padding:40px; text-align:center; color:var(--dim); font-family:'Barlow',sans-serif; font-size:15px; }
 
-/* ── DETAILED TABLE ── */
+/* ── DETAILED MATRIX TABLE ──
+   Column order: Rank | Athlete | Ev1 | Ev2 | ... | EvN | Total
+   Total is on the FAR RIGHT — shows running progression left → right */
 .results-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .ev-table-header, .ev-table-row {
-  display:flex; align-items:stretch;
-  min-width:640px;
+  display:flex; align-items:stretch; min-width:700px;
   border:1px solid var(--border); margin-bottom:2px; overflow:hidden; border-radius:6px;
 }
 .ev-table-header { background:var(--surface2); margin-bottom:8px; border-radius:8px; }
-.ev-table-row:hover { background:rgba(255,255,255,0.025); }
-.ev-table-row.rank-1 { border-left:3px solid rgba(245,200,66,0.55); }
-.ev-table-row.rank-2 { border-left:3px solid rgba(200,200,200,0.35); }
-.ev-table-row.rank-3 { border-left:3px solid rgba(205,127,50,0.35); }
+.ev-table-row:hover { background:rgba(255,255,255,0.02); }
+.ev-table-row.rank-1 { border-left:3px solid rgba(245,200,66,0.6); }
+.ev-table-row.rank-2 { border-left:3px solid rgba(200,200,200,0.4); }
+.ev-table-row.rank-3 { border-left:3px solid rgba(205,127,50,0.4); }
 
-/* Header: rank */
-.ev-head-rank { width:52px; min-width:52px; padding:10px 6px; border-right:1px solid var(--border); flex-shrink:0; }
-/* Header: name */
-.ev-head-name {
-  width:220px; min-width:160px; padding:10px 16px; border-right:1px solid var(--border);
-  font-size:12px; font-weight:900; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim);
-  display:flex; align-items:center;
-}
-/* Header: total */
-.ev-head-total {
-  width:80px; min-width:70px; padding:10px 6px; border-right:1px solid var(--border);
-  font-size:12px; font-weight:900; letter-spacing:0.16em; text-transform:uppercase;
-  color:var(--gold); text-align:center; display:flex; align-items:center; justify-content:center;
-}
-/* Header: event columns */
-.ev-head-events { flex:1; display:flex; }
-.ev-head-event {
-  flex:1; min-width:90px; padding:10px 6px; text-align:center;
-  border-right:1px solid var(--border);
-  font-size:13px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase;
-  color:var(--dim); line-height:1.25; display:flex; align-items:center; justify-content:center;
-}
-.ev-head-event:last-child { border-right:none; }
-
-/* Data rows */
+/* ── RANK COLUMN ── */
+.ev-head-rank { width:52px; min-width:52px; flex-shrink:0; padding:12px 6px; border-right:1px solid var(--border); }
 .ev-rank {
   width:52px; min-width:52px; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
@@ -112,57 +89,84 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 .ev-rank.r1 { color:var(--gold); }
 .ev-rank.r2 { color:var(--silver); }
 .ev-rank.r3 { color:var(--bronze); }
+
+/* ── ATHLETE COLUMN ── */
+.ev-head-name {
+  width:220px; min-width:180px; padding:12px 16px; border-right:1px solid var(--border);
+  font-size:12px; font-weight:900; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim);
+  display:flex; align-items:center;
+}
 .ev-name-col {
-  width:220px; min-width:160px; padding:12px 16px;
-  font-size:20px; font-weight:800; text-transform:uppercase;
+  width:220px; min-width:180px; padding:14px 16px;
+  font-size:21px; font-weight:800; text-transform:uppercase;
   border-right:1px solid var(--border);
   display:flex; align-items:center;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.ev-total-col {
-  width:80px; min-width:70px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; flex-direction:column;
-  border-right:1px solid var(--border); padding:8px 4px; gap:1px;
+
+/* ── EVENT COLUMNS (middle) ── */
+.ev-head-events { flex:1; display:flex; }
+.ev-head-event {
+  flex:1; min-width:150px; padding:10px 12px; text-align:left;
+  border-right:1px solid var(--border);
+  font-size:13px; font-weight:900; letter-spacing:0.07em; text-transform:uppercase;
+  color:rgba(255,255,255,0.75); line-height:1.25;
+  display:flex; align-items:center;
 }
-.ev-total-pts { font-size:24px; font-weight:900; color:var(--gold); line-height:1; }
-.ev-total-lbl { font-size:10px; color:var(--dim); letter-spacing:0.14em; text-transform:uppercase; font-family:'Barlow',sans-serif; }
+.ev-head-event:last-child { border-right:1px solid var(--border); }
 .ev-events { flex:1; display:flex; }
 .ev-event-cell {
-  flex:1; min-width:90px; padding:10px 6px;
-  text-align:center; border-right:1px solid var(--border);
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  flex:1; min-width:150px; padding:12px 14px;
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:row; align-items:center; flex-wrap:wrap;
+  gap:6px;
 }
-.ev-event-cell:last-child { border-right:none; }
+.ev-event-cell:last-child { border-right:1px solid var(--border); }
 
-/* Cell content — raw result is primary, pts is secondary */
+/* ── TOTAL COLUMN (far right) ── */
+.ev-head-total {
+  width:90px; min-width:80px; flex-shrink:0; padding:12px 10px; border-left:1px solid var(--border);
+  font-size:12px; font-weight:900; letter-spacing:0.18em; text-transform:uppercase;
+  color:var(--gold); text-align:center; display:flex; align-items:center; justify-content:center;
+}
+.ev-total-col {
+  width:90px; min-width:80px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  border-left:1px solid var(--border); padding:10px 6px; gap:2px;
+}
+.ev-total-pts { font-size:26px; font-weight:900; color:var(--gold); line-height:1; }
+.ev-total-lbl { font-size:10px; color:var(--dim); letter-spacing:0.16em; text-transform:uppercase; font-family:'Barlow',sans-serif; }
+
+/* ── CELL CONTENT — inline horizontal layout ──
+   Format: "300kg × 8  ·  20 pts  ·  #1"
+   Raw result is primary, points secondary, rank tertiary */
 .cell-raw {
-  font-size:20px; font-weight:800; color:var(--text); line-height:1;
-  font-family:'Barlow Condensed',sans-serif; white-space:nowrap;
+  font-size:18px; font-weight:800; color:var(--text); line-height:1;
+  white-space:nowrap;
 }
-.cell-unit {
-  font-size:13px; font-weight:700; color:var(--dim); margin-left:2px;
-}
+.cell-unit { font-size:13px; font-weight:700; color:var(--dim); margin-left:1px; }
+.cell-dot { color:rgba(255,255,255,0.18); font-size:13px; flex-shrink:0; }
 .cell-pts {
-  font-size:13px; font-weight:900; color:rgba(245,200,66,0.6); line-height:1;
-  font-family:'Barlow Condensed',sans-serif;
+  font-size:14px; font-weight:900; color:rgba(245,200,66,0.65); line-height:1;
+  white-space:nowrap;
 }
 .cell-pts.top { color:var(--gold); }
-.cell-rank { font-size:11px; color:var(--dim); font-family:'Barlow',sans-serif; }
+.cell-rank { font-size:12px; font-weight:700; color:var(--dim); white-space:nowrap; font-family:'Barlow',sans-serif; }
 .cell-dns {
-  font-size:12px; font-weight:800; letter-spacing:0.1em; color:var(--blue);
-  background:rgba(0,136,255,0.1); padding:3px 6px; border-radius:3px;
+  font-size:13px; font-weight:800; letter-spacing:0.1em; color:var(--blue);
+  background:rgba(68,136,255,0.1); padding:3px 8px; border-radius:3px;
 }
 .cell-dnf {
-  font-size:12px; font-weight:800; letter-spacing:0.1em; color:#FF4422;
-  background:rgba(255,68,34,0.1); padding:3px 6px; border-radius:3px;
+  font-size:13px; font-weight:800; letter-spacing:0.1em; color:#FF4422;
+  background:rgba(255,68,34,0.1); padding:3px 8px; border-radius:3px;
 }
-.cell-empty { font-size:16px; color:rgba(255,255,255,0.15); }
+.cell-empty { font-size:18px; color:rgba(255,255,255,0.12); }
 
 @media(max-width:700px) {
   .main { padding:10px 3%; }
-  .lb-row { min-height:52px; }
-  .lb-rank { width:44px; font-size:20px; }
-  .lb-name { font-size:18px; }
+  .lb-row { min-height:54px; }
+  .lb-rank { width:46px; font-size:22px; }
+  .lb-name { font-size:20px; }
   .lb-score { font-size:22px; padding-right:14px; }
   .filter-btn { font-size:13px; padding:8px 14px; }
 }
@@ -182,28 +186,25 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
     <a href="/comp/leaderboard?category={{ cat }}" class="filter-btn {% if selected_cat==cat %}active{% endif %}">{{ cat }}</a>
     {% endfor %}
   </div>
+
   {% if selected_cat and detailed_rows %}
-  <!-- Per-event breakdown table (category selected) -->
+  <!-- Per-event matrix — Rank | Athlete | Ev1 | Ev2 | ... | Total -->
   <div class="results-table" id="results-table">
     <div class="ev-table-header">
       <div class="ev-head-rank"></div>
       <div class="ev-head-name">Athlete</div>
-      <div class="ev-head-total">Total</div>
       <div class="ev-head-events">
         {% for ev in events_list %}
         <div class="ev-head-event">{{ ev.name }}</div>
         {% endfor %}
       </div>
+      <div class="ev-head-total">Total</div>
     </div>
     {% for r in detailed_rows %}
     {% set rnk = r.overall_rank %}
     <div class="ev-table-row {% if rnk==1 %}rank-1{% elif rnk==2 %}rank-2{% elif rnk==3 %}rank-3{% endif %}">
       <div class="ev-rank {% if rnk==1 %}r1{% elif rnk==2 %}r2{% elif rnk==3 %}r3{% endif %}">{{ rnk }}</div>
       <div class="ev-name-col">{{ r.name }}</div>
-      <div class="ev-total-col">
-        <div class="ev-total-pts">{{ r.total_points | int if r.total_points == (r.total_points | int) else r.total_points }}</div>
-        <div class="ev-total-lbl">pts</div>
-      </div>
       <div class="ev-events">
         {% for ed in r.event_data %}
         <div class="ev-event-cell">
@@ -215,17 +216,24 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
             {% set unit = event_types[ed.event_type].unit if ed.event_type in event_types else '' %}
             {% set raw_fmt = (ed.raw_value | int) if ed.raw_value == (ed.raw_value | int) else (ed.raw_value | round(2)) %}
             {% if ed.event_type == 'weight_reps' and ed.tiebreak %}
-              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">kg</span> × {{ ed.tiebreak | int if ed.tiebreak == (ed.tiebreak | int) else ed.tiebreak }}<span class="cell-unit">r</span></span>
+              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">kg</span>&thinsp;×&thinsp;{{ ed.tiebreak | int if ed.tiebreak == (ed.tiebreak | int) else ed.tiebreak }}</span>
+            {% elif ed.event_type == 'object' and ed.tiebreak %}
+              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit"> in </span>{{ ed.tiebreak | round(1) }}<span class="cell-unit">s</span></span>
             {% else %}
               <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">{{ unit }}</span></span>
             {% endif %}
-            <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }} pts</span>
-            {% if ed.rank %}<span class="cell-rank">#{{ ed.rank }}</span>{% endif %}
+            <span class="cell-dot">·</span>
+            <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}&thinsp;pts</span>
+            {% if ed.rank %}<span class="cell-dot">·</span><span class="cell-rank">#{{ ed.rank }}</span>{% endif %}
           {% else %}
             <span class="cell-empty">—</span>
           {% endif %}
         </div>
         {% endfor %}
+      </div>
+      <div class="ev-total-col">
+        <div class="ev-total-pts">{{ r.total_points | int if r.total_points == (r.total_points | int) else r.total_points }}</div>
+        <div class="ev-total-lbl">pts</div>
       </div>
     </div>
     {% endfor %}
@@ -233,8 +241,9 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
     <div class="empty">No results entered yet.</div>
     {% endif %}
   </div>
+
   {% else %}
-  <!-- Overall view: simple list -->
+  <!-- Overall view: simple ranked list -->
   <div class="section" id="results-table">
     {% if athletes %}
     {% for a in athletes %}
@@ -255,7 +264,6 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   {% endif %}
 </div>
 <script>
-/* Unit lookup — static mapping from event_type → display unit */
 var EVENT_TYPES_UNITS = {{ event_types | tojson }};
 
 (function() {
@@ -273,23 +281,28 @@ var EVENT_TYPES_UNITS = {{ event_types | tojson }};
     var n = parseFloat(v);
     return isNaN(n) ? '' : (n % 1 === 0 ? String(Math.floor(n)) : n.toFixed(2).replace(/\.?0+$/, ''));
   }
+
+  /* Build inline cell HTML: "300kg × 8 · 20 pts · #1" */
   function fmtCell(ed) {
     if (ed.result_type === 'dns') return '<span class="cell-dns">DNS</span>';
     if (ed.result_type === 'dnf') return '<span class="cell-dnf">DNF</span>';
     if (ed.raw_value === null || ed.raw_value === undefined) return '<span class="cell-empty">—</span>';
 
-    var unit = (EVENT_TYPES_UNITS[ed.event_type] || {}).unit || '';
-    var raw  = fmtRaw(ed.raw_value);
+    var unit  = (EVENT_TYPES_UNITS[ed.event_type] || {}).unit || '';
+    var raw   = fmtRaw(ed.raw_value);
     var rawHtml;
+
     if (ed.event_type === 'weight_reps' && ed.tiebreak !== null && ed.tiebreak !== undefined) {
-      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit">kg</span>' +
-                ' × ' + fmtRaw(ed.tiebreak) + '<span class="cell-unit">r</span></span>';
+      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit">kg</span>&thinsp;×&thinsp;' + fmtRaw(ed.tiebreak) + '</span>';
+    } else if (ed.event_type === 'object' && ed.tiebreak !== null && ed.tiebreak !== undefined) {
+      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit"> in </span>' + parseFloat(ed.tiebreak).toFixed(1) + '<span class="cell-unit">s</span></span>';
     } else {
       rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit">' + escHtml(unit) + '</span></span>';
     }
+
     var topCls  = ed.rank === 1 ? ' top' : '';
-    var ptsHtml = '<span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + ' pts</span>';
-    var rnkHtml = ed.rank ? '<span class="cell-rank">#' + ed.rank + '</span>' : '';
+    var ptsHtml = '<span class="cell-dot">·</span><span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + '&thinsp;pts</span>';
+    var rnkHtml = ed.rank ? '<span class="cell-dot">·</span><span class="cell-rank">#' + ed.rank + '</span>' : '';
     return rawHtml + ptsHtml + rnkHtml;
   }
 
@@ -299,14 +312,15 @@ var EVENT_TYPES_UNITS = {{ event_types | tojson }};
     var tableEl = document.getElementById('results-table');
     if (!tableEl) return;
 
+    /* Header: Rank | Athlete | Events... | Total */
     var evHeads = data.events.map(function(e) {
       return '<div class="ev-head-event">' + escHtml(e.name) + '</div>';
     }).join('');
     var header = '<div class="ev-table-header">' +
       '<div class="ev-head-rank"></div>' +
       '<div class="ev-head-name">Athlete</div>' +
-      '<div class="ev-head-total">Total</div>' +
       '<div class="ev-head-events">' + evHeads + '</div>' +
+      '<div class="ev-head-total">Total</div>' +
       '</div>';
 
     var rows = data.rows.map(function(r) {
@@ -316,11 +330,13 @@ var EVENT_TYPES_UNITS = {{ event_types | tojson }};
       var evCells = r.event_data.map(function(ed) {
         return '<div class="ev-event-cell">' + fmtCell(ed) + '</div>';
       }).join('');
+      /* Total on far right */
+      var totalHtml = '<div class="ev-total-col"><div class="ev-total-pts">' + fmtPts(r.total_points) + '</div><div class="ev-total-lbl">pts</div></div>';
       return '<div class="ev-table-row ' + rnkCls + '">' +
         '<div class="ev-rank ' + rankIconCls + '">' + rnk + '</div>' +
         '<div class="ev-name-col">' + escHtml(r.name) + '</div>' +
-        '<div class="ev-total-col"><div class="ev-total-pts">' + fmtPts(r.total_points) + '</div><div class="ev-total-lbl">pts</div></div>' +
         '<div class="ev-events">' + evCells + '</div>' +
+        totalHtml +
         '</div>';
     }).join('');
 
@@ -328,8 +344,7 @@ var EVENT_TYPES_UNITS = {{ event_types | tojson }};
     tableEl.innerHTML = header + (rows || '<div class="empty">No results entered yet.</div>');
   }
 
-  /* Debounce: coalesce rapid SSE ticks into one fetch 250ms after the last tick.
-     Prevents burst score updates from hammering the DB with duplicate queries. */
+  /* Debounce: coalesce rapid SSE ticks into one fetch 250ms after last tick */
   var _fetchTimer = null;
   function scheduleFetch() {
     if (_fetchTimer) clearTimeout(_fetchTimer);
@@ -350,8 +365,7 @@ var EVENT_TYPES_UNITS = {{ event_types | tojson }};
         var msg = JSON.parse(evt.data);
         if (msg.restart_token !== undefined) {
           if (_lastRestartToken !== null && msg.restart_token !== _lastRestartToken) {
-            lastVersion = null;
-            scheduleFetch();
+            lastVersion = null; scheduleFetch();
           }
           _lastRestartToken = msg.restart_token;
         }

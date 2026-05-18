@@ -602,8 +602,6 @@ body {
       <button id="take-btn" onclick="take()">TAKE</button>
       <button id="cut-btn"  onclick="goClean()">CUT</button>
       <div class="t-sep"></div>
-      <button class="auto-btn" disabled title="Auto transition — not available">AUTO</button>
-      <div class="t-sep"></div>
       <button id="clean-btn" onclick="goCleanAll()">CLN</button>
     </div>
 
@@ -655,7 +653,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-P';
+var BUILD_ID = 'BUILD-20260519-A';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
@@ -687,8 +685,9 @@ var OVERLAYS = [
   { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', hasControls:true,  ctrlStateKeys:['lbCategory','lbDisplayCount','lbFrozen','categories'],   ctrlBuilder:buildLbCtrls,    pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
   { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', hasControls:true,  ctrlStateKeys:['h2hLeft','h2hRight'],                                    ctrlBuilder:buildH2HCtrls,   pvwDrop:['athletes'], pvwFlags:['h2h'],     pgmKeys:['h2h'] },
   { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', hasControls:true,  ctrlStateKeys:['lineupIndex','lineupAuto','lineupDuration','categories'], ctrlBuilder:buildLineupCtrls, pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
-  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', hasControls:false,                                                                                                       pvwDrop:['athletes'], pvwFlags:['lowerThirdVisible'], pgmKeys:['lowerThirdVisible'] },
-  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', hasControls:false,                                                                                                       pvwDrop:['athletes'], pvwFlags:['champion'],         pgmKeys:['champion'] },
+  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',       group:'B', hasControls:false,                                                                                                                                pvwDrop:['athletes'], pvwFlags:['lowerThirdVisible'],          pgmKeys:['lowerThirdVisible'] },
+  { key:'manuallower', label:'Manual Lower Third', src:'/manual_lowerthird.html', group:'B', hasControls:true, ctrlStateKeys:['manualLine1','manualLine2','manualScore'], ctrlBuilder:buildManualLtCtrls, pvwDrop:['athletes'], pvwFlags:['manualVisible'],              pgmKeys:['manualVisible'] },
+  { key:'champion',    label:'Champion',      src:'/champion.html',         group:'B', hasControls:true,  ctrlStateKeys:['champName','champDetail','champScore','champEvents'],                    ctrlBuilder:buildChampCtrls,    pvwDrop:['athletes'], pvwFlags:['champion'],                  pgmKeys:['champion'] },
   { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', hasControls:false,                                                                                                       pvwDrop:['athletes'], pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
 ];
 
@@ -1714,6 +1713,38 @@ function buildH2HCtrls() {
     '<span class="ctrl-sep"></span>' +
     '<span class="ctrl-label">Right</span>' +
     '<input class="ctrl-input" type="text" placeholder="Athlete name" value="' + esc(right) + '" onchange="ctrlH2H(\'right\',this.value)">';
+}
+
+function buildManualLtCtrls() {
+  var line1 = liveState.manualLine1 || '';
+  var line2 = liveState.manualLine2 || '';
+  var score = liveState.manualScore || '';
+  return '<span class="ctrl-label">Line 1</span>' +
+    '<input class="ctrl-input" type="text" placeholder="Name / title" value="' + esc(line1) + '" onchange="postUpdate({manualLine1:this.value})">' +
+    '<span class="ctrl-sep"></span>' +
+    '<span class="ctrl-label">Line 2</span>' +
+    '<input class="ctrl-input" type="text" placeholder="Subtitle" value="' + esc(line2) + '" onchange="postUpdate({manualLine2:this.value})">' +
+    '<span class="ctrl-sep"></span>' +
+    '<span class="ctrl-label">Score</span>' +
+    '<input class="ctrl-input" type="text" placeholder="Score / detail" value="' + esc(score) + '" onchange="postUpdate({manualScore:this.value})">';
+}
+
+function buildChampCtrls() {
+  var name   = liveState.champName   || '';
+  var detail = liveState.champDetail || '';
+  var score  = liveState.champScore  || '';
+  var events = liveState.champEvents || '';
+  return '<span class="ctrl-label">Name</span>' +
+    '<input class="ctrl-input" type="text" placeholder="Athlete name" value="' + esc(name)   + '" onchange="postUpdate({champName:this.value})">' +
+    '<span class="ctrl-sep"></span>' +
+    '<span class="ctrl-label">Detail</span>' +
+    '<input class="ctrl-input" type="text" placeholder="Country / division" value="' + esc(detail) + '" onchange="postUpdate({champDetail:this.value})">' +
+    '<span class="ctrl-sep"></span>' +
+    '<span class="ctrl-label">Score</span>' +
+    '<input class="ctrl-input" type="text" placeholder="Score" value="' + esc(score)  + '" onchange="postUpdate({champScore:this.value})">' +
+    '<span class="ctrl-sep"></span>' +
+    '<span class="ctrl-label">Events</span>' +
+    '<input class="ctrl-input" type="text" placeholder="e.g. 6/6" value="' + esc(events) + '" onchange="postUpdate({champEvents:this.value})">';
 }
 
 // ─── CONTROL ACTION HELPERS ───────────────────────────────────────────────────
