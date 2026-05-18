@@ -61,7 +61,7 @@ body {
 .back-link:hover { color: var(--text); border-color: var(--border-hi); }
 .header-logo  { height: 24px; width: auto; object-fit: contain; mix-blend-mode: lighten; opacity: 0.75; }
 .header-title { font-size: 13px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; line-height: 1; }
-.header-sub   { font-size: 9px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim2); font-family: 'Barlow', sans-serif; margin-top: 1px; }
+.header-sub   { font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.28); font-family: 'Barlow', sans-serif; margin-top: 1px; }
 .conn-wrap    { display:flex; align-items:center; gap:5px; }
 .conn-dot     { width:5px; height:5px; border-radius:50%; background:#1e1e1e; flex-shrink:0; }
 .conn-dot.ok  { background:var(--green-bright); }
@@ -314,9 +314,9 @@ body {
 .ovl-btn {
   flex: 1; padding: 10px 6px;
   border-radius: 2px; border: 1px solid var(--border); background: var(--surface3);
-  color: rgba(255,255,255,0.32);
-  font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 800;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(255,255,255,0.36);
+  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 800;
+  letter-spacing: 0.07em; text-transform: uppercase;
   cursor: pointer; transition: all 0.1s; position: relative; white-space: nowrap;
   -webkit-user-select: none; user-select: none; touch-action: manipulation;
 }
@@ -591,7 +591,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-I';
+var BUILD_ID = 'BUILD-20260518-J';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {

@@ -1,11 +1,11 @@
 # Strongpass Live — Engineer Handover
 
-**Current local build:** `BUILD-20260518-I` (not yet deployed to production)
+**Current local build:** `BUILD-20260518-J` (not yet deployed to production)
 **Last production build:** `BUILD-20260517-C`
 **Stable tag:** `v2-runtime-stable`
 **Production URL:** `https://strongpass.live`
 **GitHub remote:** `https://github.com/anthony89f-creator/Strongpass-live.git`
-**Last updated:** 2026-05-18 (BUILD-20260518-I)
+**Last updated:** 2026-05-18 (BUILD-20260518-J)
 
 ---
 

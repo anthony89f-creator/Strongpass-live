@@ -1,5 +1,21 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-J (2026-05-18) — Phase 2 polish: readability at distance
+
+### Improved: BUILD_ID header readability
+
+`header-sub` (shows BUILD_ID below "Broadcast Director" title): 9px → 10px,
+opacity 13% → 28%. Build verification during deployment requires reading this — previously
+near-invisible against the dark header background.
+
+### Improved: Overlay button font size
+
+`.ovl-btn` font: 12px → 13px. During live production operators must quickly identify and
+press the correct overlay button. 1px increase reduces mis-reads at monitor distance.
+Color opacity also nudged: 0.32 → 0.36 for better contrast before selection.
+
+---
+
 ## BUILD-20260518-I (2026-05-18) — Phase 4: ctrlStateKeys registry + dirty-check fix
 
 ### Added: ctrlStateKeys overlay registry field (Phase 4)
