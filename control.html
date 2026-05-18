@@ -13,13 +13,14 @@
   :root {
     --red:#CC0000; --green:#00AA44; --green-bright:#00DD55;
     --gold:#D4A017; --gold-light:#F5C842;
+    --blue:#4488FF; --blue-dim:rgba(68,136,255,0.15); --blue-border:rgba(68,136,255,0.3);
     --bg:#0C0C0C; --surface:#161616; --surface2:#1E1E1E; --surface3:#252525;
     --border:rgba(255,255,255,0.08); --text:#F0F0F0; --dim:#777;
   }
   html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; overscroll-behavior:none; }
 
-  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
-  .header-title { font-size:20px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; color:#fff; line-height:1; }
+  .header { background:var(--surface); border-bottom:2px solid var(--blue-border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .header-title { font-size:20px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; color:var(--blue); line-height:1; }
   .header-sub   { font-size:10px; font-weight:600; letter-spacing:0.2em; color:var(--dim); text-transform:uppercase; }
   .conn-dot { width:8px; height:8px; border-radius:50%; background:#555; display:inline-block; margin-right:6px; }
   .conn-dot.ok { background:var(--green-bright); animation:pulse 2s infinite; }
@@ -123,15 +124,18 @@
 <div class="header">
   <div style="display:flex;align-items:center;gap:14px">
     <a href="/" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);text-decoration:none;white-space:nowrap">← Home</a>
-    <a href="/director.html" target="_blank" rel="noopener" style="background:var(--surface2);border:1px solid rgba(212,160,23,0.35);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-light);text-decoration:none;white-space:nowrap;transition:border-color 0.15s,color 0.15s" onmouseover="this.style.borderColor='rgba(245,200,66,0.6)';this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(212,160,23,0.35)';this.style.color='var(--gold-light)'">Director ↗</a>
     <img src="/logo.png" alt="Logo" style="height:44px;width:auto;object-fit:contain;mix-blend-mode:lighten">
     <div>
-      <div class="header-sub">Competition Engine</div>
+      <div class="header-title">Competition Engine</div>
+      <div class="header-sub">Data Panel — Strongpass</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:6px">
-    <span class="conn-dot" id="conn-dot"></span>
-    <span class="conn-text" id="conn-text">Connecting...</span>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="/director.html" target="_blank" rel="noopener" style="background:rgba(212,160,23,0.12);border:1px solid rgba(212,160,23,0.4);border-radius:6px;padding:8px 16px;font-size:13px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-light);text-decoration:none;white-space:nowrap">Broadcast Director ↗</a>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span class="conn-dot" id="conn-dot"></span>
+      <span class="conn-text" id="conn-text">Connecting...</span>
+    </div>
   </div>
 </div>
 

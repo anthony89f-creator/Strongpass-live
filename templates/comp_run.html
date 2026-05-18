@@ -28,9 +28,14 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 }
 .topbar-logo { height:48px; width:auto; margin-right:16px; object-fit:contain; mix-blend-mode:lighten; }
 .topbar-badge {
-  background:var(--gold-dim); border:1px solid var(--gold-border);
-  color:var(--gold); font-size:10px; font-weight:800; letter-spacing:0.2em;
+  background:var(--blue-dim); border:1px solid var(--blue-border);
+  color:var(--blue); font-size:10px; font-weight:800; letter-spacing:0.2em;
   text-transform:uppercase; padding:4px 10px; border-radius:4px; margin-right:auto;
+}
+.system-id {
+  font-size:9px; font-weight:800; letter-spacing:0.25em; text-transform:uppercase;
+  color:var(--blue); opacity:0.6; padding:0 12px 0 0; border-right:1px solid var(--border);
+  margin-right:8px;
 }
 .topbar-nav { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .topbar-nav a {
@@ -44,7 +49,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 
 /* ── STATE BAR ── */
 .state-bar {
-  background:var(--surface); border-bottom:2px solid var(--gold-border);
+  background:var(--surface); border-bottom:2px solid var(--blue-border);
   padding:10px 20px; display:flex; align-items:center; gap:0;
 }
 .state-pill {
@@ -53,7 +58,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 }
 .state-pill:last-child { border-right:none; margin-left:auto; }
 .state-pill-label { font-size:9px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--dim); }
-.state-pill-val { font-size:20px; font-weight:900; color:var(--gold); line-height:1; }
+.state-pill-val { font-size:26px; font-weight:900; color:var(--blue); line-height:1; }
 .state-pill-sub { font-size:11px; color:var(--dim2); font-family:'Barlow',sans-serif; }
 .live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -97,10 +102,10 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 .lane-list { display:flex; flex-direction:column; }
 .lane-row {
   display:grid;
-  grid-template-columns: 44px 1fr auto;
+  grid-template-columns: 52px 1fr auto;
   align-items:center;
-  gap:14px;
-  padding:12px 16px;
+  gap:16px;
+  padding:16px 18px;
   border-bottom:1px solid var(--border);
   transition:background 0.15s;
 }
@@ -113,14 +118,14 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
 .lane-num.next { background:var(--green-dim); border-color:var(--green-border); color:var(--green); }
-.lane-name { font-size:22px; font-weight:800; text-transform:uppercase; line-height:1.1; }
+.lane-name { font-size:26px; font-weight:800; text-transform:uppercase; line-height:1.1; }
 .lane-name.dim { font-size:18px; color:var(--dim2); }
 .lane-score-wrap { display:flex; align-items:center; gap:8px; }
 .score-input {
   background:var(--surface3); border:2px solid var(--border);
-  border-radius:8px; padding:10px 14px; color:var(--gold);
-  font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:900;
-  width:130px; text-align:center; transition:border-color 0.2s;
+  border-radius:8px; padding:12px 16px; color:var(--gold);
+  font-family:'Barlow Condensed',sans-serif; font-size:34px; font-weight:900;
+  width:160px; text-align:center; transition:border-color 0.2s;
 }
 .score-input:focus { outline:none; border-color:var(--gold-border); background:rgba(245,200,66,0.05); }
 .score-input.filled { border-color:rgba(0,221,85,0.4); color:var(--green); }
@@ -249,11 +254,10 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
   <img src="/logo.png" alt="Logo" class="topbar-logo" style="mix-blend-mode:lighten">
   <div class="topbar-badge">▶ Run Competition</div>
   <nav class="topbar-nav">
-    <span class="topbar-nav-group"><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run" style="color:var(--gold)">Run</a></span>
+    <span class="topbar-nav-group"><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run" style="color:var(--blue)">Run</a></span>
     <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
     <a href="/comp/callroom" target="_blank">Call Room ↗</a>
     <a href="/comp/leaderboard">Leaderboard</a>
-    <a href="/control.html" target="_blank" rel="noopener" style="color:var(--gold)">📡 Broadcast ↗</a>
     <a href="/">← Home</a>
   </nav>
 </div>
@@ -287,11 +291,8 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
       <div class="state-pill-val" style="font-size:16px">{{ current_lanes|length }}</div>
     </div>
   </div>
-  <div class="state-pill" style="margin-left:auto;border-right:none;gap:8px">
-    <form action="/comp/action/push_to_broadcast" method="post" style="display:contents">
-      <button type="submit" class="btn btn-green" style="padding:8px 16px;font-size:12px">📡 Push to OBS</button>
-    </form>
-    <a href="/control.html" target="_blank" rel="noopener" class="btn btn-outline" style="padding:8px 14px;font-size:12px">Broadcast Control ↗</a>
+  <div class="state-pill" style="margin-left:auto;border-right:none">
+    <span class="system-id">Competition Engine</span>
   </div>
 </div>
 
@@ -308,9 +309,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
         <div class="wb-detail">{% if winner %}Score: {{ winner.score }}{% endif %}</div>
       </div>
       {% if winner %}
-      <form action="/comp/action/push_to_broadcast" method="post" style="display:contents">
-        <button type="submit" class="btn btn-gold" style="white-space:nowrap">🏆 Show on OBS</button>
-      </form>
+      <div style="font-size:10px;color:var(--dim);font-family:'Barlow',sans-serif">Open Director to take live</div>
       {% endif %}
     </div>
 
@@ -412,10 +411,12 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 
         <!-- Save + Next bar -->
         <div class="save-next-bar">
-          <button type="submit" name="action" value="save_next" class="btn btn-gold btn-lg btn-full">
-            ✓ Save Scores &amp; Next Heat →
+          <button type="submit" name="action" value="save_next" class="btn btn-gold btn-full"
+            style="font-size:22px;padding:20px 28px;letter-spacing:0.06em">
+            ✓ Save &amp; Next Heat →
           </button>
-          <button type="submit" name="action" value="save_only" class="btn btn-outline btn-lg">
+          <button type="submit" name="action" value="save_only" class="btn btn-outline"
+            style="font-size:15px;padding:20px 20px">
             Save Only
           </button>
         </div>

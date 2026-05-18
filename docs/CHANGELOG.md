@@ -1,5 +1,43 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-N (2026-05-18) — Frontend Visual Separation: Competition Engine identity
+
+### Changed: all Competition Engine templates — broadcast crossovers removed
+
+Removed all broadcast-adjacent links, buttons, and text from every Competition Engine page.
+No `/update` payload changes — visual-only removals.
+
+**comp_run.html:**
+- Topbar: removed `📡 Broadcast ↗` link to `/control.html`
+- State bar: removed "Push to OBS" form + "Broadcast Control ↗" link; replaced with blue
+  "Competition Engine" system-id label
+- Winner banner: removed "🏆 Show on OBS" button; replaced with "Open Director to take live" text
+- Save button: font-size 22px, padding 20px 28px (larger touchscreen target)
+- Score input: 160px wide, font-size 34px (was 130px / 26px)
+- Lane name: font-size 26px (was 22px)
+- State bar values: font-size 26px, color blue (was 20px, gold)
+- State bar border: blue (was gold)
+- Topbar badge: blue accent (was gold)
+- Added `.system-id` CSS class (blue label, 0.25em tracking)
+- Lane row: padding 16px 18px, gap 16px, col 52px (was 12px 16px / 14px / 44px)
+
+**comp_home.html, comp_athletes.html, comp_heats.html, comp_results.html,
+comp_leaderboard.html, comp_dashboard.html:**
+- All: removed `📡 Broadcast ↗` topbar link to `/control.html`; replaced with dim
+  "Director ↗" link to `/director.html` (low-contrast, non-primary)
+- comp_results.html: button "Save Results + Push to OBS" → "Save Results"
+- comp_athletes.html: regen notice "syncs to OBS" → "syncs to Competition Engine" (removed OBS ref)
+
+**control.html (Competition Engine data panel):**
+- Added `--blue:#4488FF`, `--blue-dim`, `--blue-border` CSS variables
+- Header border: `1px solid var(--border)` → `2px solid var(--blue-border)` (blue identity stripe)
+- Header title: now uses `.header-title` class with `color:var(--blue)` — text "Competition Engine"
+- Header subtitle: "Data Panel — Strongpass" (was "Competition Engine" sub-only)
+- Director link: repositioned to right of header, gold accent, labeled "Broadcast Director ↗"
+  (more prominent — clear exit point to separate system)
+
+---
+
 ## BUILD-20260518-L (2026-05-18) — Operational Separation: Competition Engine vs Broadcast Control
 
 ### Changed: control.html — overlay toggles removed, system boundary enforced
