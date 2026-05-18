@@ -8,88 +8,172 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  :root { --bg:#080808; --surface:#111; --surface2:#181818; --border:rgba(255,255,255,0.09); --text:#F0F0F0; --dim:#888; --gold:#F5C842; --silver:#C8C8C8; --bronze:#CD7F32; --blue:#0088FF; }
-  html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
-  .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .topbar a { color:var(--dim); text-decoration:none; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
-  .topbar-nav-group { display:flex; align-items:center; gap:16px; }
-  .topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
-  .topbar-title { font-size:16px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; }
-  .main { padding:20px; max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
-  .filter-row { display:flex; gap:6px; flex-wrap:wrap; }
-  .filter-btn { padding:6px 14px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; text-decoration:none; }
-  .filter-btn.active { background:rgba(245,200,66,0.1); border-color:rgba(245,200,66,0.3); color:var(--gold); }
-  .section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-  .lb-row { display:flex; align-items:center; height:50px; border-bottom:1px solid var(--border); }
-  .lb-row:last-child { border-bottom:none; }
-  .lb-row.pos-1 { border-left:2px solid rgba(245,200,66,0.6); }
-  .lb-row.pos-2 { border-left:2px solid rgba(200,200,200,0.4); }
-  .lb-row.pos-3 { border-left:2px solid rgba(205,127,50,0.4); }
-  .lb-rank { width:44px; text-align:center; font-size:18px; font-weight:900; color:var(--dim); flex-shrink:0; }
-  .lb-row.pos-1 .lb-rank { color:var(--gold); }
-  .lb-row.pos-2 .lb-rank { color:var(--silver); }
-  .lb-row.pos-3 .lb-rank { color:var(--bronze); }
-  .lb-info { flex:1; padding:0 12px; min-width:0; }
-  .lb-name { font-size:18px; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .lb-cat { font-size:10px; color:var(--dim); font-family:'Barlow',sans-serif; }
-  .lb-score { padding-right:16px; font-size:22px; font-weight:900; color:var(--dim); }
-  .lb-row.pos-1 .lb-score { color:var(--gold); }
-  .lb-row.pos-2 .lb-score { color:var(--silver); }
-  .lb-row.pos-3 .lb-score { color:var(--bronze); }
-  .empty { padding:30px; text-align:center; color:var(--dim); font-family:'Barlow',sans-serif; }
-  /* Per-event breakdown table (when category selected) */
-  .results-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .ev-table-header, .ev-table-row {
-    display:flex; align-items:stretch; min-width:480px;
-    border:1px solid var(--border); border-radius:6px; margin-bottom:3px; overflow:hidden;
-  }
-  .ev-table-header { background:var(--surface2); margin-bottom:6px; }
-  .ev-table-row:hover { background:var(--surface2); }
-  .ev-table-row.rank-1 { border-color:rgba(255,215,0,0.3); }
-  .ev-table-row.rank-2 { border-color:rgba(192,192,192,0.2); }
-  .ev-table-row.rank-3 { border-color:rgba(205,127,50,0.2); }
-  .ev-rank { width:36px; min-width:36px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900; color:var(--dim); border-right:1px solid var(--border); }
-  .ev-rank.r1 { color:var(--gold); }
-  .ev-rank.r2 { color:var(--silver); }
-  .ev-rank.r3 { color:var(--bronze); }
-  .ev-name-col { width:140px; min-width:140px; padding:8px 10px; font-size:14px; font-weight:800; text-transform:uppercase; border-right:1px solid var(--border); display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ev-total-col { width:60px; min-width:60px; display:flex; align-items:center; justify-content:center; flex-direction:column; border-right:1px solid var(--border); padding:4px; }
-  .ev-total-pts { font-size:18px; font-weight:900; color:var(--gold); line-height:1; }
-  .ev-total-lbl { font-size:8px; color:var(--dim); letter-spacing:0.12em; text-transform:uppercase; }
-  .ev-events { flex:1; display:flex; }
-  .ev-event-cell { flex:1; min-width:52px; padding:4px 3px; text-align:center; border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
-  .ev-event-cell:last-child { border-right:none; }
-  .ev-head-rank { width:36px; min-width:36px; padding:6px; border-right:1px solid var(--border); }
-  .ev-head-name { width:140px; min-width:140px; padding:6px 10px; border-right:1px solid var(--border); font-size:10px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:var(--dim); }
-  .ev-head-total { width:60px; min-width:60px; padding:6px; border-right:1px solid var(--border); font-size:10px; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); text-align:center; }
-  .ev-head-events { flex:1; display:flex; }
-  .ev-head-event { flex:1; min-width:52px; padding:6px 3px; text-align:center; border-right:1px solid var(--border); font-size:10px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim); line-height:1.2; }
-  .ev-head-event:last-child { border-right:none; }
-  .cell-pts { font-size:15px; font-weight:900; color:var(--text); line-height:1; }
-  .cell-pts.top { color:var(--gold); }
-  .cell-raw { font-size:10px; color:var(--dim); font-family:'Barlow',sans-serif; }
-  .cell-rank { font-size:9px; color:var(--dim); }
-  .cell-dns { font-size:9px; font-weight:800; letter-spacing:0.1em; color:var(--blue); background:rgba(0,136,255,0.1); padding:2px 4px; border-radius:3px; }
-  .cell-dnf { font-size:9px; font-weight:800; letter-spacing:0.1em; color:#FF4422; background:rgba(255,68,34,0.1); padding:2px 4px; border-radius:3px; }
-  .cell-empty { font-size:10px; color:var(--dim); }
-  @media(max-width:600px) {
-    .main { padding:12px; }
-    .lb-row { height:auto; padding:8px 0; }
-    .lb-rank { width:36px; font-size:15px; }
-    .lb-name { font-size:15px; }
-    .lb-score { font-size:18px; padding-right:12px; }
-  }
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#080808; --surface:#111; --surface2:#181818; --surface3:#202020;
+  --border:rgba(255,255,255,0.09); --text:#F0F0F0; --dim:#888;
+  --gold:#F5C842; --silver:#C8C8C8; --bronze:#CD7F32; --blue:#0088FF;
+}
+html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:10px 2%; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.topbar a { color:var(--dim); text-decoration:none; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+.topbar a:hover { color:var(--text); }
+.topbar-nav-group { display:flex; align-items:center; gap:16px; }
+.topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
+.topbar-title { font-size:17px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; letter-spacing:0.06em; }
+
+/* ── MAIN — full width ── */
+.main { padding:16px 2%; max-width:none; width:100%; display:flex; flex-direction:column; gap:14px; }
+
+/* ── CATEGORY FILTER TABS ── */
+.filter-row { display:flex; gap:8px; flex-wrap:wrap; }
+.filter-btn {
+  padding:10px 22px; border-radius:8px; border:1px solid var(--border);
+  background:var(--surface); color:var(--dim);
+  font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800;
+  letter-spacing:0.06em; text-transform:uppercase; text-decoration:none;
+  transition:all 0.15s; cursor:pointer;
+}
+.filter-btn:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
+.filter-btn.active { background:rgba(245,200,66,0.1); border-color:rgba(245,200,66,0.35); color:var(--gold); }
+
+/* ── OVERALL VIEW (simple list) ── */
+.section { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.lb-row {
+  display:flex; align-items:center; min-height:62px;
+  border-bottom:1px solid var(--border); padding:10px 0;
+}
+.lb-row:last-child { border-bottom:none; }
+.lb-row.pos-1 { border-left:3px solid rgba(245,200,66,0.7); }
+.lb-row.pos-2 { border-left:3px solid rgba(200,200,200,0.5); }
+.lb-row.pos-3 { border-left:3px solid rgba(205,127,50,0.5); }
+.lb-rank { width:60px; text-align:center; font-size:26px; font-weight:900; color:var(--dim); flex-shrink:0; }
+.lb-row.pos-1 .lb-rank { color:var(--gold); }
+.lb-row.pos-2 .lb-rank { color:var(--silver); }
+.lb-row.pos-3 .lb-rank { color:var(--bronze); }
+.lb-info { flex:1; padding:0 16px; min-width:0; }
+.lb-name { font-size:24px; font-weight:800; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lb-cat { font-size:12px; color:var(--dim); font-family:'Barlow',sans-serif; margin-top:2px; }
+.lb-score { padding-right:24px; font-size:28px; font-weight:900; color:var(--dim); white-space:nowrap; }
+.lb-row.pos-1 .lb-score { color:var(--gold); }
+.lb-row.pos-2 .lb-score { color:var(--silver); }
+.lb-row.pos-3 .lb-score { color:var(--bronze); }
+.empty { padding:40px; text-align:center; color:var(--dim); font-family:'Barlow',sans-serif; font-size:15px; }
+
+/* ── DETAILED TABLE ── */
+.results-table { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.ev-table-header, .ev-table-row {
+  display:flex; align-items:stretch;
+  min-width:640px;
+  border:1px solid var(--border); margin-bottom:2px; overflow:hidden; border-radius:6px;
+}
+.ev-table-header { background:var(--surface2); margin-bottom:8px; border-radius:8px; }
+.ev-table-row:hover { background:rgba(255,255,255,0.025); }
+.ev-table-row.rank-1 { border-left:3px solid rgba(245,200,66,0.55); }
+.ev-table-row.rank-2 { border-left:3px solid rgba(200,200,200,0.35); }
+.ev-table-row.rank-3 { border-left:3px solid rgba(205,127,50,0.35); }
+
+/* Header: rank */
+.ev-head-rank { width:52px; min-width:52px; padding:10px 6px; border-right:1px solid var(--border); flex-shrink:0; }
+/* Header: name */
+.ev-head-name {
+  width:220px; min-width:160px; padding:10px 16px; border-right:1px solid var(--border);
+  font-size:12px; font-weight:900; letter-spacing:0.2em; text-transform:uppercase; color:var(--dim);
+  display:flex; align-items:center;
+}
+/* Header: total */
+.ev-head-total {
+  width:80px; min-width:70px; padding:10px 6px; border-right:1px solid var(--border);
+  font-size:12px; font-weight:900; letter-spacing:0.16em; text-transform:uppercase;
+  color:var(--gold); text-align:center; display:flex; align-items:center; justify-content:center;
+}
+/* Header: event columns */
+.ev-head-events { flex:1; display:flex; }
+.ev-head-event {
+  flex:1; min-width:90px; padding:10px 6px; text-align:center;
+  border-right:1px solid var(--border);
+  font-size:13px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--dim); line-height:1.25; display:flex; align-items:center; justify-content:center;
+}
+.ev-head-event:last-child { border-right:none; }
+
+/* Data rows */
+.ev-rank {
+  width:52px; min-width:52px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:900; color:var(--dim);
+  border-right:1px solid var(--border);
+}
+.ev-rank.r1 { color:var(--gold); }
+.ev-rank.r2 { color:var(--silver); }
+.ev-rank.r3 { color:var(--bronze); }
+.ev-name-col {
+  width:220px; min-width:160px; padding:12px 16px;
+  font-size:20px; font-weight:800; text-transform:uppercase;
+  border-right:1px solid var(--border);
+  display:flex; align-items:center;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ev-total-col {
+  width:80px; min-width:70px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  border-right:1px solid var(--border); padding:8px 4px; gap:1px;
+}
+.ev-total-pts { font-size:24px; font-weight:900; color:var(--gold); line-height:1; }
+.ev-total-lbl { font-size:10px; color:var(--dim); letter-spacing:0.14em; text-transform:uppercase; font-family:'Barlow',sans-serif; }
+.ev-events { flex:1; display:flex; }
+.ev-event-cell {
+  flex:1; min-width:90px; padding:10px 6px;
+  text-align:center; border-right:1px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+}
+.ev-event-cell:last-child { border-right:none; }
+
+/* Cell content — raw result is primary, pts is secondary */
+.cell-raw {
+  font-size:20px; font-weight:800; color:var(--text); line-height:1;
+  font-family:'Barlow Condensed',sans-serif; white-space:nowrap;
+}
+.cell-unit {
+  font-size:13px; font-weight:700; color:var(--dim); margin-left:2px;
+}
+.cell-pts {
+  font-size:13px; font-weight:900; color:rgba(245,200,66,0.6); line-height:1;
+  font-family:'Barlow Condensed',sans-serif;
+}
+.cell-pts.top { color:var(--gold); }
+.cell-rank { font-size:11px; color:var(--dim); font-family:'Barlow',sans-serif; }
+.cell-dns {
+  font-size:12px; font-weight:800; letter-spacing:0.1em; color:var(--blue);
+  background:rgba(0,136,255,0.1); padding:3px 6px; border-radius:3px;
+}
+.cell-dnf {
+  font-size:12px; font-weight:800; letter-spacing:0.1em; color:#FF4422;
+  background:rgba(255,68,34,0.1); padding:3px 6px; border-radius:3px;
+}
+.cell-empty { font-size:16px; color:rgba(255,255,255,0.15); }
+
+@media(max-width:700px) {
+  .main { padding:10px 3%; }
+  .lb-row { min-height:52px; }
+  .lb-rank { width:44px; font-size:20px; }
+  .lb-name { font-size:18px; }
+  .lb-score { font-size:22px; padding-right:14px; }
+  .filter-btn { font-size:13px; padding:8px 14px; }
+}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <span class="topbar-title">🏆 Leaderboard</span>
+  <span class="topbar-title">Leaderboard</span>
   <a href="/">← Home</a>
-  <a href="/comp/events">Setup</a>
   <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/events">Events</a><a href="/comp/athletes">Athletes</a><a href="/comp/heats">Heats</a><a href="/comp/run">Run</a></span>
   <span class="topbar-nav-group"><span class="sep">|</span><a href="/comp/results">Results</a></span>
-  <a href="/director.html" target="_blank" rel="noopener" style="color:var(--dim);font-size:11px">Director ↗</a>
 </div>
 <div class="main">
   <div class="filter-row">
@@ -128,8 +212,14 @@
           {% elif ed.result_type == 'dnf' %}
             <span class="cell-dnf">DNF</span>
           {% elif ed.raw_value is not none %}
-            <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}</span>
-            <span class="cell-raw">{{ ed.raw_value | round(2) }}</span>
+            {% set unit = event_types[ed.event_type].unit if ed.event_type in event_types else '' %}
+            {% set raw_fmt = (ed.raw_value | int) if ed.raw_value == (ed.raw_value | int) else (ed.raw_value | round(2)) %}
+            {% if ed.event_type == 'weight_reps' and ed.tiebreak %}
+              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">kg</span> × {{ ed.tiebreak | int if ed.tiebreak == (ed.tiebreak | int) else ed.tiebreak }}<span class="cell-unit">r</span></span>
+            {% else %}
+              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">{{ unit }}</span></span>
+            {% endif %}
+            <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }} pts</span>
             {% if ed.rank %}<span class="cell-rank">#{{ ed.rank }}</span>{% endif %}
           {% else %}
             <span class="cell-empty">—</span>
@@ -165,9 +255,12 @@
   {% endif %}
 </div>
 <script>
+/* Unit lookup — static mapping from event_type → display unit */
+var EVENT_TYPES_UNITS = {{ event_types | tojson }};
+
 (function() {
   var CAT = {{ selected_cat | tojson }};
-  if (!CAT) return;  // no SSE update for overall view
+  if (!CAT) return;
   var lastVersion = null;
   var _lastRestartToken = null;
 
@@ -178,7 +271,26 @@
   function fmtRaw(v) {
     if (v === null || v === undefined) return '';
     var n = parseFloat(v);
-    return isNaN(n) ? '' : (n % 1 === 0 ? n : n.toFixed(2).replace(/\.?0+$/, ''));
+    return isNaN(n) ? '' : (n % 1 === 0 ? String(Math.floor(n)) : n.toFixed(2).replace(/\.?0+$/, ''));
+  }
+  function fmtCell(ed) {
+    if (ed.result_type === 'dns') return '<span class="cell-dns">DNS</span>';
+    if (ed.result_type === 'dnf') return '<span class="cell-dnf">DNF</span>';
+    if (ed.raw_value === null || ed.raw_value === undefined) return '<span class="cell-empty">—</span>';
+
+    var unit = (EVENT_TYPES_UNITS[ed.event_type] || {}).unit || '';
+    var raw  = fmtRaw(ed.raw_value);
+    var rawHtml;
+    if (ed.event_type === 'weight_reps' && ed.tiebreak !== null && ed.tiebreak !== undefined) {
+      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit">kg</span>' +
+                ' × ' + fmtRaw(ed.tiebreak) + '<span class="cell-unit">r</span></span>';
+    } else {
+      rawHtml = '<span class="cell-raw">' + raw + '<span class="cell-unit">' + escHtml(unit) + '</span></span>';
+    }
+    var topCls  = ed.rank === 1 ? ' top' : '';
+    var ptsHtml = '<span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + ' pts</span>';
+    var rnkHtml = ed.rank ? '<span class="cell-rank">#' + ed.rank + '</span>' : '';
+    return rawHtml + ptsHtml + rnkHtml;
   }
 
   function renderTable(data) {
@@ -202,20 +314,7 @@
       var rnkCls = rnk <= 3 ? 'rank-' + rnk : '';
       var rankIconCls = rnk <= 3 ? 'r' + rnk : '';
       var evCells = r.event_data.map(function(ed) {
-        var inner;
-        if (ed.result_type === 'dns') {
-          inner = '<span class="cell-dns">DNS</span>';
-        } else if (ed.result_type === 'dnf') {
-          inner = '<span class="cell-dnf">DNF</span>';
-        } else if (ed.raw_value !== null && ed.raw_value !== undefined) {
-          var topCls = ed.rank === 1 ? ' top' : '';
-          inner = '<span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + '</span>' +
-                  '<span class="cell-raw">' + fmtRaw(ed.raw_value) + '</span>' +
-                  (ed.rank ? '<span class="cell-rank">#' + ed.rank + '</span>' : '');
-        } else {
-          inner = '<span class="cell-empty">—</span>';
-        }
-        return '<div class="ev-event-cell">' + inner + '</div>';
+        return '<div class="ev-event-cell">' + fmtCell(ed) + '</div>';
       }).join('');
       return '<div class="ev-table-row ' + rnkCls + '">' +
         '<div class="ev-rank ' + rankIconCls + '">' + rnk + '</div>' +
@@ -229,11 +328,18 @@
     tableEl.innerHTML = header + (rows || '<div class="empty">No results entered yet.</div>');
   }
 
-  function fetchAndUpdate() {
-    fetch('/comp/api/leaderboard?category=' + encodeURIComponent(CAT) + '&detailed=1')
-      .then(function(r) { return r.json(); })
-      .then(renderTable)
-      .catch(function() {});
+  /* Debounce: coalesce rapid SSE ticks into one fetch 250ms after the last tick.
+     Prevents burst score updates from hammering the DB with duplicate queries. */
+  var _fetchTimer = null;
+  function scheduleFetch() {
+    if (_fetchTimer) clearTimeout(_fetchTimer);
+    _fetchTimer = setTimeout(function() {
+      _fetchTimer = null;
+      fetch('/comp/api/leaderboard?category=' + encodeURIComponent(CAT) + '&detailed=1')
+        .then(function(r) { return r.json(); })
+        .then(renderTable)
+        .catch(function() {});
+    }, 250);
   }
 
   var _es = null;
@@ -242,27 +348,25 @@
     _es.onmessage = function(evt) {
       try {
         var msg = JSON.parse(evt.data);
-        // Detect server restart — reset version tracking so stale gate doesn't block refresh
         if (msg.restart_token !== undefined) {
           if (_lastRestartToken !== null && msg.restart_token !== _lastRestartToken) {
             lastVersion = null;
-            fetchAndUpdate();
+            scheduleFetch();
           }
           _lastRestartToken = msg.restart_token;
         }
-        // Seed lastVersion on first message (null coerces to 0, bypassing the gate)
         if (msg.results_version !== undefined) {
           if (lastVersion === null) { lastVersion = msg.results_version; return; }
           if (msg.results_version <= lastVersion) return;
         }
       } catch(e) {}
-      fetchAndUpdate();
+      scheduleFetch();
     };
     _es.onerror = function() { _es.close(); setTimeout(connect, 5000); };
   }
   connect();
   window.addEventListener('pagehide', function() { if (_es) { _es.close(); _es = null; } });
-})();
+}());
 </script>
 </body>
 </html>
