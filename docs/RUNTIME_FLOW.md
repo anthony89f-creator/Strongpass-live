@@ -5,8 +5,8 @@
 ```
 page load
   │
-  ├─ BUILD_ID = 'BUILD-20260517-C'
-  ├─ document.title = 'Director [BUILD-20260517-C]'
+  ├─ BUILD_ID = 'BUILD-20260518-C'
+  ├─ document.title = 'Director [BUILD-20260518-C]'
   ├─ console.log [Director BOOT] (visible immediately)
   │
   ├─ init()
@@ -30,10 +30,8 @@ page load
 ```
 operator clicks "Lineup" button
   │
-  ├─ [CLICK] lineup — raw DOM event fired
   ├─ _activeTransitionId++ → id = N
-  ├─ _enqueue(selectPVW_queued)
-  ├─ [QUEUE] enqueue called for key=lineup id=#N
+  ├─ _enqueue(selectPVW_queued)   [DL() only — behind ?debug=1]
   │
   ▼
 selectPVW('lineup', N)   [runs when queue is available]

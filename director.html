@@ -173,7 +173,7 @@ body {
   background: transparent; /* critical: Safari treats iframes as opaque without this */
 }
 .pvw-frame { visibility: hidden; } /* JS shows only the selected one */
-.pgm-frame { visibility: hidden; } /* JS shows only the live one via renderPGMVisibility() */
+.pgm-frame { visibility: hidden; } /* _createPGMGroupFrame sets visibility:visible inline; renderPGMVisibility() called after TAKE/CUT/CLN as defence */
 
 /* Empty placeholder when no PVW selection */
 .monitor-empty {
@@ -258,8 +258,9 @@ body {
   cursor: pointer; transition: all 0.1s;
   -webkit-user-select: none; user-select: none;
 }
-#cut-btn:hover  { border-color: var(--border-hi); color: rgba(255,255,255,0.5); }
-#cut-btn:active { transform: scale(0.96); }
+#cut-btn:hover:not(:disabled)  { border-color: var(--border-hi); color: rgba(255,255,255,0.5); }
+#cut-btn:active:not(:disabled) { transform: scale(0.96); }
+#cut-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
 .auto-btn {
   width: 66px; padding: 8px 0;
@@ -465,7 +466,7 @@ body {
     <img class="header-logo" src="/logo.png" alt="">
     <div>
       <div class="header-title">Broadcast Director</div>
-      <div class="header-sub">Preview / Program</div>
+      <div class="header-sub" id="header-sub">Preview / Program</div>
     </div>
   </div>
   <div class="conn-wrap">
@@ -571,13 +572,13 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-B';
+var BUILD_ID = 'BUILD-20260518-C';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
-  // Stamp build ID visibly in conn-text before any async work
-  var ct = document.getElementById('conn-text');
-  if (ct) ct.textContent = BUILD_ID;
+  // Stamp build ID into header-sub so it's always visible, even after SSE connects.
+  var sub = document.getElementById('header-sub');
+  if (sub) sub.textContent = BUILD_ID;
   // Log immediately — if this doesn't appear in console the file is not being served
   console.log('%c[Director BOOT] BUILD_ID=' + BUILD_ID + ' url=' + location.href,
               'background:#1a1a00;color:#ffe84d;font-weight:bold;padding:2px 6px');
@@ -655,6 +656,11 @@ window.addEventListener('unhandledrejection', function(e) {
 var liveState    = {};
 var pvwSelection = null;
 var _taking      = false;
+var _takingAt    = 0;  // timestamp when _taking became true; watchdog checks duration
+
+// ─── OVERLAY BUTTON CACHE ────────────────────────────────────────────────────
+// Populated in init(). Eliminates repeated querySelector in the hot renderOvlButtons path.
+var _ovlBtns = {};
 
 // ─── TRANSITION QUEUE ─────────────────────────────────────────────────────────
 var _queue      = Promise.resolve();
@@ -784,12 +790,11 @@ function onStateUpdate(d) {
   try {
     Object.assign(liveState, d);
   } catch(e) { console.error('[Director onStateUpdate merge EXCEPTION tick=' + tick + ']', e); return; }
-  try { renderCtxStrip(); }    catch(e) { console.error('[Director renderCtxStrip EXCEPTION]', e); }
-  try { renderPGMStatus(); }   catch(e) { console.error('[Director renderPGMStatus EXCEPTION]', e); }
-  try { renderPGMVisibility(); } catch(e) { console.error('[Director renderPGMVisibility EXCEPTION]', e); }
-  try { renderOvlButtons(); }  catch(e) { console.error('[Director renderOvlButtons EXCEPTION]', e); }
-  try { renderCtrlPanel(); }   catch(e) { console.error('[Director renderCtrlPanel EXCEPTION]', e); }
-  try { renderGroupStrip(); }  catch(e) { console.error('[Director renderGroupStrip EXCEPTION]', e); }
+  try { renderCtxStrip(); }   catch(e) { console.error('[Director renderCtxStrip EXCEPTION]', e); }
+  try { renderPGMStatus(); }  catch(e) { console.error('[Director renderPGMStatus EXCEPTION]', e); }
+  try { renderOvlButtons(); } catch(e) { console.error('[Director renderOvlButtons EXCEPTION]', e); }
+  try { renderCtrlPanel(); }  catch(e) { console.error('[Director renderCtrlPanel EXCEPTION]', e); }
+  try { renderGroupStrip(); } catch(e) { console.error('[Director renderGroupStrip EXCEPTION]', e); }
   // Push to active PVW via postMessage
   if (pvwSelection) {
     var ovl = OVL_BY_KEY[pvwSelection];
@@ -841,7 +846,15 @@ function renderCtxStrip() {
 // ─── PGM STATUS ───────────────────────────────────────────────────────────────
 // Derives on-air state from liveState overlay flags (which are kept in sync by
 // the server after every /broadcast/take and /broadcast/clean call).
+// Dirty-check: on-air state changes only on TAKE/CUT/CLN — skip DOM write on score-only ticks.
+var _lastPGMStatusKey = null;
 function renderPGMStatus() {
+  var statusKey = OVERLAYS.map(function(o) {
+    return o.pgmKeys.some(function(f) { return !!liveState[f]; }) ? '1' : '0';
+  }).join('');
+  if (statusKey === _lastPGMStatusKey) return;
+  _lastPGMStatusKey = statusKey;
+
   var live = OVERLAYS.filter(function(o) {
     return o.pgmKeys.some(function(f) { return !!liveState[f]; });
   });
@@ -869,15 +882,11 @@ function renderPGMVisibility() {
 
 // ─── OVERLAY BUTTONS ──────────────────────────────────────────────────────────
 function renderOvlButtons() {
-  DL('renderOvlButtons enter — pvwSelection=' + pvwSelection);
+  DL('renderOvlButtons — pvwSelection=' + pvwSelection);
   try {
-    var totalBtns = document.querySelectorAll('.ovl-btn').length;
-    if (totalBtns !== OVERLAYS.length) {
-      console.error('[renderOvlButtons] BUTTON COUNT MISMATCH — expected=' + OVERLAYS.length + ' found=' + totalBtns);
-    }
     OVERLAYS.forEach(function(o) {
-      var btn = document.querySelector('.ovl-btn[data-key="' + o.key + '"]');
-      if (!btn) { console.error('[renderOvlButtons] MISSING BUTTON for key=' + o.key); return; }
+      var btn = _ovlBtns[o.key];
+      if (!btn) return;
       var isLive = o.pgmKeys.some(function(f) { return !!liveState[f]; });
       btn.classList.toggle('live',     isLive);
       btn.classList.toggle('selected', pvwSelection === o.key);
@@ -885,7 +894,6 @@ function renderOvlButtons() {
   } catch(err) {
     console.error('[renderOvlButtons EXCEPTION]', err);
   }
-  DL('renderOvlButtons exit');
 }
 
 // ─── IFRAME MANAGEMENT ────────────────────────────────────────────────────────
@@ -980,18 +988,16 @@ function _createPVWFrame(ovl, id) {
       if (!e.data || e.source !== frame.contentWindow) return;
 
       if (e.data.type === 'overlay-runtime-ready') {
-        console.log('[PVW#' + id + '] runtime-ready received — pushing initial state');
+        DL('[PVW#' + id + '] runtime-ready received — pushing initial state');
         _setLifecycleStage('[PVW#' + id + '] runtime-ready:' + ovl.key);
         if (!statePushed) {
           statePushed = true;
           try {
             var initialState = pvwStateFor(ovl);
             frame.contentWindow.postMessage(initialState, '*');
-            console.log('[PVW#' + id + '] initial state pushed');
-            DL('[PVW#' + id + '] state pushed after runtime-ready — overlay will render then send overlay-ready');
+            DL('[PVW#' + id + '] initial state pushed — overlay will render then send overlay-ready');
           } catch(pushErr) {
             console.error('[PVW#' + id + '] state push FAILED: ' + pushErr.message);
-            DL('[PVW#' + id + '] state push FAILED: ' + pushErr.message);
           }
         } else {
           DL('[PVW#' + id + '] runtime-ready received again — state already pushed, ignoring');
@@ -1000,10 +1006,9 @@ function _createPVWFrame(ovl, id) {
       }
 
       if (e.data.type === 'overlay-ready') {
-        console.log('[PVW#' + id + '] overlay-ready received — statePushed=' + statePushed);
-        DL('[PVW#' + id + '] overlay-ready received settled=' + settled);
+        DL('[PVW#' + id + '] overlay-ready received — statePushed=' + statePushed + ' settled=' + settled);
         if (!statePushed) {
-          console.warn('[PVW#' + id + '] overlay-ready arrived before state pushed — overlay may render blank');
+          console.warn('[PVW#' + id + '] overlay-ready before state pushed — overlay may render blank');
         }
         settle('overlay-ready');
       }
@@ -1142,13 +1147,19 @@ function updateTakeBtn() {
 function updateCutBtn() {
   var ovl = pvwSelection ? OVL_BY_KEY[pvwSelection] : null;
   var btn = document.getElementById('cut-btn');
-  if (btn) btn.textContent = ovl ? 'CUT ' + ovl.group : 'CUT';
+  if (!btn) return;
+  btn.textContent = ovl ? 'CUT ' + ovl.group : 'CUT';
+  btn.disabled    = !ovl;
 }
 
+var _lastGroupStripKey = null;
 function renderGroupStrip() {
   var strip = document.getElementById('group-strip');
   if (!strip) return;
   var groups = (liveState.program && liveState.program.groups) || {};
+  var stripKey = _PGM_GROUP_ORDER.map(function(g) { return g + ':' + (groups[g] || ''); }).join('|');
+  if (stripKey === _lastGroupStripKey) return;
+  _lastGroupStripKey = stripKey;
   strip.innerHTML = '';
   _PGM_GROUP_ORDER.forEach(function(g) {
     var key  = groups[g] || null;
@@ -1183,10 +1194,12 @@ async function _doTake() {
   if (!ovl) { DL('_doTake() BLOCKED — no ovl found for key=' + pvwSelection); return; }
 
   _taking = true;
+  _takingAt = Date.now();
   var btn = null;
   var _takeTimer = setTimeout(function() {
     console.error('[_doTake] SAFETY TIMEOUT 8s — forcing reset');
     _taking = false;
+    _takingAt = 0;
     if (btn) { btn.disabled = false; }
   }, 8000);
 
@@ -1256,6 +1269,7 @@ async function _doTake() {
   } finally {
     clearTimeout(_takeTimer);
     _taking = false;
+    _takingAt = 0;
     if (btn) { btn.disabled = false; }
     _setLifecycleStage('doTake:finally-reset');
     DL('_doTake() FINALLY — _taking=false btn.disabled=false');
@@ -1670,8 +1684,9 @@ document.addEventListener('keydown', function(e) {
         _enqueue(function selectPVW_queued() { return selectPVW(key, id); });
       };
     }(ovl.key)));
+    _ovlBtns[ovl.key] = btn;
     selectorEl.appendChild(btn);
-    DL('init() — listener attached for key=' + ovl.key + ' total buttons now=' + selectorEl.querySelectorAll('.ovl-btn').length);
+    DL('init() — listener attached for key=' + ovl.key);
   });
   // Create debug HUD inside pvw-body
   (function() {
@@ -1716,6 +1731,7 @@ document.addEventListener('keydown', function(e) {
 
   setTimeout(applyScale, 80);
   renderGroupStrip();
+  updateCutBtn();
   DL('init() — calling fetchState() and connect()');
   fetchState();
   connect();
@@ -1742,7 +1758,7 @@ document.addEventListener('keydown', function(e) {
         sseState:        _es ? _es.readyState : 'null',
       });
     }
-    if (_taking)              { console.warn('[WATCHDOG] _taking stuck — possible deadlock. stage=' + _lifecycleStage); }
+    if (_taking && _takingAt && (Date.now() - _takingAt > 4000)) { console.warn('[WATCHDOG] _taking stuck >4s — possible deadlock. stage=' + _lifecycleStage); }
     if (btnCount !== OVERLAYS.length) { console.error('[WATCHDOG] button count wrong — expected=' + OVERLAYS.length + ' got=' + btnCount); }
     if (pgmCount > 3)         { console.error('[WATCHDOG] PGM iframe leak — ' + pgmCount + ' frames in DOM'); }
     if (/src-set:|iframe-load:/.test(_lifecycleStage)) {

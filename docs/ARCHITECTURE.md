@@ -162,7 +162,7 @@ iframe.style.transformOrigin = `top left`
 
 **Critical rule: scale the host iframe element ONLY.** Do NOT also apply `scale()` to `contentDocument.body`. Doing so causes double-scaling (`scale²`): if `scale = 0.306`, the content appears at `0.306 × 0.306 = 0.094x` — effectively invisible.
 
-`_applyScaleToBody()` exists as a utility for diagnostic logging only. It is NOT called from `applyScale()`.
+`_applyScaleToBody()` was removed in BUILD-20260518-B (dead code with unreachable MutationObserver).
 
 `applyScale()` is triggered by:
 - `ResizeObserver` on `pvw-body` (catches flex reflow, ctrl-panel open/close)

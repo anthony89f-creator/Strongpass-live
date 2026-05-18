@@ -1,5 +1,91 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-C (2026-05-18) — Runtime efficiency + UX hardening
+
+### Fixed: Watchdog false-positive _taking warning
+
+The watchdog fired every 2s. If `_taking=true` was set during a normal TAKE (~200ms), the
+watchdog could fire during that window and emit a spurious `[WATCHDOG] _taking stuck` warning.
+
+Fix: added `_takingAt = Date.now()` when `_taking` becomes true; reset to `0` in both the
+finally block and the 8s safety timeout. Watchdog now warns only when `_taking` has been
+true for >4 seconds — genuine deadlock territory only.
+
+---
+
+### Improved: renderPGMStatus() dirty-check — skip DOM writes on score-only SSE ticks
+
+`renderPGMStatus()` was rebuilding 3 DOM elements on every SSE message regardless of whether
+on-air state had changed. Score updates, heat advances, and ctrl changes all triggered a full
+DOM write cycle.
+
+Fix: added `_lastPGMStatusKey` — a 6-character binary string tracking which overlays are live.
+DOM writes skipped entirely unless the key changes. Key only changes on TAKE/CUT/CLN.
+
+---
+
+### Improved: renderGroupStrip() dirty-check — skip rebuild on score-only ticks
+
+`renderGroupStrip()` rebuilt 3 pill elements via innerHTML wipe + DOM creation on every
+SSE tick. Same root cause as renderPGMStatus.
+
+Fix: added `_lastGroupStripKey` — a `"A:key|B:key|C:key"` string. Strip rebuild skipped
+unless the key changes. Eliminates the innerHTML wipe + 3×4 DOM node creations per tick.
+
+---
+
+### Improved: renderOvlButtons() uses element cache — eliminates 6+ querySelector per tick
+
+`renderOvlButtons()` was calling `document.querySelector('.ovl-btn[data-key="..."]')` for
+each of the 6 overlays on every SSE message. At 1-3 ticks/sec this was 6-18 DOM lookups
+per second.
+
+Fix: added `_ovlBtns = {}` map (key → element) populated once in `init()`. `renderOvlButtons()`
+now uses direct element references with no DOM queries.
+
+Also removed the per-call `querySelectorAll('.ovl-btn').length` button-count check from
+the hot path — that debug assertion was an additional querySelectorAll per tick.
+
+---
+
+### Improved: renderPGMVisibility() removed from SSE tick
+
+`renderPGMVisibility()` iterated all iframes in `#pgm-screen` and forced `visibility:visible`
+on every SSE message. Redundant: `_createPGMGroupFrame` already sets `visibility:visible`
+inline on creation, and frames are never hidden without being removed.
+
+Fix: removed from `onStateUpdate`. Kept in `_doTake`, `_doClean`, `_doCleanAll` as
+defence against any edge-case where a frame might be created without the inline style.
+
+---
+
+### Improved: _createPVWFrame handshake logs gated behind DL()
+
+Three `console.log` calls in the PVW handshake fired unconditionally on every overlay
+transition: runtime-ready received, initial state pushed, overlay-ready received.
+
+Fix: all three → DL() (only visible when `?debug=1`). Error and warn paths unchanged.
+
+---
+
+### Improved: BUILD_ID permanently visible in header
+
+Previously BUILD_ID was written to `conn-text` at boot, then immediately overwritten when
+SSE connected (`setConn(true)` sets conn-text to "Connected").
+
+Fix: BUILD_ID now written to `#header-sub` element (below "Broadcast Director" title) at
+boot. Permanently visible for the duration of the session. `conn-text` no longer shows BUILD_ID.
+
+---
+
+### Improved: CUT button disabled when no overlay selected
+
+`updateCutBtn()` now sets `btn.disabled = !ovl`. When no overlay is in PVW, CUT is
+meaningless (there is no group to cut). CSS added: `:disabled` reduces opacity to 0.25
+and sets `cursor:not-allowed`. The button re-enables automatically when pvwSelection is set.
+
+---
+
 ## BUILD-20260518-B (2026-05-18) — Overlay registry + operator polish
 
 ### Fixed: pgmChanged undeclared variable in onStateUpdate PGM reconstruction
