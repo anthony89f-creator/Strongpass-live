@@ -15,7 +15,7 @@
     --gold:#D4A017; --gold-light:#F5C842;
     --blue:#4488FF; --blue-dim:rgba(68,136,255,0.15); --blue-border:rgba(68,136,255,0.3);
     --bg:#0C0C0C; --surface:#161616; --surface2:#1E1E1E; --surface3:#252525;
-    --border:rgba(255,255,255,0.08); --text:#F0F0F0; --dim:#777;
+    --border:rgba(255,255,255,0.10); --text:#F0F0F0; --dim:#999;
   }
   html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; overscroll-behavior:none; }
 
@@ -30,7 +30,7 @@
   .main { padding:14px; max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
 
   .tabs { display:flex; gap:2px; background:var(--surface2); padding:4px; border-radius:8px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .tab { flex:1; padding:9px 12px; border-radius:6px; background:transparent; border:none; color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; white-space:nowrap; touch-action:manipulation; }
+  .tab { flex:1; padding:9px 12px; border-radius:6px; background:transparent; border:none; color:var(--dim); font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; white-space:nowrap; touch-action:manipulation; }
   .tab.active { background:var(--surface3); color:#fff; border:1px solid rgba(255,255,255,0.15); }
   .tab-panel { display:none; }
   .tab-panel.active { display:flex; flex-direction:column; gap:14px; }

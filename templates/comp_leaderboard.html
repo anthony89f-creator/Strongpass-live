@@ -9,10 +9,10 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  :root { --bg:#080808; --surface:#111; --surface2:#181818; --border:rgba(255,255,255,0.07); --text:#F0F0F0; --dim:#666; --gold:#F5C842; --silver:#C8C8C8; --bronze:#CD7F32; --blue:#0088FF; }
+  :root { --bg:#080808; --surface:#111; --surface2:#181818; --border:rgba(255,255,255,0.09); --text:#F0F0F0; --dim:#888; --gold:#F5C842; --silver:#C8C8C8; --bronze:#CD7F32; --blue:#0088FF; }
   html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
   .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:10px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .topbar a { color:var(--dim); text-decoration:none; font-size:12px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+  .topbar a { color:var(--dim); text-decoration:none; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
   .topbar-nav-group { display:flex; align-items:center; gap:16px; }
   .topbar-nav-group .sep { color:var(--border); font-weight:400; user-select:none; }
   .topbar-title { font-size:16px; font-weight:900; text-transform:uppercase; color:var(--blue); margin-right:auto; }
@@ -61,15 +61,15 @@
   .ev-event-cell { flex:1; min-width:52px; padding:4px 3px; text-align:center; border-right:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
   .ev-event-cell:last-child { border-right:none; }
   .ev-head-rank { width:36px; min-width:36px; padding:6px; border-right:1px solid var(--border); }
-  .ev-head-name { width:140px; min-width:140px; padding:6px 10px; border-right:1px solid var(--border); font-size:9px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:var(--dim); }
-  .ev-head-total { width:60px; min-width:60px; padding:6px; border-right:1px solid var(--border); font-size:9px; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); text-align:center; }
+  .ev-head-name { width:140px; min-width:140px; padding:6px 10px; border-right:1px solid var(--border); font-size:10px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase; color:var(--dim); }
+  .ev-head-total { width:60px; min-width:60px; padding:6px; border-right:1px solid var(--border); font-size:10px; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); text-align:center; }
   .ev-head-events { flex:1; display:flex; }
-  .ev-head-event { flex:1; min-width:52px; padding:6px 3px; text-align:center; border-right:1px solid var(--border); font-size:9px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim2); line-height:1.2; }
+  .ev-head-event { flex:1; min-width:52px; padding:6px 3px; text-align:center; border-right:1px solid var(--border); font-size:10px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--dim); line-height:1.2; }
   .ev-head-event:last-child { border-right:none; }
-  .cell-pts { font-size:13px; font-weight:900; color:var(--text); line-height:1; }
+  .cell-pts { font-size:15px; font-weight:900; color:var(--text); line-height:1; }
   .cell-pts.top { color:var(--gold); }
-  .cell-raw { font-size:9px; color:var(--dim); font-family:'Barlow',sans-serif; }
-  .cell-rank { font-size:8px; color:var(--dim); }
+  .cell-raw { font-size:10px; color:var(--dim); font-family:'Barlow',sans-serif; }
+  .cell-rank { font-size:9px; color:var(--dim); }
   .cell-dns { font-size:9px; font-weight:800; letter-spacing:0.1em; color:var(--blue); background:rgba(0,136,255,0.1); padding:2px 4px; border-radius:3px; }
   .cell-dnf { font-size:9px; font-weight:800; letter-spacing:0.1em; color:#FF4422; background:rgba(255,68,34,0.1); padding:2px 4px; border-radius:3px; }
   .cell-empty { font-size:10px; color:var(--dim); }

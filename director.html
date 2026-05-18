@@ -25,11 +25,11 @@
   --surface:     #0F0F0F;
   --surface2:    #131313;
   --surface3:    #171717;
-  --border:      rgba(255,255,255,0.052);
-  --border-hi:   rgba(255,255,255,0.11);
+  --border:      rgba(255,255,255,0.10);
+  --border-hi:   rgba(255,255,255,0.22);
   --text:        #EFEFEF;
-  --dim:         rgba(255,255,255,0.3);
-  --dim2:        rgba(255,255,255,0.13);
+  --dim:         rgba(255,255,255,0.55);
+  --dim2:        rgba(255,255,255,0.28);
 }
 
 /* ── VIEWPORT LOCK ──────────────────────────────────────────────────────── */
@@ -45,27 +45,27 @@ body {
 
 /* ── HEADER ─────────────────────────────────────────────────────────────── */
 .header {
-  height: 38px; flex-shrink: 0;
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 0 12px;
+  height: 46px; flex-shrink: 0;
+  background: var(--surface); border-bottom: 2px solid rgba(212,160,23,0.25);
+  padding: 0 14px;
   display: flex; align-items: center; justify-content: space-between;
   z-index: 200;
 }
-.header-left  { display:flex; align-items:center; gap:9px; }
+.header-left  { display:flex; align-items:center; gap:10px; }
 .back-link {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 3px;
-  padding: 3px 9px; font-size: 9px; font-weight: 800; letter-spacing: 0.2em;
+  background: var(--surface2); border: 1px solid var(--border-hi); border-radius: 3px;
+  padding: 5px 11px; font-size: 10px; font-weight: 800; letter-spacing: 0.18em;
   text-transform: uppercase; color: var(--dim); text-decoration: none;
   transition: color 0.12s, border-color 0.12s; white-space: nowrap;
 }
-.back-link:hover { color: var(--text); border-color: var(--border-hi); }
-.header-logo  { height: 24px; width: auto; object-fit: contain; mix-blend-mode: lighten; opacity: 0.75; }
-.header-title { font-size: 13px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; line-height: 1; }
-.header-sub   { font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.28); font-family: 'Barlow', sans-serif; margin-top: 1px; }
-.conn-wrap    { display:flex; align-items:center; gap:5px; }
-.conn-dot     { width:5px; height:5px; border-radius:50%; background:#1e1e1e; flex-shrink:0; }
+.back-link:hover { color: var(--text); border-color: rgba(255,255,255,0.35); }
+.header-logo  { height: 28px; width: auto; object-fit: contain; mix-blend-mode: lighten; opacity: 0.85; }
+.header-title { font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; line-height: 1; }
+.header-sub   { font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.45); font-family: 'Barlow', sans-serif; margin-top: 2px; }
+.conn-wrap    { display:flex; align-items:center; gap:6px; }
+.conn-dot     { width:6px; height:6px; border-radius:50%; background:#1e1e1e; flex-shrink:0; }
 .conn-dot.ok  { background:var(--green-bright); }
-.conn-text    { font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; }
+.conn-text    { font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; }
 
 /* ── MAIN LAYOUT ────────────────────────────────────────────────────────── */
 /* Fills remaining viewport after header. No scroll. */
@@ -78,17 +78,17 @@ body {
 
 /* ── COMP STRIP ─────────────────────────────────────────────────────────── */
 .comp-strip {
-  flex-shrink: 0; height: 20px;
+  flex-shrink: 0; height: 24px;
   display: flex; align-items: center;
   background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
   padding: 0 10px; overflow: hidden;
 }
 .ctx-item {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-  color: rgba(255,255,255,0.25); font-family:'Barlow',sans-serif; white-space:nowrap; padding: 0 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(255,255,255,0.45); font-family:'Barlow',sans-serif; white-space:nowrap; padding: 0 6px;
 }
-.ctx-item:first-child { padding-left:0; color:var(--text); font-size:12px; font-weight:800; }
-.ctx-sep { color:rgba(255,255,255,0.09); font-size:9px; }
+.ctx-item:first-child { padding-left:0; color:var(--text); font-size:14px; font-weight:900; }
+.ctx-sep { color:rgba(255,255,255,0.18); font-size:10px; }
 
 /* ── MONITORS SECTION ───────────────────────────────────────────────────── */
 .monitors-section {
@@ -120,9 +120,9 @@ body {
 
 /* Label bars */
 .monitor-head {
-  flex-shrink: 0; height: 24px; padding: 0 10px;
+  flex-shrink: 0; height: 28px; padding: 0 10px;
   display: flex; align-items: center; gap: 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   transition: background 0.25s ease;
 }
 .pgm-monitor.on-air .monitor-head { background: rgba(187,30,0,0.06); }
@@ -135,11 +135,11 @@ body {
 @keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .mon-label {
-  font-size: 10px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
+  font-size: 11px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
   font-family: 'Barlow', sans-serif; line-height: 1;
 }
-.pvw-monitor .mon-label { color: rgba(212,160,23,0.65); }
-.pgm-monitor .mon-label { color: rgba(255,68,34,0.7); }
+.pvw-monitor .mon-label { color: rgba(212,160,23,0.85); }
+.pgm-monitor .mon-label { color: rgba(255,68,34,0.85); }
 
 /* Badge is hidden when clean; only shown when on-air class is active */
 .live-badge {
@@ -220,26 +220,26 @@ body {
 /* ── TRANSITION SPINE ───────────────────────────────────────────────────── */
 /* The control column between PVW and PGM */
 .transition-col {
-  width: 84px; flex-shrink: 0;
+  width: 92px; flex-shrink: 0;
   background: var(--rail);
-  border-left:  1px solid rgba(255,255,255,0.04);
-  border-right: 1px solid rgba(255,255,255,0.04);
+  border-left:  1px solid rgba(255,255,255,0.07);
+  border-right: 1px solid rgba(255,255,255,0.07);
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   padding: 12px 6px; gap: 5px;
 }
 .t-eyebrow {
   font-size: 8px; font-weight: 900; letter-spacing: 0.32em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.1); margin-bottom: 5px;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.22); margin-bottom: 5px;
 }
-.t-sep { width: 40px; height: 1px; background: rgba(255,255,255,0.04); margin: 3px 0; }
+.t-sep { width: 44px; height: 1px; background: rgba(255,255,255,0.08); margin: 3px 0; }
 
 #take-btn {
-  width: 66px; padding: 13px 0 10px;
-  border-radius: 2px; border: 1px solid rgba(255,255,255,0.05);
-  background: rgba(255,255,255,0.015); color: rgba(255,255,255,0.12);
+  width: 74px; padding: 18px 0 14px;
+  border-radius: 3px; border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.38);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 15px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;
+  font-size: 18px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;
   cursor: pointer; transition: background 0.14s, border-color 0.14s, color 0.14s, box-shadow 0.14s;
   -webkit-user-select: none; user-select: none;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -247,25 +247,25 @@ body {
 #take-btn::after {
   content: '↵ ENTER';
   font-size: 7px; font-weight: 700; letter-spacing: 0.08em;
-  font-family: 'Barlow', sans-serif; opacity: 0.32; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; opacity: 0.45; text-transform: uppercase;
 }
 #take-btn.ready {
-  background: rgba(0,90,35,0.32);
-  border-color: rgba(0,185,75,0.55);
+  background: rgba(0,90,35,0.35);
+  border-color: rgba(0,200,80,0.65);
   color: var(--green-bright);
-  box-shadow: 0 0 14px rgba(0,180,60,0.08);
+  box-shadow: 0 0 16px rgba(0,180,60,0.12);
 }
-#take-btn.ready:hover  { background: rgba(0,110,42,0.48); border-color: var(--green); }
+#take-btn.ready:hover  { background: rgba(0,110,42,0.52); border-color: var(--green); }
 #take-btn:active       { transform: scale(0.95); }
-#take-btn:disabled     { opacity: 0.3; cursor: not-allowed; transform: none; }
+#take-btn:disabled     { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 /* CUT = cut current PGM overlay to clean */
 #cut-btn {
-  width: 66px; padding: 9px 0 7px;
-  border-radius: 2px; border: 1px solid rgba(255,255,255,0.07);
-  background: transparent; color: rgba(255,255,255,0.28);
+  width: 74px; padding: 11px 0 9px;
+  border-radius: 3px; border: 1px solid rgba(255,255,255,0.14);
+  background: transparent; color: rgba(255,255,255,0.55);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: 14px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
   cursor: pointer; transition: all 0.1s;
   -webkit-user-select: none; user-select: none;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -273,136 +273,200 @@ body {
 #cut-btn::after {
   content: 'ESC';
   font-size: 7px; font-weight: 700; letter-spacing: 0.08em;
-  font-family: 'Barlow', sans-serif; opacity: 0.25; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; opacity: 0.45; text-transform: uppercase;
 }
-#cut-btn:hover:not(:disabled)  { border-color: var(--border-hi); color: rgba(255,255,255,0.5); }
+#cut-btn:hover:not(:disabled)  { border-color: var(--border-hi); color: rgba(255,255,255,0.8); }
 #cut-btn:active:not(:disabled) { transform: scale(0.96); }
-#cut-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+#cut-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .auto-btn {
-  width: 66px; padding: 8px 0;
-  border-radius: 2px; border: 1px solid rgba(255,255,255,0.03);
-  background: transparent; color: rgba(255,255,255,0.06);
+  width: 74px; padding: 8px 0;
+  border-radius: 3px; border: 1px solid rgba(255,255,255,0.06);
+  background: transparent; color: rgba(255,255,255,0.15);
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   cursor: default;
 }
 
 #clean-btn {
-  width: 66px; padding: 9px 0;
-  border-radius: 2px; border: 1px solid rgba(130,0,0,0.18);
-  background: rgba(70,0,0,0.06); color: rgba(200,60,60,0.45);
+  width: 74px; padding: 11px 0;
+  border-radius: 3px; border: 1px solid rgba(180,0,0,0.3);
+  background: rgba(100,0,0,0.08); color: rgba(220,80,80,0.7);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
   cursor: pointer; transition: all 0.1s;
   -webkit-user-select: none; user-select: none;
 }
-#clean-btn:hover  { border-color: rgba(200,0,0,0.35); color: rgba(240,80,80,0.75); }
+#clean-btn:hover  { border-color: rgba(220,0,0,0.5); color: rgba(255,100,100,0.9); background: rgba(130,0,0,0.12); }
 #clean-btn:active { transform: scale(0.96); }
 
 /* ── OVERLAY SELECTOR ───────────────────────────────────────────────────── */
 .ovl-selector-wrap {
   flex-shrink: 0;
   background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
-  padding: 6px 8px;
+  padding: 7px 9px;
 }
 .ovl-selector-label {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.18); margin-bottom: 6px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.28em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.45); margin-bottom: 7px;
 }
-.ovl-selector { display:flex; gap:4px; }
+.ovl-selector { display:flex; gap:5px; }
 .ovl-btn {
-  flex: 1; padding: 10px 6px;
-  border-radius: 2px; border: 1px solid var(--border); background: var(--surface3);
-  color: rgba(255,255,255,0.36);
-  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 800;
+  flex: 1; padding: 13px 8px;
+  border-radius: 3px; border: 1px solid var(--border-hi); background: var(--surface3);
+  color: rgba(255,255,255,0.6);
+  font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 800;
   letter-spacing: 0.07em; text-transform: uppercase;
   cursor: pointer; transition: all 0.1s; position: relative; white-space: nowrap;
   -webkit-user-select: none; user-select: none; touch-action: manipulation;
 }
-.ovl-btn:hover  { border-color: var(--border-hi); color: rgba(255,255,255,0.55); }
+.ovl-btn:hover  { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.9); }
 .ovl-btn:active { transform: scale(0.97); }
 .ovl-btn.selected {
-  background: rgba(212,160,23,0.06); border-color: rgba(212,160,23,0.42); color: var(--gold-light);
+  background: rgba(212,160,23,0.09); border-color: rgba(212,160,23,0.55); color: var(--gold-light);
 }
 /* Red pip = live on PGM */
 .ovl-btn.live::after {
-  content: ''; position: absolute; top: 4px; right: 4px;
-  width: 4px; height: 4px; border-radius: 50%; background: var(--red-bright);
+  content: ''; position: absolute; top: 5px; right: 5px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--red-bright);
 }
 /* Group badge — bottom-left corner of each overlay button */
 .ovl-btn::before {
   content: attr(data-group);
-  position: absolute; bottom: 3px; left: 4px;
+  position: absolute; bottom: 3px; left: 5px;
   font-size: 7px; font-weight: 900; letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.15); font-family: 'Barlow', sans-serif;
+  color: rgba(255,255,255,0.25); font-family: 'Barlow', sans-serif;
   pointer-events: none;
 }
 
 /* ── GROUP STATUS STRIP ──────────────────────────────────────────────────── */
 .group-strip {
-  flex-shrink: 0; height: 18px;
+  flex-shrink: 0; height: 22px;
   display: flex; align-items: stretch; gap: 3px;
 }
 .grp-pill {
-  display: flex; align-items: center; gap: 5px;
-  background: transparent; border: 1px solid rgba(255,255,255,0.03); border-radius: 2px;
-  padding: 0 8px; min-width: 70px;
-  opacity: 0.4; transition: opacity 0.2s, background 0.2s, border-color 0.2s;
+  display: flex; align-items: center; gap: 6px;
+  background: transparent; border: 1px solid rgba(255,255,255,0.07); border-radius: 2px;
+  padding: 0 10px; min-width: 80px;
+  opacity: 0.5; transition: opacity 0.2s, background 0.2s, border-color 0.2s;
 }
 .grp-pill.live {
-  background: rgba(187,30,0,0.08);
-  border-color: rgba(187,30,0,0.3);
+  background: rgba(187,30,0,0.1);
+  border-color: rgba(187,30,0,0.4);
   opacity: 1;
 }
 .grp-pill-dot {
-  width: 4px; height: 4px; border-radius: 50%;
-  background: rgba(255,255,255,0.12); flex-shrink: 0;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255,255,255,0.2); flex-shrink: 0;
 }
 .grp-pill.live .grp-pill-dot { background: var(--red-bright); }
 .grp-pill-label {
-  font-size: 8px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
-  color: rgba(255,255,255,0.3); font-family: 'Barlow', sans-serif; white-space: nowrap;
+  font-size: 9px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255,255,255,0.45); font-family: 'Barlow', sans-serif; white-space: nowrap;
 }
-.grp-pill.live .grp-pill-label { color: rgba(255,255,255,0.6); }
+.grp-pill.live .grp-pill-label { color: rgba(255,255,255,0.75); }
 .grp-pill-name {
-  font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-  color: rgba(255,255,255,0.22); font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35); font-family: 'Barlow Condensed', sans-serif;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .grp-pill.live .grp-pill-name { color: var(--red-mid); }
 
-/* ── INLINE OVERLAY CONTROLS ────────────────────────────────────────────── */
-/* Contextual controls appear below selector when an overlay with controls is selected */
+/* ── CONTEXTUAL OVERLAY PROPERTY PANEL ─────────────────────────────────── */
 .ctrl-panel {
-  flex-shrink: 0;
-  display: none; /* JS shows this as flex when there are controls */
+  flex-shrink: 0; display: none;
+}
+.ctrl-panel.open {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 6px 10px;
   background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
-  padding: 5px 8px; gap: 5px;
-  align-items: center; flex-wrap: wrap;
 }
-.ctrl-panel.open { display: flex; }
-
-.ctrl-label {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.28); white-space: nowrap; flex-shrink: 0;
+.cp-head {
+  flex-shrink: 0; height: 28px; padding: 0 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
 }
-.ctrl-sep { width:1px; height:18px; background:rgba(255,255,255,0.06); margin:0 3px; flex-shrink:0; }
-.ctrl-select {
-  background: var(--surface3); border: 1px solid var(--border); border-radius: 2px;
+.cp-head-title {
+  font-size: 9px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.5);
+}
+.cp-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 10px; display: flex; flex-direction: column; gap: 10px;
+}
+.cp-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  color: rgba(255,255,255,0.12);
+}
+.cp-empty-icon  { font-size: 20px; }
+.cp-empty-label { font-size: 8px; font-weight: 700; letter-spacing: 0.32em; text-transform: uppercase; font-family: 'Barlow', sans-serif; }
+.cp-section {
+  background: var(--surface2); border: 1px solid var(--border-hi); border-radius: 3px;
+  padding: 9px 11px; display: flex; flex-direction: column; gap: 8px;
+}
+.cp-section-title {
+  font-size: 8px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(255,255,255,0.38); font-family: 'Barlow', sans-serif;
+}
+.cp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cp-row.single { grid-template-columns: 1fr; }
+.cp-row.three  { grid-template-columns: 1fr 1fr 1fr; }
+.cp-field { display: flex; flex-direction: column; gap: 3px; }
+.cp-label {
+  font-size: 8px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.42); font-family: 'Barlow', sans-serif;
+}
+.cp-input {
+  background: var(--surface3); border: 1px solid var(--border-hi); border-radius: 2px;
   color: var(--text); font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
-  padding: 4px 7px; cursor: pointer; outline: none; max-width: 170px;
+  font-size: 14px; font-weight: 700; padding: 7px 9px; width: 100%; outline: none;
 }
-.ctrl-select:focus { border-color: rgba(212,160,23,0.35); }
-.ctrl-btn {
-  background: var(--surface3); border: 1px solid var(--border); border-radius: 2px;
-  color: rgba(255,255,255,0.42); font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 4px 10px; cursor: pointer; transition: all 0.1s; flex-shrink: 0;
+.cp-input:focus { border-color: rgba(212,160,23,0.5); }
+.cp-select {
+  background: var(--surface3); border: 1px solid var(--border-hi); border-radius: 2px;
+  color: var(--text); font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; padding: 7px 9px; cursor: pointer; outline: none; width: 100%;
+}
+.cp-select:focus { border-color: rgba(212,160,23,0.4); }
+.cp-btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.cp-btn {
+  background: var(--surface3); border: 1px solid var(--border-hi); border-radius: 2px;
+  color: rgba(255,255,255,0.55); font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 6px 12px; cursor: pointer; transition: all 0.1s;
   -webkit-user-select: none; user-select: none;
 }
-.ctrl-btn:hover  { border-color: var(--border-hi); color: rgba(255,255,255,0.65); }
+.cp-btn:hover  { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.85); }
+.cp-btn:active { transform: scale(0.97); }
+.cp-btn.active { background: rgba(212,160,23,0.1); border-color: rgba(212,160,23,0.45); color: var(--gold-light); }
+.cp-btn.danger { border-color: rgba(180,0,0,0.28); color: rgba(220,80,80,0.7); }
+.cp-btn.danger:hover { border-color: rgba(220,0,0,0.5); color: rgba(255,110,110,0.95); }
+.cp-btn.push { background: rgba(0,90,35,0.2); border-color: rgba(0,185,75,0.45); color: var(--green-bright); }
+.cp-btn.push:hover { background: rgba(0,110,42,0.35); border-color: var(--green); }
+.cp-divider { height: 1px; background: rgba(255,255,255,0.07); }
+
+/* ctrl-* classes used by ctrlBuilder JS functions */
+.ctrl-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.55); white-space: nowrap; flex-shrink: 0;
+}
+.ctrl-sep { width: 1px; height: 18px; background: rgba(255,255,255,0.12); flex-shrink: 0; }
+.ctrl-select {
+  background: var(--surface3); border: 1px solid var(--border-hi); border-radius: 2px;
+  color: var(--text); font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; padding: 4px 8px; cursor: pointer; outline: none;
+}
+.ctrl-select:focus { border-color: rgba(212,160,23,0.4); }
+
+.ctrl-btn {
+  background: var(--surface3); border: 1px solid var(--border-hi); border-radius: 2px;
+  color: rgba(255,255,255,0.60); font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 5px 11px; cursor: pointer; transition: all 0.1s; flex-shrink: 0;
+  -webkit-user-select: none; user-select: none;
+}
+.ctrl-btn:hover  { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.85); }
 .ctrl-btn:active { transform: scale(0.97); }
 .ctrl-btn.active {
   background: rgba(212,160,23,0.08); border-color: rgba(212,160,23,0.38); color: var(--gold-light);
@@ -591,7 +655,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-K';
+var BUILD_ID = 'BUILD-20260518-P';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {

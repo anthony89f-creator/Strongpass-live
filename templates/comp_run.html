@@ -12,8 +12,8 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
   --bg:#060608; --surface:#0e0e12; --surface2:#14141a; --surface3:#1c1c24;
-  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.12);
-  --text:#F0F0F0; --dim:#555; --dim2:#888;
+  --border:rgba(255,255,255,0.09); --border2:rgba(255,255,255,0.15);
+  --text:#F0F0F0; --dim:#777; --dim2:#aaa;
   --gold:#F5C842; --gold-dim:rgba(245,200,66,0.15); --gold-border:rgba(245,200,66,0.3);
   --green:#00DD55; --green-dim:rgba(0,221,85,0.12); --green-border:rgba(0,221,85,0.3);
   --blue:#4488FF; --blue-dim:rgba(68,136,255,0.12); --blue-border:rgba(68,136,255,0.3);
@@ -39,7 +39,7 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 }
 .topbar-nav { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
 .topbar-nav a {
-  color:var(--dim2); text-decoration:none; font-size:11px; font-weight:700;
+  color:var(--dim2); text-decoration:none; font-size:13px; font-weight:700;
   letter-spacing:0.1em; text-transform:uppercase; padding:6px 12px; border-radius:5px;
   transition:all 0.15s;
 }
@@ -196,14 +196,14 @@ html,body { background:var(--bg); color:var(--text); font-family:'Barlow Condens
 .lb-row:last-child { border-bottom:none; }
 .lb-row:hover { background:var(--surface2); }
 .lb-rank {
-  font-size:12px; font-weight:900; color:var(--dim); min-width:22px; text-align:center;
+  font-size:13px; font-weight:900; color:var(--dim); min-width:22px; text-align:center;
 }
-.lb-rank.r1 { color:#FFD700; font-size:14px; }
-.lb-rank.r2 { color:#C0C0C0; font-size:13px; }
-.lb-rank.r3 { color:#CD7F32; font-size:13px; }
-.lb-name { font-size:14px; font-weight:800; text-transform:uppercase; flex:1; line-height:1.1; }
+.lb-rank.r1 { color:#FFD700; font-size:16px; }
+.lb-rank.r2 { color:#C0C0C0; font-size:14px; }
+.lb-rank.r3 { color:#CD7F32; font-size:14px; }
+.lb-name { font-size:16px; font-weight:800; text-transform:uppercase; flex:1; line-height:1.1; }
 .lb-cat-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.lb-score { font-size:15px; font-weight:900; color:var(--gold); }
+.lb-score { font-size:17px; font-weight:900; color:var(--gold); }
 .lb-score-unit { font-size:9px; color:var(--dim); letter-spacing:0.1em; }
 
 /* ── CAT FILTER ── */
