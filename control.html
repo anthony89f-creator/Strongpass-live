@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Strongman Broadcast Control</title>
+<title>Competition Engine — Strongpass</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -126,7 +126,7 @@
     <a href="/director.html" target="_blank" rel="noopener" style="background:var(--surface2);border:1px solid rgba(212,160,23,0.35);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-light);text-decoration:none;white-space:nowrap;transition:border-color 0.15s,color 0.15s" onmouseover="this.style.borderColor='rgba(245,200,66,0.6)';this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(212,160,23,0.35)';this.style.color='var(--gold-light)'">Director ↗</a>
     <img src="/logo.png" alt="Logo" style="height:44px;width:auto;object-fit:contain;mix-blend-mode:lighten">
     <div>
-      <div class="header-sub">Broadcast Control</div>
+      <div class="header-sub">Competition Engine</div>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
@@ -138,7 +138,7 @@
 <div class="main">
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('overlays')">Overlays</button>
+    <button class="tab active" onclick="switchTab('overlays')">Data Source</button>
     <button class="tab" onclick="switchTab('athletes')">Athletes</button>
     <button class="tab" onclick="switchTab('lanes')">Lanes</button>
     <button class="tab" onclick="switchTab('winner')">Winner</button>
@@ -246,15 +246,11 @@
     <!-- ── END BROADCAST DATA SOURCE ───────────────────────── -->
 
     <div class="section">
-      <div class="section-header"><span class="section-title">Overlay Visibility</span></div>
+      <div class="section-header"><span class="section-title">Leaderboard Display</span></div>
       <div class="section-body">
-        <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Leaderboard</div><div class="overlay-sub">Top 10 · Right panel</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-leaderboard" onchange="toggleOverlay('leaderboard',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-leaderboard" style="color:var(--dim)">OFF</div></div>
-        </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;display:flex;flex-direction:column;gap:8px;margin-top:-4px">
+        <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap">Leaderboard:</span>
+            <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap">Category:</span>
             <span id="lb-mode-badge" style="font-size:10px;font-weight:700;letter-spacing:0.14em;padding:2px 8px;border-radius:3px;background:rgba(0,255,136,0.08);color:var(--green-bright);white-space:nowrap">AUTO</span>
             <select id="lbCategorySelect" onchange="setLbCategory(this.value)" style="flex:1;min-width:120px;font-size:13px">
               <option value="all">All Athletes (Overall)</option>
@@ -273,39 +269,13 @@
           </div>
           <div id="lb-preview" style="display:none;background:rgba(0,0,0,0.3);border-radius:4px;padding:6px 8px;font-size:12px;font-family:'Barlow Condensed',sans-serif;line-height:1.6"></div>
         </div>
-        <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Nameplates</div><div class="overlay-sub">Lane athlete cards</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-lowerThirdVisible" onchange="toggleOverlay('lowerThirdVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-lowerThirdVisible" style="color:var(--dim)">OFF</div></div>
-        </div>
-        <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Event Bar</div><div class="overlay-sub">Slim info strip above nameplates</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-eventBarVisible" onchange="toggleOverlay('eventBarVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-eventBarVisible" style="color:var(--dim)">OFF</div></div>
-        </div>
-        <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Head to Head</div><div class="overlay-sub">Split screen athlete comparison</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-h2h" onchange="toggleOverlay('h2h',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-h2h" style="color:var(--dim)">OFF</div></div>
-        </div>
-        <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Category Lineup</div><div class="overlay-sub">Opening intro · Weight classes</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-lineup" onchange="toggleOverlay('lineup',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-lineup" style="color:var(--dim)">OFF</div></div>
-        </div>
-        <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Rep Counters</div><div class="overlay-sub">Live reps above nameplates</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-repsVisible" onchange="toggleOverlay('repsVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-repsVisible" style="color:var(--dim)">OFF</div></div>
-        </div>
-        <div class="overlay-row">
-          <div class="overlay-row-left"><div><div class="overlay-label">Lights Strip</div><div class="overlay-sub">Good/No Rep banner across top</div></div></div>
-          <div><label class="toggle"><input type="checkbox" id="tog-lightsVisible" onchange="toggleOverlay('lightsVisible',this.checked)"><div class="toggle-track"></div></label><div class="toggle-label" id="lab-lightsVisible" style="color:var(--dim)">OFF</div></div>
-        </div>
+        <p style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif;margin-top:4px">Pin the leaderboard overlay to a specific category. When set to Auto, it follows the active competition category.</p>
       </div>
     </div>
-    <div class="section">
-      <div class="section-header"><span class="section-title">Quick Actions</span></div>
-      <div class="section-body">
-        <div class="btn-row">
-          <button class="btn btn-outline" onclick="hideAll()">Hide All</button>
-          <button class="btn btn-outline" onclick="showAll()">Show All</button>
-        </div>
+    <div class="section" style="background:rgba(0,120,255,0.04);border-color:rgba(0,120,255,0.15)">
+      <div class="section-body" style="padding:10px 14px">
+        <p style="font-size:12px;font-weight:700;letter-spacing:0.06em;color:#60a0ff">Overlay visibility is controlled from the <a href="/director.html" target="_blank" rel="noopener" style="color:#60a0ff">Broadcast Director ↗</a></p>
+        <p style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif;margin-top:4px">Use TAKE / CUT in the Director to put overlays on-air. This panel manages competition data only.</p>
       </div>
     </div>
   </div>
@@ -394,7 +364,6 @@
     <div class="section champ-section">
       <div class="section-header">
         <span class="section-title">Event Winner Graphic</span>
-        <label class="toggle"><input type="checkbox" id="tog-champion" onchange="toggleOverlay('champion',this.checked)"><div class="toggle-track"></div></label>
       </div>
       <div class="section-body">
         <!-- Live winner preview banner -->
@@ -416,9 +385,9 @@
           <div><label>Eyebrow Text</label><input type="text" id="champEyebrow" value="" oninput="pushUpdate()"></div>
           <div><label>Competition Name</label><input type="text" id="champComp" value="" oninput="pushUpdate()"></div>
         </div>
-        <div class="btn-row" style="margin-top:4px">
-          <button class="btn btn-gold" onclick="showChampion()" style="font-size:16px;padding:14px 24px">🏆 SHOW EVENT WINNER</button>
-          <button class="btn btn-outline" onclick="hideChampion()">Hide</button>
+        <div style="background:rgba(0,120,255,0.04);border:1px solid rgba(0,120,255,0.15);border-radius:6px;padding:9px 12px;margin-top:4px">
+          <p style="font-size:12px;font-weight:700;letter-spacing:0.06em;color:#60a0ff">Take live from <a href="/director.html" target="_blank" rel="noopener" style="color:#60a0ff">Broadcast Director ↗</a></p>
+          <p style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif;margin-top:3px">Fill in the fields above, then use the Champion overlay in the Director to put it on-air.</p>
         </div>
       </div>
     </div>
@@ -535,7 +504,6 @@
     <div class="section">
       <div class="section-header">
         <span class="section-title">Head to Head</span>
-        <label class="toggle"><input type="checkbox" id="tog-h2h2" onchange="toggleOverlay('h2h',this.checked)"><div class="toggle-track"></div></label>
       </div>
       <div class="section-body">
         <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.5;margin-bottom:4px">
@@ -583,9 +551,9 @@
           </p>
         </div>
 
-        <div class="btn-row">
-          <button class="btn btn-gold" onclick="showH2H()" style="font-size:16px;padding:14px 24px">SHOW HEAD TO HEAD</button>
-          <button class="btn btn-outline" onclick="hideH2H()">Hide</button>
+        <div style="background:rgba(0,120,255,0.04);border:1px solid rgba(0,120,255,0.15);border-radius:6px;padding:9px 12px">
+          <p style="font-size:12px;font-weight:700;letter-spacing:0.06em;color:#60a0ff">Take live from <a href="/director.html" target="_blank" rel="noopener" style="color:#60a0ff">Broadcast Director ↗</a></p>
+          <p style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif;margin-top:3px">Select athletes above, then use the H2H overlay in the Director to put it on-air.</p>
         </div>
       </div>
     </div>
@@ -596,7 +564,6 @@
     <div class="section">
       <div class="section-header">
         <span class="section-title">Category Lineup</span>
-        <label class="toggle"><input type="checkbox" id="tog-lineup2" onchange="toggleOverlay('lineup',this.checked)"><div class="toggle-track"></div></label>
       </div>
       <div class="section-body">
         <p style="font-size:12px;color:var(--dim);font-family:'Barlow',sans-serif;line-height:1.5;margin-bottom:6px">
@@ -621,9 +588,9 @@
           <div id="lineup-cat-btns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
 
-        <div class="btn-row" style="margin-top:4px">
-          <button class="btn btn-gold" onclick="showLineup()" style="font-size:16px;padding:14px 24px">SHOW LINEUP</button>
-          <button class="btn btn-outline" onclick="hideLineup()">Hide</button>
+        <div style="background:rgba(0,120,255,0.04);border:1px solid rgba(0,120,255,0.15);border-radius:6px;padding:9px 12px;margin-top:4px">
+          <p style="font-size:12px;font-weight:700;letter-spacing:0.06em;color:#60a0ff">Take live from <a href="/director.html" target="_blank" rel="noopener" style="color:#60a0ff">Broadcast Director ↗</a></p>
+          <p style="font-size:11px;color:var(--dim);font-family:'Barlow',sans-serif;margin-top:3px">Configure timing and category above, then use the Lineup overlay in the Director to put it on-air.</p>
         </div>
       </div>
     </div>
@@ -670,8 +637,6 @@
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let state = {
-  leaderboard:false, lowerThirdVisible:false, eventBarVisible:false, champion:false,
-  h2h:false, lineup:false,
   h2hLeft:  {name:'', origin:'', category:'', photoUrl:''},
   h2hRight: {name:'', origin:'', category:'', photoUrl:''},
   lineupIndex:0, lineupAuto:true, lineupDuration:5,
@@ -773,9 +738,6 @@ function collectFromInputs() {
 }
 
 // ─── TOGGLES ──────────────────────────────────────────────────────────────────
-function toggleOverlay(key, val) {
-  state[key] = val; updateToggleLabel(key, val); pushUpdate();
-}
 function updateToggleLabel(key, val) {
   const lab = document.getElementById('lab-'+key);
   if (lab) { lab.textContent = val?'ON':'OFF'; lab.style.color = val?'var(--green-bright)':'var(--dim)'; }
@@ -802,14 +764,6 @@ function clearManual() {
   updateToggleLabel('manualVisible', false);
   pushUpdate();
 }
-function hideAll()      { ['leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>{state[k]=false;updateToggleLabel(k,false);}); pushUpdate(); }
-function showAll()      { ['leaderboard','lowerThirdVisible','eventBarVisible'].forEach(k=>{state[k]=true;updateToggleLabel(k,true);}); state.champion=false; state.h2h=false; state.lineup=false; updateToggleLabel('champion',false); pushUpdate(); }
-function showChampion() { state.champion=true;  updateToggleLabel('champion',true);  pushUpdate(); }
-function hideChampion() { state.champion=false; updateToggleLabel('champion',false); pushUpdate(); }
-function showH2H()      { state.h2h=true;  updateToggleLabel('h2h',true);  syncH2HInputs(); pushUpdate(); }
-function hideH2H()      { state.h2h=false; updateToggleLabel('h2h',false); pushUpdate(); }
-function showLineup()   { state.lineup=true;  updateToggleLabel('lineup',true);  pushUpdate(); }
-function hideLineup()   { state.lineup=false; updateToggleLabel('lineup',false); pushUpdate(); }
 
 // ─── ATHLETE TABLE ────────────────────────────────────────────────────────────
 let catFilterValue = 'all';
@@ -1228,8 +1182,6 @@ function renderLineupCatButtons() {
 
 function jumpToCategory(i) {
   state.lineupIndex = i;
-  state.lineup = true;
-  updateToggleLabel('lineup', true);
   pushUpdate();
 }
 
@@ -1313,7 +1265,6 @@ function initInputs() {
   set('champComp',    state.champComp);
   set('laneCount',    state.laneCount);
   set('lineupDuration', state.lineupDuration||5);
-  ['leaderboard','lowerThirdVisible','eventBarVisible','champion','h2h','lineup','repsVisible','lightsVisible'].forEach(k=>updateToggleLabel(k,state[k]));
   updateToggleLabel('manualVisible', !!state.manualVisible);
   if (state.manualLine1) set('manualLine1', state.manualLine1);
   if (state.manualLine2) set('manualLine2', state.manualLine2);

@@ -1,11 +1,11 @@
 # Strongpass Live — Engineer Handover
 
-**Current local build:** `BUILD-20260518-K` (not yet deployed to production)
+**Current local build:** `BUILD-20260518-L` (not yet deployed to production)
 **Last production build:** `BUILD-20260517-C`
 **Stable tag:** `v2-runtime-stable`
 **Production URL:** `https://strongpass.live`
 **GitHub remote:** `https://github.com/anthony89f-creator/Strongpass-live.git`
-**Last updated:** 2026-05-18 (BUILD-20260518-K)
+**Last updated:** 2026-05-18 (BUILD-20260518-L)
 
 ---
 
@@ -14,6 +14,29 @@
 Strongpass Live is a broadcast director for strongman/powerlifting competitions. It runs as a single Flask/SQLite/Gunicorn process on a Hetzner Ubuntu 24.04 VPS. A director operator (in the arena) controls which overlay graphics appear in OBS via a browser-based switcher at `/director.html`.
 
 OBS browser sources connect to the same server and receive live state via Server-Sent Events (SSE). The director's preview pane loads overlays in isolated iframes with state injected via `postMessage` instead of SSE.
+
+---
+
+## System Boundary (BUILD-20260518-L)
+
+Two operationally separated systems, one shared server:
+
+| System | Entry point | Owns | Does NOT own |
+|---|---|---|---|
+| Competition Engine | `/comp/run`, `/control.html` | Athletes, heats, scores, lanes, categories, event progression, data source mode | Overlay on-air state |
+| Broadcast Control | `/director.html` | Overlay visibility, TAKE/CUT/CLEAN, PVW preview, PGM program state | Competition data |
+
+**Key rule:** Overlay visibility is set **only** from `director.html` via TAKE/CUT endpoints. `control.html` is a read-only consumer of SSE state for competition data display; it no longer writes overlay flags.
+
+`control.html` is the "Competition Engine" data panel — it manages:
+- What data the overlays display (athlete names, categories, H2H content, lineup timing)
+- Which data source feeds the overlays (engine/api/manual)
+- Leaderboard category pin, freeze, row count
+
+`director.html` is the "Broadcast Director" — it manages:
+- Which overlays are on-air (TAKE/CUT/CLEAN)
+- PVW preview before taking live
+- PGM program state and group mutex
 
 ---
 

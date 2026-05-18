@@ -1,5 +1,30 @@
 # Strongpass Live — System Architecture
 
+## System Boundary
+
+Two operationally separated front-ends share one server process:
+
+```
+home.html
+  │
+  ├── /comp/run, /control.html  ──► Competition Engine
+  │     Manages: athletes, heats, scores, lanes, categories, data source mode
+  │     Writes: athletes, lanes, eventName, h2hLeft/Right, lineupDuration/Auto, lbCategory
+  │     Does NOT write: overlay visibility flags (leaderboard, h2h, lineup, champion, etc.)
+  │
+  └── /director.html  ──► Broadcast Control
+        Manages: overlay on-air state, TAKE/CUT/CLEAN, PVW preview, PGM iframes
+        Writes: overlay flags, program.groups, program.scene, program.takenAt/cleanAt
+        Reads: competition state from SSE / state.json (read-only consumer)
+```
+
+`control.html` (Competition Engine panel) is a **read-only consumer** of broadcast state.
+It no longer writes overlay visibility flags. All overlay on-air decisions go through
+`director.html` TAKE/CUT only, which enforces group mutual exclusion and updates
+`program.groups` atomically.
+
+---
+
 ## High-Level Overview
 
 ```

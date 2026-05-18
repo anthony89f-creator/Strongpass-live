@@ -1,5 +1,53 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-L (2026-05-18) — Operational Separation: Competition Engine vs Broadcast Control
+
+### Changed: control.html — overlay toggles removed, system boundary enforced
+
+Removed all overlay visibility controls from `control.html`. These controls bypassed the
+`director.html` TAKE/CUT workflow, writing overlay flags directly to `/update` without going
+through the group mutual-exclusion state machine or updating `program.groups`.
+
+**Removed from control.html:**
+- "Overlay Visibility" section (Overlays tab) — 8 toggle switches for leaderboard, nameplates,
+  event bar, H2H, lineup, reps, lights
+- "Quick Actions" section — Hide All / Show All buttons
+- `tog-champion` toggle from Winner tab section-header
+- `tog-h2h2` toggle from H2H tab section-header
+- `tog-lineup2` toggle from Lineup tab section-header
+- "SHOW EVENT WINNER" / "Hide" buttons from Winner tab
+- "SHOW HEAD TO HEAD" / "Hide" buttons from H2H tab
+- "SHOW LINEUP" / "Hide" buttons from Lineup tab
+- JS functions: `toggleOverlay`, `hideAll`, `showAll`, `showChampion`, `hideChampion`,
+  `showH2H`, `hideH2H`, `showLineup`, `hideLineup`
+- Overlay flags (`leaderboard`, `h2h`, `lineup`, `champion`, `lowerThirdVisible`,
+  `eventBarVisible`, `repsVisible`, `lightsVisible`) from `state` object — these were
+  being sent in every `pushUpdate()` payload, silently clobbering director-set program state
+
+**Changed:**
+- `jumpToCategory()` no longer sets `state.lineup = true` (was a hidden broadcast write)
+- `initInputs()` no longer loops over overlay flags to update toggle labels (elements gone)
+- "Overlays" tab renamed to "Data Source"
+- Leaderboard category pin, freeze, and row count controls moved out of the removed Overlay
+  Visibility section into a standalone "Leaderboard Display" section
+- Page title: "Strongman Broadcast Control" → "Competition Engine — Strongpass"
+- Header subtitle: "Broadcast Control" → "Competition Engine"
+- Each tab that previously had show/hide buttons now shows a blue info banner:
+  "Overlay visibility is controlled from the Broadcast Director ↗"
+
+**Result:** `control.html` no longer writes overlay visibility state. It remains a read-only
+consumer of SSE state and a writer of competition data (athletes, lanes, categories, event
+fields, H2H athlete content, lineup timing). All overlay on-air decisions go through
+`director.html` TAKE/CUT only.
+
+### Changed: home.html — navigation reflects operational separation
+
+- Broadcast card primary CTA: `/control.html` → `/director.html` (Open Director ↗)
+- Broadcast card description updated to describe overlay/OBS control
+- Competition Engine card: added "Data Panel ↗" secondary link to `/control.html`
+
+---
+
 ## BUILD-20260518-K (2026-05-18) — Phase 4: ctrlBuilder in overlay registry
 
 ### Improved: ctrl panel builder dispatch — registry-based (Phase 4)
