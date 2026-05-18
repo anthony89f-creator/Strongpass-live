@@ -1,6 +1,91 @@
 # Strongpass Live — Changelog
 
-## BUILD-20260517-C (2026-05-17) — Current stable
+## BUILD-20260518-A (2026-05-18) — Stabilisation pass
+
+### Fixed: console.trace() in applyScale() causing severe console noise
+
+**Symptom:** Every scale recalculation (on every ResizeObserver fire, every window resize, every TAKE/CUT/selectPVW) emitted a full JS stack trace via `console.trace()`. Stack traces are many orders of magnitude more expensive than `console.log()` and caused measurable DevTools slowdown during long sessions.
+
+**Fix:** Removed `console.trace()` from `applyScale()` entirely. The function still logs scale calculations via `DL()` when `DEBUG=true`.
+
+---
+
+### Fixed: Per-SSE-tick verbose logging with no production gate
+
+**Symptom:** `DL()` logged on every SSE message, every `onStateUpdate()`, every `renderOvlButtons()` entry/exit. In production with 1-3 SSE ticks per second this produced hundreds of log lines per minute.
+
+**Fix:** Added `var DEBUG = /[?&]debug=1/.test(location.search)`. `DL()` returns a no-op when `!DEBUG`. Also gated watchdog `console.log` object dump behind `DEBUG`. Warn/error paths remain unconditional. Enable full logging via `?debug=1` in the director URL.
+
+---
+
+### Fixed: Verbose PVW message handler in all 6 overlay files
+
+**Symptom:** Every `postMessage` to a PVW iframe (fired on every SSE tick via `pushToPVW()`) triggered:
+- `JSON.stringify(e.data).slice(0, 200)` — serialises the full state object
+- `getBoundingClientRect()` — forces layout reflow
+- `getComputedStyle()` — forces style recalc
+- 6–8 `console.log()` calls
+
+This ran in all 6 overlays on every SSE event while an overlay was in PVW, causing consistent hidden CPU overhead.
+
+**Fix:** Stripped the diagnostic block from all 6 overlays (lowerthird, reps, leaderboard, lineup, h2h, champion). Reduced PVW message handler to the minimal correct form: call `onStateUpdate`, send `overlay-ready` once. Error handler preserved.
+
+---
+
+### Fixed: Runtime HUD always visible, covering conn-wrap
+
+**Symptom:** `#runtime-hud` was `display:block` at all times at `position:fixed; top:6px; right:8px; z-index:9999`, covering the connection status indicator in the header.
+
+**Fix:** `#runtime-hud` is now `display:none` by default. It activates only when debug mode is toggled (D key), same as the PVW scale HUD. The `_hudUpdate()` function now checks `classList.contains('on')` before redrawing. HUD content updated: shows SSE state, removes hardcoded `queue: running` line.
+
+---
+
+### Fixed: CLN button calling group-selective clean instead of global clean
+
+**Symptom:** Both CUT and CLN called `goClean()`, which POSTs `/broadcast/clean_group` and clears only the selected PVW group. CLN should clear all groups. Operators expecting a full blackout got only a group-level cut.
+
+**Fix:** Added `_doCleanAll()` / `goCleanAll()` that POSTs `/broadcast/clean` (the global clean endpoint). CLN button now wired to `goCleanAll()`. Optimistic local update clears all group flags and destroys all PGM frames. CUT and Escape key retain group-selective behaviour.
+
+---
+
+### Improved: Typography and operator readability
+
+All sub-10px font sizes bumped for readability at production monitor distance:
+
+| Element | Before | After |
+|---|---|---|
+| `.header-sub` | 7px | 9px |
+| `.header-title` | 12px | 13px |
+| `.conn-text` | 9px | 10px |
+| `.ctx-item` | 9px | 10px |
+| `.ctx-item:first-child` | 10px | 12px |
+| `.mon-label` | 8px | 10px |
+| `.live-badge` | 6px | 8px |
+| `.t-eyebrow` | 6px | 8px |
+| `.monitor-current` | 10px | 12px |
+| `.mfoot-tag` | 7px | 9px |
+| `.ovl-selector-label` | 6px | 9px |
+| `.ovl-btn` | 11px | 12px |
+| `.ctrl-label` | 7px | 9px |
+| `.ctrl-btn` | 10px | 11px |
+| `.ctrl-select` | 11px | 12px |
+| `.ctrl-input` | 11px | 12px |
+| `.status-bar` | 9px | 11px |
+| `.auth-notice` | 10px | 12px |
+| `#cut-btn` | 12px | 13px |
+| `#clean-btn` | 10px | 11px |
+
+Also improved dim text contrast and increased ovl-btn, ctrl-btn padding for cleaner tap targets.
+
+---
+
+### Fixed: _hudUpdate() hardcoded "queue: running"
+
+The runtime HUD always displayed `queue: running` regardless of actual queue state. Replaced with SSE state (`connecting/open/closed`) and a note pointing to `?debug=1` for full logging.
+
+---
+
+## BUILD-20260517-C (2026-05-17) — Previous stable
 
 **Tag:** `v2-runtime-stable`
 
