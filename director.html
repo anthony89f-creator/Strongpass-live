@@ -60,12 +60,12 @@ body {
 }
 .back-link:hover { color: var(--text); border-color: var(--border-hi); }
 .header-logo  { height: 24px; width: auto; object-fit: contain; mix-blend-mode: lighten; opacity: 0.75; }
-.header-title { font-size: 12px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; line-height: 1; }
-.header-sub   { font-size: 7px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim2); font-family: 'Barlow', sans-serif; margin-top: 1px; }
+.header-title { font-size: 13px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; line-height: 1; }
+.header-sub   { font-size: 9px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim2); font-family: 'Barlow', sans-serif; margin-top: 1px; }
 .conn-wrap    { display:flex; align-items:center; gap:5px; }
 .conn-dot     { width:5px; height:5px; border-radius:50%; background:#1e1e1e; flex-shrink:0; }
 .conn-dot.ok  { background:var(--green-bright); }
-.conn-text    { font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; }
+.conn-text    { font-size:10px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--dim); font-family:'Barlow',sans-serif; }
 
 /* ── MAIN LAYOUT ────────────────────────────────────────────────────────── */
 /* Fills remaining viewport after header. No scroll. */
@@ -84,10 +84,10 @@ body {
   padding: 0 10px; overflow: hidden;
 }
 .ctx-item {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   color: rgba(255,255,255,0.25); font-family:'Barlow',sans-serif; white-space:nowrap; padding: 0 6px;
 }
-.ctx-item:first-child { padding-left:0; color:var(--text); font-size:10px; font-weight:800; }
+.ctx-item:first-child { padding-left:0; color:var(--text); font-size:12px; font-weight:800; }
 .ctx-sep { color:rgba(255,255,255,0.09); font-size:9px; }
 
 /* ── MONITORS SECTION ───────────────────────────────────────────────────── */
@@ -133,17 +133,17 @@ body {
 @keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .mon-label {
-  font-size: 8px; font-weight: 900; letter-spacing: 0.36em; text-transform: uppercase;
+  font-size: 10px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
   font-family: 'Barlow', sans-serif; line-height: 1;
 }
 .pvw-monitor .mon-label { color: rgba(212,160,23,0.65); }
 .pgm-monitor .mon-label { color: rgba(255,68,34,0.7); }
 
 .live-badge {
-  font-size: 6px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;
+  font-size: 8px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
   font-family: 'Barlow', sans-serif; color: var(--red-bright);
   background: rgba(187,30,0,0.1); border: 1px solid rgba(187,30,0,0.2);
-  padding: 1px 4px; border-radius: 2px;
+  padding: 2px 5px; border-radius: 2px;
 }
 
 /* 16:9 — width is set by flex, height follows via aspect-ratio */
@@ -200,13 +200,13 @@ body {
   border-top: 1px solid rgba(255,255,255,0.04);
 }
 .mfoot-tag {
-  font-size: 7px; font-weight: 900; letter-spacing: 0.32em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.09); flex-shrink: 0;
+  font-size: 9px; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.14); flex-shrink: 0;
 }
 /* className set by JS: 'monitor-current' or 'monitor-current active' */
 .monitor-current {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.16);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pvw-monitor .monitor-current.active { color: var(--gold-light); }
@@ -224,8 +224,8 @@ body {
   padding: 12px 6px; gap: 5px;
 }
 .t-eyebrow {
-  font-size: 6px; font-weight: 900; letter-spacing: 0.4em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.06); margin-bottom: 5px;
+  font-size: 8px; font-weight: 900; letter-spacing: 0.32em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.1); margin-bottom: 5px;
 }
 .t-sep { width: 40px; height: 1px; background: rgba(255,255,255,0.04); margin: 3px 0; }
 
@@ -250,11 +250,11 @@ body {
 
 /* CUT = cut current PGM overlay to clean */
 #cut-btn {
-  width: 66px; padding: 11px 0;
-  border-radius: 2px; border: 1px solid rgba(255,255,255,0.05);
-  background: transparent; color: rgba(255,255,255,0.18);
+  width: 66px; padding: 12px 0;
+  border-radius: 2px; border: 1px solid rgba(255,255,255,0.07);
+  background: transparent; color: rgba(255,255,255,0.28);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase;
+  font-size: 13px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
   cursor: pointer; transition: all 0.1s;
   -webkit-user-select: none; user-select: none;
 }
@@ -264,22 +264,22 @@ body {
 .auto-btn {
   width: 66px; padding: 8px 0;
   border-radius: 2px; border: 1px solid rgba(255,255,255,0.03);
-  background: transparent; color: rgba(255,255,255,0.07);
+  background: transparent; color: rgba(255,255,255,0.06);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 10px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
-  cursor: not-allowed;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: default;
 }
 
 #clean-btn {
-  width: 66px; padding: 8px 0;
-  border-radius: 2px; border: 1px solid rgba(130,0,0,0.14);
-  background: rgba(70,0,0,0.04); color: rgba(200,60,60,0.38);
+  width: 66px; padding: 9px 0;
+  border-radius: 2px; border: 1px solid rgba(130,0,0,0.18);
+  background: rgba(70,0,0,0.06); color: rgba(200,60,60,0.45);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
   cursor: pointer; transition: all 0.1s;
   -webkit-user-select: none; user-select: none;
 }
-#clean-btn:hover  { border-color: rgba(200,0,0,0.28); color: rgba(240,80,80,0.65); }
+#clean-btn:hover  { border-color: rgba(200,0,0,0.35); color: rgba(240,80,80,0.75); }
 #clean-btn:active { transform: scale(0.96); }
 
 /* ── OVERLAY SELECTOR ───────────────────────────────────────────────────── */
@@ -289,16 +289,16 @@ body {
   padding: 6px 8px;
 }
 .ovl-selector-label {
-  font-size: 6px; font-weight: 900; letter-spacing: 0.36em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.1); margin-bottom: 5px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.18); margin-bottom: 6px;
 }
 .ovl-selector { display:flex; gap:4px; }
 .ovl-btn {
-  flex: 1; padding: 8px 5px;
+  flex: 1; padding: 10px 6px;
   border-radius: 2px; border: 1px solid var(--border); background: var(--surface3);
-  color: rgba(255,255,255,0.24);
-  font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 800;
-  letter-spacing: 0.09em; text-transform: uppercase;
+  color: rgba(255,255,255,0.32);
+  font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
   cursor: pointer; transition: all 0.1s; position: relative; white-space: nowrap;
   -webkit-user-select: none; user-select: none; touch-action: manipulation;
 }
@@ -325,22 +325,22 @@ body {
 .ctrl-panel.open { display: flex; }
 
 .ctrl-label {
-  font-size: 7px; font-weight: 900; letter-spacing: 0.3em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.22); white-space: nowrap; flex-shrink: 0;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.28); white-space: nowrap; flex-shrink: 0;
 }
 .ctrl-sep { width:1px; height:18px; background:rgba(255,255,255,0.06); margin:0 3px; flex-shrink:0; }
 .ctrl-select {
   background: var(--surface3); border: 1px solid var(--border); border-radius: 2px;
   color: var(--text); font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
-  padding: 3px 6px; cursor: pointer; outline: none; max-width: 160px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 4px 7px; cursor: pointer; outline: none; max-width: 170px;
 }
 .ctrl-select:focus { border-color: rgba(212,160,23,0.35); }
 .ctrl-btn {
   background: var(--surface3); border: 1px solid var(--border); border-radius: 2px;
-  color: rgba(255,255,255,0.35); font-family: 'Barlow Condensed', sans-serif;
-  font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
-  padding: 3px 8px; cursor: pointer; transition: all 0.1s; flex-shrink: 0;
+  color: rgba(255,255,255,0.42); font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 10px; cursor: pointer; transition: all 0.1s; flex-shrink: 0;
   -webkit-user-select: none; user-select: none;
 }
 .ctrl-btn:hover  { border-color: var(--border-hi); color: rgba(255,255,255,0.65); }
@@ -353,41 +353,43 @@ body {
 .ctrl-input {
   background: var(--surface3); border: 1px solid var(--border); border-radius: 2px;
   color: var(--text); font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px; font-weight: 700; padding: 3px 7px; width: 130px; outline: none;
+  font-size: 12px; font-weight: 700; padding: 4px 8px; width: 140px; outline: none;
 }
 .ctrl-input:focus { border-color: rgba(212,160,23,0.35); }
 
 /* ── AUTH + STATUS ──────────────────────────────────────────────────────── */
 .auth-notice {
   flex-shrink: 0; display: none; align-items: center; gap: 10px;
-  padding: 5px 10px;
+  padding: 6px 12px;
   background: rgba(130,0,0,0.06); border: 1px solid rgba(130,0,0,0.2); border-radius: 2px;
-  font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
-  color: rgba(255,110,110,0.8); font-family: 'Barlow', sans-serif;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  color: rgba(255,110,110,0.85); font-family: 'Barlow', sans-serif;
 }
 .auth-notice a { color: rgba(255,150,150,0.9); text-decoration: underline; font-weight: 700; }
 .auth-notice.visible { display: flex; }
 
 .status-bar {
-  flex-shrink: 0; height: 22px;
+  flex-shrink: 0; height: 24px;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 10px;
+  padding: 0 12px;
   background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
-  font-size: 9px; font-weight: 600; letter-spacing: 0.12em;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
   color: var(--dim); font-family: 'Barlow', sans-serif;
 }
 .status-ok  { color: var(--green-bright); }
 .status-err { color: #FF4444; }
 .status-time { opacity: 0.35; font-variant-numeric: tabular-nums; }
 
-/* ── RUNTIME HUD — always visible, top-right corner ─────────────────────── */
+/* ── RUNTIME HUD — debug mode only (press D to show) ────────────────────── */
 #runtime-hud {
   position:fixed; top:6px; right:8px; z-index:9999;
-  background:rgba(0,0,0,0.88); color:#ffe84d;
+  display:none;
+  background:rgba(0,0,0,0.92); color:#ffe84d;
   font:9px/1.5 'Courier New',monospace; letter-spacing:0;
   padding:5px 8px; border:1px solid rgba(255,232,77,0.3); border-radius:2px;
   pointer-events:none; white-space:pre; min-width:180px;
 }
+#runtime-hud.on { display:block; }
 
 /* ── PVW SCALE DEBUG HUD (toggle: press D key) ──────────────────────────── */
 #pvw-dbg-hud {
@@ -477,9 +479,9 @@ body {
       <button id="take-btn" onclick="take()">TAKE</button>
       <button id="cut-btn"  onclick="goClean()">CUT</button>
       <div class="t-sep"></div>
-      <button class="auto-btn" disabled>AUTO</button>
+      <button class="auto-btn" disabled title="Auto transition — not available">AUTO</button>
       <div class="t-sep"></div>
-      <button id="clean-btn" onclick="goClean()">CLN</button>
+      <button id="clean-btn" onclick="goCleanAll()">CLN</button>
     </div>
 
     <!-- PROGRAM — red/live -->
@@ -527,7 +529,8 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260517-C';
+var BUILD_ID = 'BUILD-20260518-A';
+var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
   // Stamp build ID visibly in conn-text before any async work
@@ -561,6 +564,7 @@ var OVERLAYS = [
 
 // ─── INSTRUMENTATION ─────────────────────────────────────────────────────────
 var DL = (function() {
+  if (!DEBUG) return function() {};
   var t0 = Date.now();
   return function(msg) {
     console.log('[Director +' + (Date.now()-t0) + 'ms] ' + msg);
@@ -572,7 +576,7 @@ var _lifecycleStage = 'init';
 
 function _hudUpdate() {
   var el = document.getElementById('runtime-hud');
-  if (!el) return;
+  if (!el || !el.classList.contains('on')) return;
   var pvwFrames = document.querySelectorAll('.pvw-frame').length;
   var pgmFrames = document.querySelectorAll('.pgm-frame').length;
   el.textContent =
@@ -581,7 +585,8 @@ function _hudUpdate() {
     'taking: ' + _taking + '\n' +
     'pvwSel: ' + (pvwSelection || '—') + '\n' +
     'pvwFrm: ' + pvwFrames + '  pgmFrm: ' + pgmFrames + '\n' +
-    'queue:  running';
+    'sse:    ' + (_es ? ['connecting','open','closed'][_es.readyState] || _es.readyState : 'null') + '\n' +
+    'debug:  ?debug=1 in URL for verbose logs';
 }
 
 function _setLifecycleStage(stage) {
@@ -1259,6 +1264,49 @@ async function _doClean() {
 }
 function goClean() { DL('goClean() enqueued'); _enqueue(_doClean); }
 
+// ─── CLEAN ALL — clears every group atomically ────────────────────────────────
+// CLN button: calls /broadcast/clean which resets all overlay flags and program.groups.
+// Distinct from CUT (group-selective clean). Use CLN to fully black out all outputs.
+async function _doCleanAll() {
+  DL('_doCleanAll() ENTER');
+  try {
+    var r = await fetch('/broadcast/clean', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({}),
+      credentials: 'include',
+    });
+    if (r.status === 401 || r.status === 403) {
+      document.getElementById('auth-notice').classList.add('visible');
+      showStatus('Login required', false);
+      return;
+    }
+    if (!r.ok) {
+      showStatus('Error (' + r.status + ')', false);
+      return;
+    }
+    document.getElementById('auth-notice').classList.remove('visible');
+    var result = await r.json();
+
+    OVERLAYS.forEach(function(o) {
+      o.pgmKeys.forEach(function(f) { liveState[f] = false; });
+    });
+    var _cProg = liveState.program || {};
+    liveState.program = { scene: null, groups: {}, takenAt: _cProg.takenAt, cleanAt: result.cleanAt };
+    _PGM_GROUP_ORDER.forEach(function(g) { _destroyPGMGroup(g); });
+
+    try { renderPGMStatus(); }     catch(e) { console.error('[_doCleanAll renderPGMStatus]', e); }
+    try { renderPGMVisibility(); } catch(e) {}
+    try { renderOvlButtons(); }    catch(e) { console.error('[_doCleanAll renderOvlButtons]', e); }
+    showStatus('All groups clean', true);
+    DL('_doCleanAll() SUCCESS');
+  } catch(e) {
+    console.error('[_doCleanAll() EXCEPTION]', e.message, e);
+    showStatus('Network error', false);
+  }
+}
+function goCleanAll() { DL('goCleanAll() enqueued'); _enqueue(_doCleanAll); }
+
 // ─── STATUS BAR ───────────────────────────────────────────────────────────────
 function showStatus(msg, ok) {
   var el   = document.getElementById('status-text');
@@ -1320,9 +1368,6 @@ function _applyScaleToBody(frame, scale) {
 }
 
 function applyScale() {
-  // Stack trace: shows WHAT called applyScale() — verifies it's executing
-  console.trace('[applyScale] called from BUILD_ID=' + BUILD_ID);
-
   var pvwBody = document.getElementById('pvw-body');
   if (!pvwBody) { DL('applyScale — ABORT: pvwBody not in DOM'); return; }
 
@@ -1419,8 +1464,11 @@ function _dbgUpdateHUD() {
 
 function _dbgToggle() {
   _dbgOn = !_dbgOn;
-  var hud = document.getElementById('pvw-dbg-hud');
-  if (hud) { hud.classList.toggle('on', _dbgOn); }
+  var hud    = document.getElementById('pvw-dbg-hud');
+  var runHud = document.getElementById('runtime-hud');
+  if (hud)    { hud.classList.toggle('on', _dbgOn); }
+  if (runHud) { runHud.classList.toggle('on', _dbgOn); }
+  if (_dbgOn) _hudUpdate();
   DL('DEBUG HUD ' + (_dbgOn ? 'ON — press D again to hide' : 'OFF'));
 
   // Debug borders: yellow=pvwBody, orange=pvwScreen, red=iframe, blue=body (applied in applyScale/_applyScaleToBody)
@@ -1666,28 +1714,28 @@ document.addEventListener('keydown', function(e) {
   // ─── WATCHDOG ──────────────────────────────────────────────────────────────
   setInterval(function() {
     var btnCount = document.querySelectorAll('.ovl-btn').length;
-    var takeBtnDisabled = (document.getElementById('take-btn') || {}).disabled;
-    // Also refresh HUD on every watchdog tick
+    var pgmCount = document.querySelectorAll('.pgm-frame').length;
     _hudUpdate();
-    console.log('[WATCHDOG]', {
-      build:           BUILD_ID,
-      stage:           _lifecycleStage,
-      taking:          _taking,
-      pvw:             pvwSelection,
-      scene:           (liveState.program || {}).scene || null,
-      buttons:         btnCount,
-      takeBtnDisabled: takeBtnDisabled,
-      pvwFrames:       document.querySelectorAll('.pvw-frame').length,
-      pgmFrames:       document.querySelectorAll('.pgm-frame').length,
-      pgmGroups:       JSON.stringify(_pgmFrames),
-      sseState:        _es ? _es.readyState : 'null',
-    });
-    if (_taking) { console.warn('[WATCHDOG] _taking is TRUE — possible stuck lock! stage=' + _lifecycleStage); }
-    if (btnCount !== OVERLAYS.length) { console.error('[WATCHDOG] BUTTON COUNT WRONG — expected=' + OVERLAYS.length + ' got=' + btnCount); }
-    if (document.querySelectorAll('.pgm-frame').length > 3) { console.error('[WATCHDOG] MORE THAN 3 PGM FRAMES — iframe leak!'); }
-    // Deadlock detector: stage should never stay at src-set or iframe-load for >2s (one watchdog cycle)
+    if (DEBUG) {
+      console.log('[WATCHDOG]', {
+        build:           BUILD_ID,
+        stage:           _lifecycleStage,
+        taking:          _taking,
+        pvw:             pvwSelection,
+        scene:           (liveState.program || {}).scene || null,
+        buttons:         btnCount,
+        takeBtnDisabled: (document.getElementById('take-btn') || {}).disabled,
+        pvwFrames:       document.querySelectorAll('.pvw-frame').length,
+        pgmFrames:       pgmCount,
+        pgmGroups:       JSON.stringify(_pgmFrames),
+        sseState:        _es ? _es.readyState : 'null',
+      });
+    }
+    if (_taking)              { console.warn('[WATCHDOG] _taking stuck — possible deadlock. stage=' + _lifecycleStage); }
+    if (btnCount !== OVERLAYS.length) { console.error('[WATCHDOG] button count wrong — expected=' + OVERLAYS.length + ' got=' + btnCount); }
+    if (pgmCount > 3)         { console.error('[WATCHDOG] PGM iframe leak — ' + pgmCount + ' frames in DOM'); }
     if (/src-set:|iframe-load:/.test(_lifecycleStage)) {
-      console.warn('[WATCHDOG] POSSIBLE DEADLOCK — stage stuck at: ' + _lifecycleStage);
+      console.warn('[WATCHDOG] handshake stall — stage=' + _lifecycleStage);
     }
   }, 2000);
 }());
