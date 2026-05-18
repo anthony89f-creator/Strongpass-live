@@ -1,6 +1,6 @@
 # Strongpass Live — Engineer Handover
 
-**Current local build:** `BUILD-20260518-C` (not yet deployed to production)
+**Current local build:** `BUILD-20260518-D` (not yet deployed to production)
 **Last production build:** `BUILD-20260517-C`
 **Stable tag:** `v2-runtime-stable`
 **Production URL:** `https://strongpass.live`

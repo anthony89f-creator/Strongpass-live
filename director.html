@@ -179,7 +179,7 @@ body {
 .monitor-empty {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
-  color: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.09);
 }
 .monitor-empty-icon  { font-size: 20px; line-height: 1; }
 .monitor-empty-label { font-size: 8px; font-weight: 700; letter-spacing: 0.36em; text-transform: uppercase; font-family:'Barlow',sans-serif; }
@@ -189,7 +189,7 @@ body {
   position: absolute; inset: 0;
   display: none; align-items: center; justify-content: center;
   font-size: 9px; font-weight: 700; letter-spacing: 0.56em; text-transform: uppercase;
-  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.04);
+  font-family: 'Barlow', sans-serif; color: rgba(255,255,255,0.07);
 }
 .pgm-clean.visible { display: flex; }
 
@@ -572,7 +572,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-C';
+var BUILD_ID = 'BUILD-20260518-D';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
@@ -597,12 +597,12 @@ var QPVW   = _token ? ('?pvw=1&token=' + encodeURIComponent(_token)) : '?pvw=1';
 // Groups enforce mutual exclusion: A=full-frame, B=lower-slot, C=data-strip.
 // Multiple groups can be live simultaneously — one overlay per group at most.
 var OVERLAYS = [
-  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
-  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', pvwFlags:['h2h'],                         pgmKeys:['h2h'] },
-  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
-  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', pvwFlags:['lowerThirdVisible'],           pgmKeys:['lowerThirdVisible'] },
-  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', pvwFlags:['champion'],                    pgmKeys:['champion'] },
-  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
+  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', hasControls:true,  pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
+  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', hasControls:true,  pvwFlags:['h2h'],                         pgmKeys:['h2h'] },
+  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', hasControls:true,  pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
+  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', hasControls:false, pvwFlags:['lowerThirdVisible'],           pgmKeys:['lowerThirdVisible'] },
+  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', hasControls:false, pvwFlags:['champion'],                    pgmKeys:['champion'] },
+  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', hasControls:false, pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
 ];
 
 // O(1) overlay lookup by key — avoids repeated OVERLAYS.find() at every transition.
@@ -835,12 +835,21 @@ function onStateUpdate(d) {
 }
 
 // ─── CONTEXT STRIP ────────────────────────────────────────────────────────────
+// Dirty-check: comp context changes only on heat advance — skip writes on score ticks.
+var _lastCtxKey = null;
 function renderCtxStrip() {
-  var s = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v || '—'; };
-  s('ctx-comp',  liveState.compName      || liveState.compEventName || '');
-  s('ctx-event', liveState.compEventName || liveState.eventName     || '');
-  s('ctx-heat',  liveState.compHeat                                 || '');
-  s('ctx-cat',   liveState.compCategory  || liveState.category      || '');
+  var comp  = liveState.compName      || liveState.compEventName || '';
+  var event = liveState.compEventName || liveState.eventName     || '';
+  var heat  = liveState.compHeat      || '';
+  var cat   = liveState.compCategory  || liveState.category      || '';
+  var key   = comp + '|' + event + '|' + heat + '|' + cat;
+  if (key === _lastCtxKey) return;
+  _lastCtxKey = key;
+  var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v || '—'; };
+  set('ctx-comp',  comp);
+  set('ctx-event', event);
+  set('ctx-heat',  heat);
+  set('ctx-cat',   cat);
 }
 
 // ─── PGM STATUS ───────────────────────────────────────────────────────────────
@@ -1537,6 +1546,12 @@ var _ctrlKey = null;
 function renderCtrlPanel() {
   var panel = document.getElementById('ctrl-panel');
   if (!panel) return;
+  // Short-circuit: overlays without controls never show a ctrl panel.
+  var selOvl = pvwSelection ? OVL_BY_KEY[pvwSelection] : null;
+  if (selOvl && !selOvl.hasControls) {
+    if (panel.classList.contains('open')) { panel.innerHTML = ''; panel.classList.remove('open'); _ctrlKey = null; }
+    return;
+  }
   // Dirty-check: skip DOM rebuild if nothing relevant changed.
   // Prevents innerHTML thrash (and focused-<select> destruction) on every SSE tick.
   var key = pvwSelection + '|' + (liveState.lbCategory||'') + '|' + (liveState.lbDisplayCount||'') + '|' + (!!liveState.lbFrozen) + '|' + (liveState.lineupIndex||'0') + '|' + (liveState.lineupAuto!==false) + '|' + ((liveState.h2hLeft||{}).name||'') + '|' + ((liveState.h2hRight||{}).name||'') + '|' + (getCats().join(','));

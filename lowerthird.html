@@ -221,7 +221,6 @@ window.onStateUpdate = function(d) { Object.assign(state,d); render(); };
 
 // Two-phase handshake: signal runtime ready first, receive state, then emit overlay-ready after render.
 if (window.PVW_MODE) {
-  console.log('[lowerthird] overlay-runtime-ready sending');
   window.parent.postMessage({ type: 'overlay-runtime-ready' }, '*');
 }
 </script>

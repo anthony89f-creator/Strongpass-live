@@ -1,5 +1,51 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-D (2026-05-18) — Registry foundations + render efficiency
+
+### Improved: OVERLAYS registry — added hasControls field (Phase 4 foundation)
+
+Added `hasControls: true|false` to each OVERLAYS entry. `renderCtrlPanel()` uses this to
+short-circuit without building the dirty-check key string for overlays that have no controls
+(lowerthird, champion, reps). When `!selOvl.hasControls`, the panel is cleared immediately
+and the function returns. Eliminates getCats() + string join on every SSE tick for these
+three overlays.
+
+This is the first step of the overlay registry abstraction — metadata lives alongside the
+key/src/group/flags in a single source of truth.
+
+---
+
+### Improved: renderCtxStrip() dirty-check
+
+The competition context strip (comp name, event, heat, category) was re-writing 4 DOM
+`textContent` values on every SSE tick. During an active competition these values change
+only on heat advance — rare during a show.
+
+Added `_lastCtxKey` dirty-check. On score-update ticks (the vast majority), renderCtxStrip
+returns after one string comparison with no DOM writes.
+
+---
+
+### Improved: overlay `overlay-runtime-ready` log removed from all 6 overlays
+
+Each overlay HTML emitted `console.log('[overlay] overlay-runtime-ready sending')` at the end
+of every PVW load. Removed from: leaderboard, h2h, lineup, lowerthird, champion, reps.
+
+The director side already logs `[PVW#N] runtime-ready received` (gated behind ?debug=1)
+and the green handshake-complete log remains. The overlay side log is redundant.
+
+---
+
+### Improved: CSS — pgm-clean and pvw-empty placeholder visibility
+
+`pgm-clean` "CLEAN" text: opacity 0.04 → 0.07 (was nearly invisible against black monitor)
+`pvw-empty` "Select an overlay" placeholder: 0.06 → 0.09 (same reason)
+
+Both remain subtle background-state indicators, not primary UI elements. The bump makes them
+barely visible at monitor distance rather than completely invisible.
+
+---
+
 ## BUILD-20260518-C (2026-05-18) — Runtime efficiency + UX hardening
 
 ### Fixed: Watchdog false-positive _taking warning
