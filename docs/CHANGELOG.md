@@ -1,5 +1,33 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-G (2026-05-18) — Phase 2 UX: keyboard hints + label polish
+
+### Added: keyboard shortcut hints on TAKE and CUT buttons (Phase 2)
+
+Operators must discover Enter=TAKE and Esc=CUT through documentation or accident.
+Added persistent CSS `::after` labels to surface these shortcuts directly on the buttons:
+
+- TAKE button: small "↵ ENTER" subtitle below the main label
+- CUT button: small "ESC" subtitle below the dynamic "CUT A/B/C" text
+
+Implemented purely via CSS `::after` + `display:flex / flex-direction:column` on the button
+elements. No JS changes — the CUT button's dynamic text content is unaffected.
+
+Button padding adjusted slightly (TAKE: 17px→13/10px, CUT: 12px→9/7px) to compensate for
+the added height from the subtitle row, keeping overall button size similar.
+
+### Improved: Transition column label (Phase 2)
+
+"T/S" eyebrow label above TAKE was cryptic operator jargon. Changed to "CTRL" which
+clearly communicates "this is a control area".
+
+### Improved: Status bar readability
+
+Status bar font: 11px → 12px, letter-spacing 0.08em → 0.06em for improved readability
+without changing the status bar's overall height or layout.
+
+---
+
 ## BUILD-20260518-F (2026-05-18) — Phase 2 UX: on-air indicator accuracy
 
 ### Fixed: PGM monitor indicators only active when live (Phase 2)
