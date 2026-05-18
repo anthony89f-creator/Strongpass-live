@@ -591,7 +591,7 @@ body {
 <script>
 // ─── BUILD ID — proof that this exact source is running ──────────────────────
 // Change this value manually whenever you deploy to verify runtime matches file.
-var BUILD_ID = 'BUILD-20260518-H';
+var BUILD_ID = 'BUILD-20260518-I';
 var DEBUG    = /[?&]debug=1/.test(location.search);
 document.title = 'Director [' + BUILD_ID + ']';
 (function() {
@@ -611,17 +611,20 @@ var Q      = _token ? ('?token=' + encodeURIComponent(_token)) : '';
 var QPVW   = _token ? ('?pvw=1&token=' + encodeURIComponent(_token)) : '?pvw=1';
 
 // Overlay definitions.
-// pvwFlags: visibility flags forced to true when injecting state into PVW iframe.
-// pgmKeys:  flags read from liveState to determine on-air status.
+// pvwFlags:      visibility flags forced to true when injecting state into PVW iframe.
+// pgmKeys:       flags read from liveState to determine on-air status.
+// pvwDrop:       liveState fields to omit from postMessage payload for this overlay.
+// hasControls:   true if this overlay has a ctrl panel in the director.
+// ctrlStateKeys: liveState fields that drive the ctrl panel dirty-check for this overlay.
 // Groups enforce mutual exclusion: A=full-frame, B=lower-slot, C=data-strip.
 // Multiple groups can be live simultaneously — one overlay per group at most.
 var OVERLAYS = [
-  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', hasControls:true,  pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
-  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', hasControls:true,  pvwDrop:['athletes'], pvwFlags:['h2h'],                         pgmKeys:['h2h'] },
-  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', hasControls:true,                        pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
-  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', hasControls:false, pvwDrop:['athletes'], pvwFlags:['lowerThirdVisible'],           pgmKeys:['lowerThirdVisible'] },
-  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', hasControls:false, pvwDrop:['athletes'], pvwFlags:['champion'],                    pgmKeys:['champion'] },
-  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', hasControls:false, pvwDrop:['athletes'], pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
+  { key:'leaderboard', label:'Leaderboard',   src:'/leaderboard.html', group:'A', hasControls:true,  ctrlStateKeys:['lbCategory','lbDisplayCount','lbFrozen','categories'],           pvwFlags:['leaderboard'],                  pgmKeys:['leaderboard'] },
+  { key:'h2h',         label:'Head To Head',  src:'/h2h.html',         group:'A', hasControls:true,  ctrlStateKeys:['h2hLeft','h2hRight'],                                            pvwDrop:['athletes'], pvwFlags:['h2h'],     pgmKeys:['h2h'] },
+  { key:'lineup',      label:'Lineup',        src:'/lineup.html',      group:'A', hasControls:true,  ctrlStateKeys:['lineupIndex','lineupAuto','lineupDuration','categories'],         pvwFlags:['lineup'],                      pgmKeys:['lineup'] },
+  { key:'lowerthird',  label:'Lower Third',   src:'/lowerthird.html',  group:'B', hasControls:false,                                                                                  pvwDrop:['athletes'], pvwFlags:['lowerThirdVisible'], pgmKeys:['lowerThirdVisible'] },
+  { key:'champion',    label:'Champion',      src:'/champion.html',    group:'B', hasControls:false,                                                                                  pvwDrop:['athletes'], pvwFlags:['champion'],         pgmKeys:['champion'] },
+  { key:'reps',        label:'Reps / Lights', src:'/reps.html',        group:'C', hasControls:false,                                                                                  pvwDrop:['athletes'], pvwFlags:['repsVisible','lightsVisible'], pgmKeys:['repsVisible','lightsVisible'] },
 ];
 
 // O(1) overlay lookup by key — avoids repeated OVERLAYS.find() at every transition.
@@ -1574,7 +1577,15 @@ function renderCtrlPanel() {
   }
   // Dirty-check: skip DOM rebuild if nothing relevant changed.
   // Prevents innerHTML thrash (and focused-<select> destruction) on every SSE tick.
-  var key = pvwSelection + '|' + (liveState.lbCategory||'') + '|' + (liveState.lbDisplayCount||'') + '|' + (!!liveState.lbFrozen) + '|' + (liveState.lineupIndex||'0') + '|' + (liveState.lineupAuto!==false) + '|' + ((liveState.h2hLeft||{}).name||'') + '|' + ((liveState.h2hRight||{}).name||'') + '|' + (getCats().join(','));
+  // Key built from per-overlay ctrlStateKeys — only the fields that overlay's ctrl panel reads.
+  var stateKeys = (selOvl && selOvl.ctrlStateKeys) || [];
+  var key = pvwSelection + '|' + stateKeys.map(function(k) {
+    if (k === 'categories') return getCats().join(',');
+    var v = liveState[k];
+    if (v == null) return '';
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  }).join('|');
   if (key === _ctrlKey) return;
   _ctrlKey = key;
   var html = '';

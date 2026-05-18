@@ -1,5 +1,36 @@
 # Strongpass Live — Changelog
 
+## BUILD-20260518-I (2026-05-18) — Phase 4: ctrlStateKeys registry + dirty-check fix
+
+### Added: ctrlStateKeys overlay registry field (Phase 4)
+
+Each overlay in the OVERLAYS registry now declares `ctrlStateKeys`: the list of liveState
+fields that its ctrl panel depends on. `renderCtrlPanel()` builds the dirty-check key from
+only these fields, rather than a hardcoded concatenation of every possible ctrl field.
+
+Registry definitions:
+- leaderboard: `['lbCategory', 'lbDisplayCount', 'lbFrozen', 'categories']`
+- h2h: `['h2hLeft', 'h2hRight']`
+- lineup: `['lineupIndex', 'lineupAuto', 'lineupDuration', 'categories']`
+- lowerthird/champion/reps: no ctrlStateKeys (hasControls:false, ctrl panel never opened)
+
+Key builder in renderCtrlPanel():
+- `categories` sentinel → getCats().join(',') — maps category objects to name list
+- object fields → JSON.stringify (handles h2hLeft/h2hRight)
+- primitives → String coercion
+
+### Fixed: lineupDuration missing from ctrl panel dirty-check key (Phase 4)
+
+The previous hardcoded dirty-check key included `lineupIndex` and `lineupAuto` but omitted
+`lineupDuration`. Changing the auto-cycle duration in the ctrl panel (e.g., 5s → 8s) would
+update server state and the PVW overlay, but the duration dropdown in the ctrl panel would
+not re-render to show the newly selected value.
+
+Fix: `lineupDuration` is now included in `ctrlStateKeys` for lineup. `renderCtrlPanel()`
+correctly rebuilds the dropdown when duration changes.
+
+---
+
 ## BUILD-20260518-H (2026-05-18) — Phase 3: console noise reduction
 
 ### Improved: Handshake-complete log gated behind DEBUG (Phase 3)
