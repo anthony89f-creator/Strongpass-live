@@ -1024,6 +1024,7 @@ def _get_sse_payload(version):
             return _sse_payload_cache["payload"]
         data = load_state()
         data.pop("lbStandings", None)   # omitted from stream — fetch via /state.json
+        data.pop("competition", None)   # duplicates top-level broadcast fields — unused by overlays
         bc = data.get("broadcast")
         if isinstance(bc, dict):
             bc.pop("lbStandings", None)  # also strip from nested broadcast dict (~19KB)
@@ -2529,8 +2530,9 @@ def api_leaderboard():
                 "events": [{"name": ev["name"], "id": ev["id"]} for ev in events],
                 "rows": rows}
     else:
+        # Use warm results cache — avoids per-category DB queries (was 30ms, now ~3ms)
         data = {"version": _sse_mod._results_version,
-                "rows": get_leaderboard(category=cat if cat else None)}
+                "rows": _get_cached_standings(category=cat if cat else None)}
     resp = jsonify(data)
     resp.headers["Access-Control-Allow-Origin"] = "*"
     return resp
