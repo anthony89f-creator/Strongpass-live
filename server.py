@@ -1023,7 +1023,10 @@ def _get_sse_payload(version):
         if _sse_payload_cache["version"] == version:
             return _sse_payload_cache["payload"]
         data = load_state()
-        data.pop("lbStandings", None)   # omitted from stream (~10KB) — fetch via /state.json
+        data.pop("lbStandings", None)   # omitted from stream — fetch via /state.json
+        bc = data.get("broadcast")
+        if isinstance(bc, dict):
+            bc.pop("lbStandings", None)  # also strip from nested broadcast dict (~19KB)
         evs, _res = _get_cached_results()
         data["events"] = evs
         data["results_version"] = _sse_mod._results_version

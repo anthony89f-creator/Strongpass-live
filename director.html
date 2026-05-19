@@ -860,13 +860,39 @@ function pushToPVW(ovl) {
   } catch(e) { console.error('[Director pushToPVW EXCEPTION]', ovl.key, e); }
 }
 
+// ─── PVW POSTMESSAGE DIRTY-CHECK ──────────────────────────────────────────────
+// Per-overlay set of liveState keys that drive PVW rendering.
+// If none of these change between SSE ticks, postMessage is skipped.
+var _PVW_TRACK = {
+  leaderboard: ['lbAthletes','lbCategory','lbDisplayCount','lbFrozen','leaderboard','lbCategoryOverride'],
+  h2h:         ['h2h','h2hLeft','h2hRight'],
+  lineup:      ['lineup','lineupIndex','lineupDuration','lineupAuto','lanes','categories','lbCategoryOverride'],
+  lowerthird:  ['lowerThirdVisible','lanes','athletes','eventName','compCategory','compHeat','compEvent'],
+  manuallower: ['manualVisible','manualLine1','manualLine2','manualScore','manualUnit'],
+  champion:    ['champion','champName','champDetail','champScore','champEvents','champEyebrow','champComp','champScoreLabel'],
+  reps:        ['repsVisible','lightsVisible','judgeL1','judgeL2','judgeL3','judgeL4','judgeL5','judgeL6','judgeL7','judgeL8','laneCount'],
+};
+var _lastPVWStateKey = '';
+
+function _pvwStateKey(ovl) {
+  var keys = _PVW_TRACK[ovl.key] || [];
+  return ovl.key + '|' + keys.map(function(k) {
+    var v = liveState[k];
+    if (v == null) return '';
+    if (typeof v === 'object') { try { return JSON.stringify(v); } catch(_) { return '?'; } }
+    return String(v);
+  }).join('|');
+}
+
 // Push current liveState to the active PVW frame immediately, without waiting for SSE.
 // Called after any ctrl action that mutates liveState, so the overlay preview reflects
 // the change right away rather than on the next SSE tick (~100-500ms later).
 function _pushCurrentPVW() {
   if (!pvwSelection) return;
   var ovl = OVL_BY_KEY[pvwSelection];
-  if (ovl) pushToPVW(ovl);
+  if (!ovl) return;
+  _lastPVWStateKey = '';  // invalidate so next SSE tick can push if needed
+  pushToPVW(ovl);
 }
 
 // ─── STATE UPDATE ─────────────────────────────────────────────────────────────
@@ -884,10 +910,18 @@ function onStateUpdate(d) {
   try { renderOvlButtons(); } catch(e) { console.error('[Director renderOvlButtons EXCEPTION]', e); }
   try { renderCtrlPanel(); }  catch(e) { console.error('[Director renderCtrlPanel EXCEPTION]', e); }
   try { renderGroupStrip(); } catch(e) { console.error('[Director renderGroupStrip EXCEPTION]', e); }
-  // Push to active PVW via postMessage
+  // Push to active PVW via postMessage — dirty-check skips if no relevant state changed
   if (pvwSelection) {
     var ovl = OVL_BY_KEY[pvwSelection];
-    if (ovl) { try { pushToPVW(ovl); } catch(e) { console.error('[Director pushToPVW from SSE EXCEPTION]', e); } }
+    if (ovl) {
+      var newKey = _pvwStateKey(ovl);
+      if (newKey !== _lastPVWStateKey) {
+        _lastPVWStateKey = newKey;
+        try { pushToPVW(ovl); } catch(e) { console.error('[Director pushToPVW from SSE EXCEPTION]', e); }
+      } else {
+        DL('onStateUpdate tick=' + tick + ' — PVW dirty-check HIT for ' + ovl.key + ', skip postMessage');
+      }
+    }
   }
   // Reconstruct PGM iframes per group. Primary source: program.groups (server-tracked
   // per-group intent). Fallback: individual overlay flags (for old state.json or

@@ -402,25 +402,31 @@ html, body {
 }
 
 /* ── ROW ENTRANCE — GPU only (transform + opacity) ── */
+/* Animations only fire when .do-anim is present (tab switch / initial load).
+   Score updates do NOT get .do-anim, so rows update silently in-place.     */
 @keyframes row-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.ev-table-row, .overall-row {
+.do-anim .ev-table-row, .do-anim .overall-row {
   animation: row-in 0.26s cubic-bezier(0.22,1,0.36,1) both;
 }
-.ev-table-row:nth-child(2),  .overall-row:nth-child(2)  { animation-delay: 0.04s; }
-.ev-table-row:nth-child(3),  .overall-row:nth-child(3)  { animation-delay: 0.08s; }
-.ev-table-row:nth-child(4),  .overall-row:nth-child(4)  { animation-delay: 0.12s; }
-.ev-table-row:nth-child(5),  .overall-row:nth-child(5)  { animation-delay: 0.15s; }
-.ev-table-row:nth-child(6),  .overall-row:nth-child(6)  { animation-delay: 0.18s; }
-.ev-table-row:nth-child(7),  .overall-row:nth-child(7)  { animation-delay: 0.21s; }
-.ev-table-row:nth-child(8),  .overall-row:nth-child(8)  { animation-delay: 0.24s; }
-.ev-table-row:nth-child(n+9),.overall-row:nth-child(n+9){ animation-delay: 0.27s; }
+.do-anim .ev-table-row:nth-child(2),  .do-anim .overall-row:nth-child(2)  { animation-delay: 0.04s; }
+.do-anim .ev-table-row:nth-child(3),  .do-anim .overall-row:nth-child(3)  { animation-delay: 0.08s; }
+.do-anim .ev-table-row:nth-child(4),  .do-anim .overall-row:nth-child(4)  { animation-delay: 0.12s; }
+.do-anim .ev-table-row:nth-child(5),  .do-anim .overall-row:nth-child(5)  { animation-delay: 0.15s; }
+.do-anim .ev-table-row:nth-child(6),  .do-anim .overall-row:nth-child(6)  { animation-delay: 0.18s; }
+.do-anim .ev-table-row:nth-child(7),  .do-anim .overall-row:nth-child(7)  { animation-delay: 0.21s; }
+.do-anim .ev-table-row:nth-child(8),  .do-anim .overall-row:nth-child(8)  { animation-delay: 0.24s; }
+.do-anim .ev-table-row:nth-child(n+9),.do-anim .overall-row:nth-child(n+9){ animation-delay: 0.27s; }
 
 /* ── LOADING STATE during category switch ── */
-.table-loading { opacity: 0.45; transition: opacity 0.12s; pointer-events: none; }
-.table-ready   { opacity: 1;    transition: opacity 0.15s; }
+/* Only fade the body (rows), not the header — keeps sticky header visible */
+#results-body.table-loading { opacity: 0.45; transition: opacity 0.12s; pointer-events: none; }
+#results-body.table-ready   { opacity: 1;    transition: opacity 0.15s; }
+/* Overall table loading */
+.overall-table.table-loading { opacity: 0.45; transition: opacity 0.12s; pointer-events: none; }
+.overall-table.table-ready   { opacity: 1;    transition: opacity 0.15s; }
 
 /* ── MOBILE ── */
 @media (max-width: 700px) {
@@ -458,9 +464,9 @@ html, body {
   </div>
 
   {% if selected_cat and detailed_rows %}
-  <!-- ── Per-event matrix (server-rendered initial state) ── -->
-  <div class="results-table" id="results-table">
-    <div class="ev-table-header">
+  <!-- ── Per-event matrix — split: static header + dynamic body ── -->
+  <div class="results-table" id="results-outer">
+    <div class="ev-table-header" id="results-header">
       <div class="th-rank"></div>
       <div class="th-name">Athlete</div>
       <div class="th-events">
@@ -476,6 +482,7 @@ html, body {
       </div>
       <div class="th-total">Total</div>
     </div>
+    <div id="results-body" class="do-anim">
     {% for r in detailed_rows %}
     {% set rnk = r.overall_rank %}
     <div class="ev-table-row {% if rnk==1 %}rank-1{% elif rnk==2 %}rank-2{% elif rnk==3 %}rank-3{% endif %}">
@@ -523,11 +530,12 @@ html, body {
     {% if not detailed_rows %}
     <div class="empty">No results entered yet.</div>
     {% endif %}
-  </div>
+    </div><!-- /results-body -->
+  </div><!-- /results-outer -->
 
   {% else %}
   <!-- ── Overall ranked list (server-rendered initial state) ── -->
-  <div class="overall-table" id="results-table">
+  <div class="overall-table do-anim" id="results-table">
     {% if athletes %}
     {% for a in athletes %}
     {% set pos = loop.index %}
@@ -558,17 +566,23 @@ var EVENT_TYPES_UNITS = {{ event_types | tojson }};
 'use strict';
 
 /* ── State ── */
-var CAT          = {{ selected_cat | tojson }};  /* mutable — updates on JS category switch */
-var lastVersion  = null;
-var _lastRestart = null;
-var _fetchTimer  = null;
-var _es          = null;
+var CAT           = {{ selected_cat | tojson }};  /* mutable — updates on JS category switch */
+var lastVersion   = null;   /* global results_version from SSE — not per-category */
+var _lastRestart  = null;
+var _fetchTimer   = null;
+var _es           = null;
+var _fetchSeq     = 0;      /* incremented on each fetchCategory call; stale responses discarded */
+var _seeded       = false;  /* true after first SSE tick seeds lastVersion on page load */
+var _doAnimate    = true;   /* true only for initial load + tab switches; false for score updates */
+var _lastEventsKey = '';    /* hash of event IDs — rebuild header only when this changes */
 
 /* ── Measure topbar for sticky header offset ── */
-(function () {
+function _updateTopbarH() {
   var tb = document.querySelector('.topbar');
   if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
-}());
+}
+_updateTopbarH();
+window.addEventListener('load', _updateTopbarH);  /* re-measure after fonts load */
 
 /* ── Escape HTML ── */
 function esc(s) {
@@ -625,33 +639,38 @@ function fmtPtsCell(ed) {
 
 /* ─────────────────────────────────────────────────────────────────────────
    renderTable(data)
-   Builds the detailed matrix: header + rows.
-   Version-gated: skips if data.version <= lastVersion.
+   Detailed matrix renderer. Only writes rows to #results-body.
+   Header (#results-header) is rebuilt only when events list changes.
+   animations controlled by _doAnimate flag (true = tab switch, false = score update).
 ───────────────────────────────────────────────────────────────────────── */
 function renderTable(data) {
-  if (lastVersion !== null && data.version <= lastVersion) return;
   lastVersion = data.version;
 
-  var tableEl = document.getElementById('results-table');
-  if (!tableEl) return;
-
-  var evHdrs = (data.events || []).map(function (e) {
-    return '<div class="th-event-wrap">' +
-             '<div class="th-event-name">' + esc(e.name) + '</div>' +
-             '<div class="th-event-sub">' +
-               '<div class="th-raw-hdr">Raw</div>' +
-               '<div class="th-pts-hdr">Pts</div>' +
-             '</div>' +
-           '</div>';
-  }).join('');
-
-  var header =
-    '<div class="ev-table-header">' +
+  /* ── Header: only rebuild if event list changed ── */
+  var evs = data.events || [];
+  var newEvKey = evs.map(function (e) { return e.id + ':' + e.name; }).join(',');
+  var hdrEl = document.getElementById('results-header');
+  if (hdrEl && newEvKey !== _lastEventsKey) {
+    _lastEventsKey = newEvKey;
+    var evHdrs = evs.map(function (e) {
+      return '<div class="th-event-wrap">' +
+               '<div class="th-event-name">' + esc(e.name) + '</div>' +
+               '<div class="th-event-sub">' +
+                 '<div class="th-raw-hdr">Raw</div>' +
+                 '<div class="th-pts-hdr">Pts</div>' +
+               '</div>' +
+             '</div>';
+    }).join('');
+    hdrEl.innerHTML =
       '<div class="th-rank"></div>' +
       '<div class="th-name">Athlete</div>' +
       '<div class="th-events">' + evHdrs + '</div>' +
-      '<div class="th-total">Total</div>' +
-    '</div>';
+      '<div class="th-total">Total</div>';
+  }
+
+  /* ── Rows: always update body ── */
+  var bodyEl = document.getElementById('results-body');
+  if (!bodyEl) return;
 
   var rows = (data.rows || []).map(function (r) {
     var rnk    = r.overall_rank;
@@ -674,16 +693,18 @@ function renderTable(data) {
     '</div>';
   }).join('');
 
-  tableEl.className = 'results-table table-ready';
-  tableEl.innerHTML = header + (rows || '<div class="empty">No results entered yet.</div>');
+  /* Animate only on tab switch / initial load */
+  bodyEl.classList.toggle('do-anim', !!_doAnimate);
+  bodyEl.classList.remove('table-loading');
+  bodyEl.innerHTML = rows || '<div class="empty">No results entered yet.</div>';
+  _doAnimate = false;  /* subsequent SSE-triggered updates are silent */
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    renderOverall(data)
-   Builds the overall ranked list. Version-gated.
+   Builds the overall ranked list. No version gate — always renders when called.
 ───────────────────────────────────────────────────────────────────────── */
 function renderOverall(data) {
-  if (lastVersion !== null && data.version <= lastVersion) return;
   lastVersion = data.version;
 
   var tableEl = document.getElementById('results-table');
@@ -705,18 +726,23 @@ function renderOverall(data) {
     '</div>';
   }).join('');
 
-  tableEl.className = 'overall-table table-ready';
+  tableEl.classList.toggle('do-anim', !!_doAnimate);
+  tableEl.classList.remove('table-loading');
   tableEl.innerHTML = rows || '<div class="empty">No results entered yet.</div>';
+  _doAnimate = false;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    fetchCategory(cat)
    Fetches data for cat (null = overall) and renders.
-   Shows loading opacity while in flight.
+   Uses _fetchSeq to discard stale responses from superseded fetches.
+   Loading indicator applied to body only (header stays crisp).
 ───────────────────────────────────────────────────────────────────────── */
 function fetchCategory(cat) {
-  var tableEl = document.getElementById('results-table');
-  if (tableEl) tableEl.classList.add('table-loading');
+  var seq = ++_fetchSeq;
+  /* Apply loading state to the appropriate element */
+  var loadEl = cat ? document.getElementById('results-body') : document.getElementById('results-table');
+  if (loadEl) loadEl.classList.add('table-loading');
 
   var url = cat
     ? '/comp/api/leaderboard?category=' + encodeURIComponent(cat) + '&detailed=1'
@@ -725,12 +751,13 @@ function fetchCategory(cat) {
   fetch(url)
     .then(function (r) { return r.json(); })
     .then(function (data) {
-      if (tableEl) tableEl.classList.remove('table-loading');
+      if (seq !== _fetchSeq) return;  /* superseded by a newer fetchCategory call */
+      if (loadEl) loadEl.classList.remove('table-loading');
       if (cat) { renderTable(data);   }
       else      { renderOverall(data); }
     })
     .catch(function () {
-      if (tableEl) tableEl.classList.remove('table-loading');
+      if (seq === _fetchSeq && loadEl) loadEl.classList.remove('table-loading');
     });
 }
 
@@ -754,8 +781,9 @@ function fetchCategory(cat) {
       b.classList.toggle('active', b === btn);
     });
 
-    CAT         = newCat;
-    lastVersion = null;  /* reset version gate for new category */
+    CAT        = newCat;
+    _doAnimate = true;   /* next render after tab switch gets entrance animation */
+    _lastEventsKey = ''; /* force header rebuild for new category */
 
     /* Update URL without page reload */
     var newUrl = newCat
@@ -771,7 +799,8 @@ function fetchCategory(cat) {
     var state  = (e.state || {});
     var newCat = state.cat || null;
     CAT        = newCat;
-    lastVersion = null;
+    _doAnimate = true;
+    _lastEventsKey = '';
     document.querySelectorAll('.filter-btn').forEach(function (b) {
       b.classList.toggle('active', (b.dataset.cat || null) === newCat);
     });
@@ -810,11 +839,15 @@ function connect() {
       }
 
       if (msg.results_version !== undefined) {
-        if (lastVersion === null) {
-          /* Seed: first tick — don't fetch, initial HTML already correct */
-          lastVersion = msg.results_version; return;
+        if (!_seeded) {
+          /* Seed: first tick after page load — initial HTML already correct, don't fetch */
+          _seeded = true;
+          lastVersion = msg.results_version;
+          return;
         }
         if (msg.results_version <= lastVersion) return;
+        /* Optimistic version advance prevents duplicate scheduleFetch on burst ticks */
+        lastVersion = msg.results_version;
       }
     } catch (e) {}
     scheduleFetch();
