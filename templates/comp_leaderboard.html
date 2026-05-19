@@ -463,6 +463,7 @@ html, body {
     <div class="live-pill"><div class="live-dot"></div><span class="live-text">Live</span></div>
   </div>
 
+  <div id="lb-wrap">
   {% if selected_cat and detailed_rows %}
   <!-- ── Per-event matrix — split: static header + dynamic body ── -->
   <div class="results-table" id="results-outer">
@@ -556,6 +557,7 @@ html, body {
     {% endif %}
   </div>
   {% endif %}
+  </div><!-- /lb-wrap -->
 
 </div><!-- /main -->
 
@@ -638,13 +640,48 @@ function fmtPtsCell(ed) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   _ensureDetailedDom() — guarantee #results-header and #results-body exist.
+   Called by renderTable() so switching from Overall → Category is safe.
+───────────────────────────────────────────────────────────────────────── */
+function _ensureDetailedDom() {
+  if (document.getElementById('results-body')) return;
+  var wrap = document.getElementById('lb-wrap');
+  if (!wrap) return;
+  var outer = document.createElement('div');
+  outer.className = 'results-table'; outer.id = 'results-outer';
+  var hdr = document.createElement('div');
+  hdr.className = 'ev-table-header'; hdr.id = 'results-header';
+  var body = document.createElement('div');
+  body.id = 'results-body';
+  outer.appendChild(hdr); outer.appendChild(body);
+  wrap.innerHTML = '';  /* remove overall-table or stale structure */
+  wrap.appendChild(outer);
+  _lastEventsKey = '';  /* force header rebuild since we just wiped it */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   _ensureOverallDom() — guarantee #results-table (overall) exists.
+   Called by renderOverall() so switching from Category → Overall is safe.
+───────────────────────────────────────────────────────────────────────── */
+function _ensureOverallDom() {
+  if (document.getElementById('results-table')) return;
+  var wrap = document.getElementById('lb-wrap');
+  if (!wrap) return;
+  var tbl = document.createElement('div');
+  tbl.className = 'overall-table'; tbl.id = 'results-table';
+  wrap.innerHTML = '';
+  wrap.appendChild(tbl);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    renderTable(data)
    Detailed matrix renderer. Only writes rows to #results-body.
    Header (#results-header) is rebuilt only when events list changes.
-   animations controlled by _doAnimate flag (true = tab switch, false = score update).
+   Animations controlled by _doAnimate flag (true = tab switch, false = score update).
 ───────────────────────────────────────────────────────────────────────── */
 function renderTable(data) {
   lastVersion = data.version;
+  _ensureDetailedDom();
 
   /* ── Header: only rebuild if event list changed ── */
   var evs = data.events || [];
@@ -706,6 +743,7 @@ function renderTable(data) {
 ───────────────────────────────────────────────────────────────────────── */
 function renderOverall(data) {
   lastVersion = data.version;
+  _ensureOverallDom();
 
   var tableEl = document.getElementById('results-table');
   if (!tableEl) return;
@@ -740,8 +778,10 @@ function renderOverall(data) {
 ───────────────────────────────────────────────────────────────────────── */
 function fetchCategory(cat) {
   var seq = ++_fetchSeq;
-  /* Apply loading state to the appropriate element */
-  var loadEl = cat ? document.getElementById('results-body') : document.getElementById('results-table');
+  /* Apply loading state to the appropriate element (body for detailed, table for overall) */
+  var loadEl = cat
+    ? (document.getElementById('results-body') || document.getElementById('lb-wrap'))
+    : (document.getElementById('results-table') || document.getElementById('lb-wrap'));
   if (loadEl) loadEl.classList.add('table-loading');
 
   var url = cat
