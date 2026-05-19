@@ -9,67 +9,69 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
-   STRONGPASS ARENA LEADERBOARD
-   55" display — broadcast-grade — 15-30ft viewing distance
-   GPU: animations use only transform + opacity
-   DOM: version-gated updates; dirty-skip on no-change ticks
-   Sticky: rank + athlete columns survive horizontal scroll
-═══════════════════════════════════════════════════════════════════════════ */
+   STRONGPASS ARENA LEADERBOARD  — Build C
+   55" display · broadcast-grade · 15-30ft reading distance
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+   Column structure (detailed view):
+     RANK | ATHLETE | [EV-RAW  EV-PTS]... | TOTAL
+   Each event gets TWO fixed-width columns: raw value + points.
+   No stacking. No flex stretching. Widths are hard constants.
+
+   JS-driven category switching:
+   - Tab clicks intercept navigation, fetch API, update in-place
+   - Single SSE connection per page load (no reconnect on category change)
+   - scheduleFetch() works for both overall and detailed views
+
+   GPU: transform+opacity only. Single innerHTML write per version advance.
+═══════════════════════════════════════════════════════════════════════════ */
+* { margin:0; padding:0; box-sizing:border-box; }
 
 :root {
-  /* — Surface — */
   --bg:        #03030A;
   --surface:   #070710;
   --surface2:  #0D0D1C;
   --surface3:  #111122;
-
-  /* — Borders — */
   --border:    rgba(255,255,255,0.07);
-  --border-hi: rgba(255,255,255,0.13);
+  --border-hi: rgba(255,255,255,0.14);
 
-  /* — Text — */
   --text:  #F0F0FA;
   --dim:   #55557A;
-  --dim2:  #8888AA;
+  --dim2:  #8080A8;
 
-  /* — Rank colors — */
-  --gold:          #F5C218;
-  --gold-glow:     rgba(245,194,24,0.28);
-  --gold-bg:       rgba(245,194,24,0.055);
-  --gold-border:   rgba(245,194,24,0.55);
-
+  --gold:        #F5C218;
+  --gold-glow:   rgba(245,194,24,0.25);
+  --gold-bg:     rgba(245,194,24,0.055);
+  --gold-border: rgba(245,194,24,0.55);
   --silver:        #C0C8DC;
-  --silver-bg:     rgba(192,200,220,0.05);
+  --silver-bg:     rgba(192,200,220,0.048);
   --silver-border: rgba(192,200,220,0.38);
-
   --bronze:        #C88B28;
-  --bronze-bg:     rgba(200,139,40,0.06);
+  --bronze-bg:     rgba(200,139,40,0.055);
   --bronze-border: rgba(200,139,40,0.42);
 
-  /* — Accent — */
   --blue:    #00BBFF;
-  --blue-bg: rgba(0,187,255,0.09);
+  --blue-bg: rgba(0,187,255,0.08);
 
-  /* — Typography scale — arena-grade — */
-  --t-rank-top:  64px;   /* gold/silver/bronze rank numerals */
-  --t-rank:      50px;   /* other rank numerals */
-  --t-name:      42px;   /* athlete name */
-  --t-raw:       28px;   /* raw event score */
-  --t-unit:      16px;   /* units (kg, m, s) */
-  --t-pts:       18px;   /* points label */
-  --t-total:     46px;   /* total points */
-  --t-header:    12px;   /* column header caps */
+  /* ── Fixed column widths — do not use flex:1 on these ── */
+  --rank-w:  78px;
+  --name-w:  252px;
+  --raw-w:   116px;   /* raw score per event */
+  --pts-w:   84px;    /* points per event     */
+  --total-w: 96px;
+  --strip:   5px;
 
-  /* — Layout — */
-  --row-h:     96px;
-  --rank-w:    88px;
-  --name-w:    290px;
-  --total-w:   108px;
-  --ev-min:    154px;
-  --strip:     5px;      /* left rank indicator width */
-  --topbar-h:  53px;     /* updated by JS on load */
+  /* ── Typography scale ── */
+  --t-rank-top: 58px;
+  --t-rank:     46px;
+  --t-name:     36px;
+  --t-raw:      24px;
+  --t-raw-unit: 14px;
+  --t-pts:      17px;
+  --t-total:    42px;
+  --t-hdr:      10px;
+
+  --row-h:     78px;
+  --topbar-h:  53px;
 }
 
 html, body {
@@ -77,21 +79,17 @@ html, body {
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
   min-height: 100vh;
-  /* Subtle crosshatch — broadcast texture, near-invisible, no repaint cost */
   background-image:
     repeating-linear-gradient(-45deg, transparent, transparent 3px,
       rgba(255,255,255,0.007) 3px, rgba(255,255,255,0.007) 4px);
 }
 
-/* ── TOPBAR ───────────────────────────────────────────────────────────────── */
+/* ── TOPBAR ── */
 .topbar {
-  background: rgba(7,7,16,0.96);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 24px;
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  position: sticky; top: 0; z-index: 100;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(7,7,16,0.97); border-bottom: 1px solid var(--border);
+  padding: 10px 24px; display: flex; align-items: center; gap: 16px;
+  flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
 .topbar a {
   color: var(--dim2); text-decoration: none;
@@ -106,84 +104,66 @@ html, body {
   color: var(--blue); margin-right: auto; letter-spacing: 0.05em;
 }
 
-/* ── MAIN ─────────────────────────────────────────────────────────────────── */
-.main { padding: 18px 2%; width: 100%; display: flex; flex-direction: column; gap: 16px; }
+/* ── MAIN ── */
+.main { padding: 18px 2%; display: flex; flex-direction: column; gap: 16px; }
 
-/* ── CATEGORY TABS ────────────────────────────────────────────────────────── */
+/* ── CATEGORY TABS ── */
 .filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .filter-btn {
-  padding: 10px 22px; border-radius: 3px;
-  border: 1px solid var(--border);
+  padding: 9px 20px; border-radius: 3px; border: 1px solid var(--border);
   background: var(--surface); color: var(--dim2);
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 15px; font-weight: 800;
-  letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  text-decoration: none; cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
-.filter-btn:hover { color: var(--text); border-color: var(--border-hi); background: var(--surface2); }
-.filter-btn.active {
-  background: var(--blue-bg); border-color: rgba(0,187,255,0.3);
-  color: var(--blue);
-}
+.filter-btn:hover { color: var(--text); border-color: var(--border-hi); }
+.filter-btn.active { background: var(--blue-bg); border-color: rgba(0,187,255,0.32); color: var(--blue); }
 
-/* Live indicator — right side of filter row */
 .live-pill {
   display: flex; align-items: center; gap: 6px; margin-left: auto;
   padding: 5px 12px; border-radius: 3px;
-  border: 1px solid rgba(0,187,255,0.18);
-  background: rgba(0,187,255,0.05);
+  border: 1px solid rgba(0,187,255,0.18); background: rgba(0,187,255,0.05);
 }
-.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: blink 2s infinite; flex-shrink: 0; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: blink 2s infinite; flex-shrink:0; }
 .live-text { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--blue); }
 @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.45;transform:scale(0.8)} }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   OVERALL VIEW — full-width ranked slabs
-   No category selected; sorted by total points across all events
+   OVERALL VIEW
 ════════════════════════════════════════════════════════════════════════════ */
 .overall-table { display: flex; flex-direction: column; gap: 3px; width: 100%; }
 
 .overall-row {
-  display: flex; align-items: stretch; min-height: 100px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
+  display: flex; align-items: stretch; min-height: 96px;
+  border-radius: 4px; border: 1px solid var(--border);
   border-left: var(--strip) solid rgba(255,255,255,0.06);
-  background: var(--surface);
-  position: relative; overflow: hidden;
-  /* GPU layer: no reflow on hover — only background changes */
-  transition: border-color 0.15s;
-  cursor: default;
+  background: var(--surface); position: relative; overflow: hidden;
+  transform: translateZ(0);
 }
-.overall-row:hover { border-color: var(--border-hi); }
-
 .overall-row.r1 { border-left-color: var(--gold-border);   background: var(--gold-bg);   }
 .overall-row.r2 { border-left-color: var(--silver-border); background: var(--silver-bg); }
 .overall-row.r3 { border-left-color: var(--bronze-border); background: var(--bronze-bg); }
 
-/* Watermark rank number — absolute, behind all content */
 .overall-row::before {
   content: attr(data-rank);
-  position: absolute; right: 16px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 180px; font-weight: 900; letter-spacing: -0.05em;
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  font-size: 170px; font-weight: 900; letter-spacing: -0.05em;
   font-family: 'Barlow Condensed', sans-serif; line-height: 1;
-  color: rgba(255,255,255,0.022);
-  pointer-events: none; user-select: none;
-  z-index: 0;
+  color: rgba(255,255,255,0.022); pointer-events: none; z-index: 0;
 }
 
-/* Rank numeral */
 .ov-rank {
-  width: 110px; min-width: 110px; flex-shrink: 0;
+  width: 108px; min-width: 108px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   font-size: var(--t-rank-top); font-weight: 900; letter-spacing: -0.02em;
   color: var(--dim); position: relative; z-index: 1;
 }
-.overall-row.r1 .ov-rank { color: var(--gold);   text-shadow: 0 0 28px var(--gold-glow); }
+.overall-row.r1 .ov-rank { color: var(--gold);   text-shadow: 0 0 26px var(--gold-glow); }
 .overall-row.r2 .ov-rank { color: var(--silver); }
 .overall-row.r3 .ov-rank { color: var(--bronze); }
 
-/* Athlete info */
 .ov-info {
   flex: 1; padding: 0 24px; min-width: 0;
   display: flex; flex-direction: column; justify-content: center;
@@ -191,97 +171,121 @@ html, body {
 }
 .ov-name {
   font-size: var(--t-name); font-weight: 900; text-transform: uppercase;
-  letter-spacing: 0.02em; line-height: 1.1;
+  letter-spacing: 0.02em; line-height: 1.15;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ov-cat {
   font-size: 14px; font-weight: 500; color: var(--dim2);
-  font-family: 'Barlow', sans-serif; margin-top: 4px; letter-spacing: 0.04em;
+  font-family: 'Barlow', sans-serif; margin-top: 4px;
 }
 
-/* Score */
 .ov-score {
   padding-right: 40px; display: flex; flex-direction: column;
   align-items: flex-end; justify-content: center;
   flex-shrink: 0; position: relative; z-index: 1;
 }
-.ov-score-val {
-  font-size: 56px; font-weight: 900; line-height: 1;
-  letter-spacing: -0.02em; color: var(--dim);
-}
+.ov-score-val { font-size: 52px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; color: var(--dim); }
 .overall-row.r1 .ov-score-val { color: var(--gold);   }
 .overall-row.r2 .ov-score-val { color: var(--silver); }
 .overall-row.r3 .ov-score-val { color: var(--bronze); }
-.ov-score-unit {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
-  text-transform: uppercase; color: var(--dim); margin-top: 3px;
-}
+.ov-score-unit { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); margin-top: 3px; }
 
-.empty {
-  padding: 60px; text-align: center;
-  color: var(--dim); font-family: 'Barlow', sans-serif; font-size: 16px;
-}
+.empty { padding: 60px; text-align: center; color: var(--dim); font-family: 'Barlow', sans-serif; font-size: 16px; }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   DETAILED MATRIX VIEW — left-to-right event progression
-   Sticky rank + athlete columns  |  horizontal scroll for wide event tables
-   Event cell: raw score (large) above points (gold) + per-event rank
-════════════════════════════════════════════════════════════════════════════ */
+   DETAILED MATRIX VIEW
 
-/* Scroll container */
+   Structure:
+     .results-table (overflow-x: auto)
+       .ev-table-header
+         .th-rank        [sticky left:0]
+         .th-name        [sticky left:--rank-w]
+         .th-events
+           .th-event-wrap × N
+             .th-event-name   (spans raw+pts width)
+             .th-event-sub
+               .th-raw-hdr
+               .th-pts-hdr
+         .th-total
+       .ev-table-row × M
+         .ev-rank        [sticky left:0]
+         .ev-name-col    [sticky left:--rank-w]
+         .ev-events
+           .ev-event-group × N
+             .ev-raw-col
+             .ev-pts-col
+         .ev-total-col
+
+   CRITICAL: .th-event-wrap, .ev-event-group, .ev-raw-col, .ev-pts-col
+   use fixed widths (--raw-w, --pts-w), NOT flex:1.
+   This guarantees header and data columns align perfectly.
+════════════════════════════════════════════════════════════════════════════ */
 .results-table {
   width: 100%; overflow-x: auto; overflow-y: visible;
   -webkit-overflow-scrolling: touch;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  /* Promote to own compositor layer — prevents scroll jank */
-  transform: translateZ(0);
+  border-radius: 6px; border: 1px solid var(--border);
+  transform: translateZ(0); /* own compositor layer */
 }
 
-/* ── HEADER ROW ── */
+/* ── HEADER ── */
 .ev-table-header {
-  display: flex; align-items: stretch;
-  min-width: max-content;
-  background: var(--surface2);
-  border-bottom: 2px solid var(--border-hi);
+  display: flex; align-items: stretch; min-width: max-content;
+  background: var(--surface2); border-bottom: 2px solid var(--border-hi);
   position: sticky; top: var(--topbar-h); z-index: 10;
 }
 
 .th-rank {
   width: var(--rank-w); min-width: var(--rank-w); flex-shrink: 0;
-  position: sticky; left: 0; z-index: 12;
-  background: var(--surface2);
+  position: sticky; left: 0; z-index: 12; background: var(--surface2);
   border-right: 1px solid var(--border);
-  /* Left strip placeholder to keep alignment */
-  border-left: var(--strip) solid transparent;
+  border-left: var(--strip) solid transparent; /* align with data rows */
 }
 .th-name {
-  width: var(--name-w); min-width: 200px; flex-shrink: 0;
-  position: sticky; left: var(--rank-w); z-index: 12;
-  background: var(--surface2);
-  padding: 12px 20px;
-  font-size: var(--t-header); font-weight: 900;
-  letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim2);
-  display: flex; align-items: center;
+  width: var(--name-w); min-width: var(--name-w); flex-shrink: 0;
+  position: sticky; left: var(--rank-w); z-index: 12; background: var(--surface2);
+  padding: 0 18px; display: flex; align-items: center;
+  font-size: var(--t-hdr); font-weight: 900; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--dim2);
   border-right: 2px solid var(--border-hi);
 }
-.th-events { display: flex; flex: 1; }
-.th-event {
-  flex: 1; min-width: var(--ev-min);
-  padding: 12px 16px;
-  font-size: var(--t-header); font-weight: 900;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--dim2); display: flex; align-items: center;
-  border-right: 1px solid var(--border); line-height: 1.3;
+.th-events { display: flex; flex-shrink: 0; }
+
+/* Each event: two-row header. Event name spans raw+pts. */
+.th-event-wrap {
+  display: flex; flex-direction: column; flex-shrink: 0;
+  width: calc(var(--raw-w) + var(--pts-w));
+  border-right: 2px solid var(--border);
 }
-.th-event:last-child { border-right: 1px solid var(--border); }
+.th-event-name {
+  padding: 7px 12px;
+  font-size: 11px; font-weight: 900; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(255,255,255,0.72);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.th-event-sub { display: flex; }
+.th-raw-hdr {
+  width: var(--raw-w); flex-shrink: 0;
+  padding: 5px 10px;
+  font-size: var(--t-hdr); font-weight: 800; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--dim2);
+  display: flex; align-items: center;
+  border-right: 1px solid rgba(255,255,255,0.04);
+}
+.th-pts-hdr {
+  width: var(--pts-w); flex-shrink: 0;
+  padding: 5px 10px;
+  font-size: var(--t-hdr); font-weight: 800; letter-spacing: 0.16em;
+  text-transform: uppercase; color: rgba(245,194,24,0.5);
+  display: flex; align-items: center;
+}
+
 .th-total {
   width: var(--total-w); min-width: var(--total-w); flex-shrink: 0;
   border-left: 2px solid var(--border-hi);
-  padding: 12px;
-  font-size: var(--t-header); font-weight: 900;
-  letter-spacing: 0.2em; text-transform: uppercase;
-  color: var(--gold); display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--t-hdr); font-weight: 900; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--gold);
 }
 
 /* ── DATA ROWS ── */
@@ -289,44 +293,36 @@ html, body {
   display: flex; align-items: stretch;
   min-height: var(--row-h); min-width: max-content;
   border-bottom: 1px solid var(--border);
-  /* CSS custom property for sticky-cell background inheritance */
+  border-left: var(--strip) solid rgba(255,255,255,0.05);
   --row-bg: var(--surface);
   background: var(--row-bg);
-  /* Rank accent strip on left */
-  border-left: var(--strip) solid rgba(255,255,255,0.05);
-  transition: border-color 0.15s;
 }
 .ev-table-row:last-child { border-bottom: none; }
-
-/* Rank color assignments */
 .ev-table-row.rank-1 { border-left-color: var(--gold-border);   --row-bg: var(--gold-bg);   }
 .ev-table-row.rank-2 { border-left-color: var(--silver-border); --row-bg: var(--silver-bg); }
 .ev-table-row.rank-3 { border-left-color: var(--bronze-border); --row-bg: var(--bronze-bg); }
 
-/* Sticky rank column */
+/* Sticky rank */
 .ev-rank {
   width: var(--rank-w); min-width: var(--rank-w); flex-shrink: 0;
   position: sticky; left: 0; z-index: 4;
-  background: var(--row-bg); /* inherits via CSS custom property */
+  background: var(--row-bg);
   display: flex; align-items: center; justify-content: center;
-  font-size: var(--t-rank); font-weight: 900; letter-spacing: -0.02em;
-  color: var(--dim);
+  font-size: var(--t-rank); font-weight: 900; letter-spacing: -0.02em; color: var(--dim);
   border-right: 1px solid var(--border);
 }
-.ev-rank.r1 { font-size: var(--t-rank-top); color: var(--gold);   text-shadow: 0 0 22px var(--gold-glow); }
+.ev-rank.r1 { font-size: var(--t-rank-top); color: var(--gold);   text-shadow: 0 0 20px var(--gold-glow); }
 .ev-rank.r2 { font-size: var(--t-rank-top); color: var(--silver); }
 .ev-rank.r3 { font-size: var(--t-rank-top); color: var(--bronze); }
 
-/* Sticky athlete name column */
+/* Sticky athlete name */
 .ev-name-col {
-  width: var(--name-w); min-width: 200px; flex-shrink: 0;
+  width: var(--name-w); min-width: var(--name-w); flex-shrink: 0;
   position: sticky; left: var(--rank-w); z-index: 4;
   background: var(--row-bg);
-  padding: 16px 20px;
-  display: flex; flex-direction: column; justify-content: center;
+  padding: 14px 18px; display: flex; align-items: center;
   border-right: 2px solid var(--border-hi);
-  /* Right shadow to signal scroll depth */
-  box-shadow: 4px 0 12px rgba(0,0,0,0.35);
+  box-shadow: 4px 0 10px rgba(0,0,0,0.3);
 }
 .ev-name-text {
   font-size: var(--t-name); font-weight: 900; text-transform: uppercase;
@@ -334,45 +330,62 @@ html, body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Event data columns */
-.ev-events { display: flex; flex: 1; }
-.ev-event-cell {
-  flex: 1; min-width: var(--ev-min);
-  padding: 14px 16px;
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; justify-content: center; gap: 5px;
+/* Event column groups — fixed widths, no flex stretching */
+.ev-events { display: flex; flex-shrink: 0; }
+.ev-event-group {
+  display: flex; align-items: stretch; flex-shrink: 0;
+  width: calc(var(--raw-w) + var(--pts-w));
+  border-right: 2px solid var(--border);
 }
-.ev-event-cell:last-child { border-right: 1px solid var(--border); }
 
-/* Cell content — stacked: raw value on top, points + rank below */
-.cell-raw {
+/* Raw score column */
+.ev-raw-col {
+  width: var(--raw-w); flex-shrink: 0;
+  padding: 12px 10px;
+  display: flex; flex-direction: column; justify-content: center;
+  border-right: 1px solid rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+.raw-val {
   font-size: var(--t-raw); font-weight: 800; color: var(--text);
-  line-height: 1; white-space: nowrap;
+  line-height: 1.1; display: inline;
 }
-.cell-unit { font-size: var(--t-unit); font-weight: 600; color: var(--dim2); margin-left: 2px; }
-.cell-pts-row { display: flex; align-items: center; gap: 8px; }
-.cell-pts {
+.raw-unit { font-size: var(--t-raw-unit); font-weight: 600; color: var(--dim2); margin-left: 1px; }
+.raw-sep  { font-size: 15px; color: var(--dim); margin: 0 3px; }
+.raw-tb   { font-size: var(--t-raw); font-weight: 800; color: var(--text); }
+
+/* Points column */
+.ev-pts-col {
+  width: var(--pts-w); flex-shrink: 0;
+  padding: 12px 8px;
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  overflow: hidden;
+}
+.pts-val {
   font-size: var(--t-pts); font-weight: 900;
-  color: rgba(245,194,24,0.55); line-height: 1; white-space: nowrap;
+  color: rgba(245,194,24,0.58); line-height: 1; white-space: nowrap;
 }
-.cell-pts.top { color: var(--gold); }
-.cell-ev-rank {
-  font-size: 12px; font-weight: 700; color: var(--dim);
+.pts-val.top { color: var(--gold); }
+.pts-val.dim { color: var(--dim); font-weight: 700; }
+.pts-rank {
+  font-size: 11px; font-weight: 700; color: var(--dim);
   font-family: 'Barlow', sans-serif;
 }
+
+/* Status cells */
 .cell-dns {
-  font-size: 14px; font-weight: 800; letter-spacing: 0.1em;
+  font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
   color: var(--blue); background: rgba(0,187,255,0.1);
-  padding: 4px 10px; border-radius: 3px; align-self: flex-start;
+  padding: 3px 8px; border-radius: 3px; align-self: flex-start;
 }
 .cell-dnf {
-  font-size: 14px; font-weight: 800; letter-spacing: 0.1em;
+  font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
   color: #FF3322; background: rgba(255,51,34,0.1);
-  padding: 4px 10px; border-radius: 3px; align-self: flex-start;
+  padding: 3px 8px; border-radius: 3px; align-self: flex-start;
 }
-.cell-empty { font-size: 22px; color: rgba(255,255,255,0.1); }
+.cell-empty { font-size: 20px; color: rgba(255,255,255,0.1); }
 
-/* Total column — far right, gold */
+/* Total column */
 .ev-total-col {
   width: var(--total-w); min-width: var(--total-w); flex-shrink: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -388,39 +401,40 @@ html, body {
   text-transform: uppercase; color: var(--dim); font-family: 'Barlow', sans-serif;
 }
 
-/* ── ROW ENTRANCE — GPU-only (transform + opacity) ── */
+/* ── ROW ENTRANCE — GPU only (transform + opacity) ── */
 @keyframes row-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .ev-table-row, .overall-row {
-  animation: row-in 0.28s cubic-bezier(0.22,1,0.36,1) both;
+  animation: row-in 0.26s cubic-bezier(0.22,1,0.36,1) both;
 }
-/* Staggered cascade — first 10 rows */
 .ev-table-row:nth-child(2),  .overall-row:nth-child(2)  { animation-delay: 0.04s; }
 .ev-table-row:nth-child(3),  .overall-row:nth-child(3)  { animation-delay: 0.08s; }
 .ev-table-row:nth-child(4),  .overall-row:nth-child(4)  { animation-delay: 0.12s; }
-.ev-table-row:nth-child(5),  .overall-row:nth-child(5)  { animation-delay: 0.16s; }
-.ev-table-row:nth-child(6),  .overall-row:nth-child(6)  { animation-delay: 0.20s; }
-.ev-table-row:nth-child(7),  .overall-row:nth-child(7)  { animation-delay: 0.24s; }
-.ev-table-row:nth-child(8),  .overall-row:nth-child(8)  { animation-delay: 0.27s; }
-.ev-table-row:nth-child(9),  .overall-row:nth-child(9)  { animation-delay: 0.30s; }
-.ev-table-row:nth-child(10), .overall-row:nth-child(10) { animation-delay: 0.33s; }
-.ev-table-row:nth-child(n+11), .overall-row:nth-child(n+11) { animation-delay: 0.36s; }
+.ev-table-row:nth-child(5),  .overall-row:nth-child(5)  { animation-delay: 0.15s; }
+.ev-table-row:nth-child(6),  .overall-row:nth-child(6)  { animation-delay: 0.18s; }
+.ev-table-row:nth-child(7),  .overall-row:nth-child(7)  { animation-delay: 0.21s; }
+.ev-table-row:nth-child(8),  .overall-row:nth-child(8)  { animation-delay: 0.24s; }
+.ev-table-row:nth-child(n+9),.overall-row:nth-child(n+9){ animation-delay: 0.27s; }
 
-/* ── MOBILE — collapse to operator-scale ── */
+/* ── LOADING STATE during category switch ── */
+.table-loading { opacity: 0.45; transition: opacity 0.12s; pointer-events: none; }
+.table-ready   { opacity: 1;    transition: opacity 0.15s; }
+
+/* ── MOBILE ── */
 @media (max-width: 700px) {
   :root {
-    --t-rank-top: 44px; --t-rank: 36px; --t-name: 28px;
-    --t-raw: 22px;  --t-pts: 15px;  --t-total: 32px;
-    --row-h: 72px;  --rank-w: 64px;  --name-w: 200px; --total-w: 88px;
+    --t-rank-top: 42px; --t-rank: 34px; --t-name: 26px;
+    --t-raw: 20px; --t-raw-unit: 12px; --t-pts: 14px; --t-total: 30px;
+    --row-h: 66px; --rank-w: 60px; --name-w: 180px;
+    --raw-w: 90px; --pts-w: 70px; --total-w: 80px;
   }
   .main { padding: 10px 3%; }
-  .ov-score-val { font-size: 38px; }
-  .ov-name      { font-size: 28px; }
-  .ov-rank      { width: 80px; min-width: 80px; }
-  .filter-btn   { font-size: 13px; padding: 8px 14px; }
-  .live-pill    { display: none; }
+  .ov-score-val { font-size: 36px; }
+  .ov-name { font-size: 26px; }
+  .filter-btn { font-size: 13px; padding: 7px 14px; }
+  .live-pill  { display: none; }
 }
 </style>
 </head>
@@ -435,32 +449,33 @@ html, body {
 
 <div class="main">
 
-  <div class="filter-row">
-    <a href="/comp/leaderboard" class="filter-btn {% if not selected_cat %}active{% endif %}">Overall</a>
+  <div class="filter-row" id="filter-row">
+    <button class="filter-btn {% if not selected_cat %}active{% endif %}" data-cat="">Overall</button>
     {% for cat in category_order %}
-    <a href="/comp/leaderboard?category={{ cat }}" class="filter-btn {% if selected_cat==cat %}active{% endif %}">{{ cat }}</a>
+    <button class="filter-btn {% if selected_cat==cat %}active{% endif %}" data-cat="{{ cat }}">{{ cat }}</button>
     {% endfor %}
-    <div class="live-pill">
-      <div class="live-dot"></div>
-      <span class="live-text">Live</span>
-    </div>
+    <div class="live-pill"><div class="live-dot"></div><span class="live-text">Live</span></div>
   </div>
 
   {% if selected_cat and detailed_rows %}
-  <!-- Per-event matrix — Rank | Athlete | Ev1 | Ev2 | … | Total -->
+  <!-- ── Per-event matrix (server-rendered initial state) ── -->
   <div class="results-table" id="results-table">
-
     <div class="ev-table-header">
       <div class="th-rank"></div>
       <div class="th-name">Athlete</div>
       <div class="th-events">
         {% for ev in events_list %}
-        <div class="th-event">{{ ev.name }}</div>
+        <div class="th-event-wrap">
+          <div class="th-event-name">{{ ev.name }}</div>
+          <div class="th-event-sub">
+            <div class="th-raw-hdr">Raw</div>
+            <div class="th-pts-hdr">Pts</div>
+          </div>
+        </div>
         {% endfor %}
       </div>
       <div class="th-total">Total</div>
     </div>
-
     {% for r in detailed_rows %}
     {% set rnk = r.overall_rank %}
     <div class="ev-table-row {% if rnk==1 %}rank-1{% elif rnk==2 %}rank-2{% elif rnk==3 %}rank-3{% endif %}">
@@ -468,28 +483,34 @@ html, body {
       <div class="ev-name-col"><div class="ev-name-text">{{ r.name }}</div></div>
       <div class="ev-events">
         {% for ed in r.event_data %}
-        <div class="ev-event-cell">
-          {% if ed.result_type == 'dns' %}
-            <span class="cell-dns">DNS</span>
-          {% elif ed.result_type == 'dnf' %}
-            <span class="cell-dnf">DNF</span>
-          {% elif ed.raw_value is not none %}
-            {% set unit = event_types[ed.event_type].unit if ed.event_type in event_types else '' %}
-            {% set raw_fmt = (ed.raw_value | int) if ed.raw_value == (ed.raw_value | int) else (ed.raw_value | round(2)) %}
-            {% if ed.event_type == 'weight_reps' and ed.tiebreak %}
-              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">kg</span>&thinsp;×&thinsp;{{ ed.tiebreak | int if ed.tiebreak == (ed.tiebreak | int) else ed.tiebreak }}</span>
-            {% elif ed.event_type == 'object' and ed.tiebreak %}
-              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit"> in </span>{{ ed.tiebreak | round(1) }}<span class="cell-unit">s</span></span>
+        <div class="ev-event-group">
+          <div class="ev-raw-col">
+            {% if ed.result_type == 'dns' %}
+              <span class="cell-dns">DNS</span>
+            {% elif ed.result_type == 'dnf' %}
+              <span class="cell-dnf">DNF</span>
+            {% elif ed.raw_value is not none %}
+              {% set raw_fmt = (ed.raw_value | int) if ed.raw_value == (ed.raw_value | int) else (ed.raw_value | round(2)) %}
+              {% if ed.event_type == 'weight_reps' and ed.tiebreak %}
+                <span class="raw-val">{{ raw_fmt }}</span><span class="raw-unit">kg</span><span class="raw-sep">×</span><span class="raw-tb">{{ ed.tiebreak | int if ed.tiebreak == (ed.tiebreak | int) else ed.tiebreak }}</span>
+              {% elif ed.event_type == 'object' and ed.tiebreak %}
+                <span class="raw-val">{{ raw_fmt }}</span><span class="raw-unit"> in </span><span class="raw-tb">{{ ed.tiebreak | round(1) }}</span><span class="raw-unit">s</span>
+              {% else %}
+                {% set unit = event_types[ed.event_type].unit if ed.event_type in event_types else '' %}
+                <span class="raw-val">{{ raw_fmt }}</span><span class="raw-unit">{{ unit }}</span>
+              {% endif %}
             {% else %}
-              <span class="cell-raw">{{ raw_fmt }}<span class="cell-unit">{{ unit }}</span></span>
+              <span class="cell-empty">—</span>
             {% endif %}
-            <div class="cell-pts-row">
-              <span class="cell-pts {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}&thinsp;pts</span>
-              {% if ed.rank %}<span class="cell-ev-rank">#{{ ed.rank }}</span>{% endif %}
-            </div>
-          {% else %}
-            <span class="cell-empty">—</span>
-          {% endif %}
+          </div>
+          <div class="ev-pts-col">
+            {% if ed.raw_value is not none and ed.result_type not in ('dns','dnf') %}
+              <span class="pts-val {% if ed.rank == 1 %}top{% endif %}">{{ ed.points | int if ed.points == (ed.points | int) else ed.points }}&thinsp;pts</span>
+              {% if ed.rank %}<span class="pts-rank">#{{ ed.rank }}</span>{% endif %}
+            {% else %}
+              <span class="pts-val dim">—</span>
+            {% endif %}
+          </div>
         </div>
         {% endfor %}
       </div>
@@ -499,15 +520,13 @@ html, body {
       </div>
     </div>
     {% endfor %}
-
     {% if not detailed_rows %}
     <div class="empty">No results entered yet.</div>
     {% endif %}
-
   </div>
 
   {% else %}
-  <!-- Overall ranked list -->
+  <!-- ── Overall ranked list (server-rendered initial state) ── -->
   <div class="overall-table" id="results-table">
     {% if athletes %}
     {% for a in athletes %}
@@ -536,179 +555,275 @@ html, body {
 var EVENT_TYPES_UNITS = {{ event_types | tojson }};
 
 (function () {
-  /* Only the per-category detailed view gets JS-driven live updates.
-     Overall view (/comp/leaderboard with no category) is served by Jinja
-     and reloads via the SSE restart-token gate below.             */
-  var CAT = {{ selected_cat | tojson }};
+'use strict';
 
-  var lastVersion      = null;
-  var _lastRestartToken = null;
+/* ── State ── */
+var CAT          = {{ selected_cat | tojson }};  /* mutable — updates on JS category switch */
+var lastVersion  = null;
+var _lastRestart = null;
+var _fetchTimer  = null;
+var _es          = null;
 
-  /* ── Measure topbar height so sticky table header aligns correctly ── */
-  (function () {
-    var tb = document.querySelector('.topbar');
-    if (tb) {
-      document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
-    }
-  }());
+/* ── Measure topbar for sticky header offset ── */
+(function () {
+  var tb = document.querySelector('.topbar');
+  if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+}());
 
-  /* ── HTML escape helper ── */
-  function esc(s) {
-    return String(s)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+/* ── Escape HTML ── */
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Number formatters ── */
+function fmtPts(v) { return v === Math.floor(v) ? Math.floor(v) : v; }
+function fmtRaw(v) {
+  if (v === null || v === undefined) return '';
+  var n = parseFloat(v);
+  return isNaN(n) ? '' : (n % 1 === 0 ? String(Math.floor(n)) : n.toFixed(2).replace(/\.?0+$/, ''));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CELL BUILDERS — separate raw and points HTML strings
+
+   fmtRawCell(ed)  → innerHTML for .ev-raw-col
+   fmtPtsCell(ed)  → innerHTML for .ev-pts-col
+───────────────────────────────────────────────────────────────────────── */
+function fmtRawCell(ed) {
+  if (ed.result_type === 'dns') return '<span class="cell-dns">DNS</span>';
+  if (ed.result_type === 'dnf') return '<span class="cell-dnf">DNF</span>';
+  if (ed.raw_value === null || ed.raw_value === undefined)
+    return '<span class="cell-empty">—</span>';
+
+  var raw = fmtRaw(ed.raw_value);
+
+  if (ed.event_type === 'weight_reps' && ed.tiebreak != null) {
+    return '<span class="raw-val">' + raw + '</span><span class="raw-unit">kg</span>' +
+           '<span class="raw-sep">×</span><span class="raw-tb">' + fmtRaw(ed.tiebreak) + '</span>';
   }
-
-  /* ── Number formatters ── */
-  function fmtPts(v) { return v === Math.floor(v) ? Math.floor(v) : v; }
-  function fmtRaw(v) {
-    if (v === null || v === undefined) return '';
-    var n = parseFloat(v);
-    return isNaN(n) ? '' : (n % 1 === 0 ? String(Math.floor(n)) : n.toFixed(2).replace(/\.?0+$/, ''));
+  if (ed.event_type === 'object' && ed.tiebreak != null) {
+    return '<span class="raw-val">' + raw + '</span><span class="raw-unit"> in </span>' +
+           '<span class="raw-tb">' + parseFloat(ed.tiebreak).toFixed(1) + '</span>' +
+           '<span class="raw-unit">s</span>';
   }
+  var unit = (EVENT_TYPES_UNITS[ed.event_type] || {}).unit || '';
+  return '<span class="raw-val">' + raw + '</span><span class="raw-unit">' + esc(unit) + '</span>';
+}
 
-  /* ── Cell builder ──────────────────────────────────────────────────
-     Produces innerHTML for .ev-event-cell
-     Layout:
-       [line 1] raw value + unit  (cell-raw)
-       [line 2] N pts · #rank     (cell-pts-row)
-  ─────────────────────────────────────────────────────────────────── */
-  function fmtCell(ed) {
-    if (ed.result_type === 'dns') return '<span class="cell-dns">DNS</span>';
-    if (ed.result_type === 'dnf') return '<span class="cell-dnf">DNF</span>';
-    if (ed.raw_value === null || ed.raw_value === undefined) {
-      return '<span class="cell-empty">—</span>';
-    }
-
-    var unit = (EVENT_TYPES_UNITS[ed.event_type] || {}).unit || '';
-    var raw  = fmtRaw(ed.raw_value);
-    var rawHtml;
-
-    if (ed.event_type === 'weight_reps' && ed.tiebreak != null) {
-      rawHtml = '<span class="cell-raw">' + raw +
-                '<span class="cell-unit">kg</span>&thinsp;×&thinsp;' +
-                fmtRaw(ed.tiebreak) + '</span>';
-    } else if (ed.event_type === 'object' && ed.tiebreak != null) {
-      rawHtml = '<span class="cell-raw">' + raw +
-                '<span class="cell-unit"> in </span>' +
-                parseFloat(ed.tiebreak).toFixed(1) +
-                '<span class="cell-unit">s</span></span>';
-    } else {
-      rawHtml = '<span class="cell-raw">' + raw +
-                '<span class="cell-unit">' + esc(unit) + '</span></span>';
-    }
-
-    var topCls  = (ed.rank === 1) ? ' top' : '';
-    var ptsHtml = '<span class="cell-pts' + topCls + '">' + fmtPts(ed.points) + '&thinsp;pts</span>';
-    var rnkHtml = ed.rank
-      ? '<span class="cell-ev-rank">#' + ed.rank + '</span>'
-      : '';
-
-    return rawHtml +
-           '<div class="cell-pts-row">' + ptsHtml + rnkHtml + '</div>';
+function fmtPtsCell(ed) {
+  if (ed.raw_value === null || ed.raw_value === undefined ||
+      ed.result_type === 'dns' || ed.result_type === 'dnf') {
+    return '<span class="pts-val dim">—</span>';
   }
+  var top   = ed.rank === 1 ? ' top' : '';
+  var pts   = '<span class="pts-val' + top + '">' + fmtPts(ed.points) + '&thinsp;pts</span>';
+  var rank  = ed.rank ? '<span class="pts-rank">#' + ed.rank + '</span>' : '';
+  return pts + rank;
+}
 
-  /* ── Table renderer ─────────────────────────────────────────────────
-     Replaces #results-table innerHTML.
-     Version-gated: skips write if data.version hasn't advanced.
-     Row entrance animations replay on every rebuild (CSS animation).
-  ─────────────────────────────────────────────────────────────────── */
-  function renderTable(data) {
-    if (lastVersion !== null && data.version <= lastVersion) return;
-    lastVersion = data.version;
+/* ─────────────────────────────────────────────────────────────────────────
+   renderTable(data)
+   Builds the detailed matrix: header + rows.
+   Version-gated: skips if data.version <= lastVersion.
+───────────────────────────────────────────────────────────────────────── */
+function renderTable(data) {
+  if (lastVersion !== null && data.version <= lastVersion) return;
+  lastVersion = data.version;
 
-    var tableEl = document.getElementById('results-table');
-    if (!tableEl) return;
+  var tableEl = document.getElementById('results-table');
+  if (!tableEl) return;
 
-    /* Header */
-    var evHeads = data.events.map(function (e) {
-      return '<div class="th-event">' + esc(e.name) + '</div>';
-    }).join('');
+  var evHdrs = (data.events || []).map(function (e) {
+    return '<div class="th-event-wrap">' +
+             '<div class="th-event-name">' + esc(e.name) + '</div>' +
+             '<div class="th-event-sub">' +
+               '<div class="th-raw-hdr">Raw</div>' +
+               '<div class="th-pts-hdr">Pts</div>' +
+             '</div>' +
+           '</div>';
+  }).join('');
 
-    var header =
-      '<div class="ev-table-header">' +
-        '<div class="th-rank"></div>' +
-        '<div class="th-name">Athlete</div>' +
-        '<div class="th-events">' + evHeads + '</div>' +
-        '<div class="th-total">Total</div>' +
-      '</div>';
+  var header =
+    '<div class="ev-table-header">' +
+      '<div class="th-rank"></div>' +
+      '<div class="th-name">Athlete</div>' +
+      '<div class="th-events">' + evHdrs + '</div>' +
+      '<div class="th-total">Total</div>' +
+    '</div>';
 
-    /* Rows */
-    var rows = data.rows.map(function (r) {
-      var rnk     = r.overall_rank;
-      var rnkCls  = rnk <= 3 ? 'rank-' + rnk : '';
-      var iconCls = rnk <= 3 ? 'r' + rnk : '';
-
-      var evCells = r.event_data.map(function (ed) {
-        return '<div class="ev-event-cell">' + fmtCell(ed) + '</div>';
-      }).join('');
-
-      var total =
-        '<div class="ev-total-col">' +
-          '<div class="ev-total-pts">' + fmtPts(r.total_points) + '</div>' +
-          '<div class="ev-total-lbl">pts</div>' +
-        '</div>';
-
-      return '<div class="ev-table-row ' + rnkCls + '">' +
-               '<div class="ev-rank ' + iconCls + '">' + rnk + '</div>' +
-               '<div class="ev-name-col"><div class="ev-name-text">' + esc(r.name) + '</div></div>' +
-               '<div class="ev-events">' + evCells + '</div>' +
-               total +
+  var rows = (data.rows || []).map(function (r) {
+    var rnk    = r.overall_rank;
+    var rnkCls = rnk <= 3 ? 'rank-' + rnk : '';
+    var iCls   = rnk <= 3 ? 'r' + rnk : '';
+    var groups = (r.event_data || []).map(function (ed) {
+      return '<div class="ev-event-group">' +
+               '<div class="ev-raw-col">' + fmtRawCell(ed) + '</div>' +
+               '<div class="ev-pts-col">' + fmtPtsCell(ed) + '</div>' +
              '</div>';
     }).join('');
+    return '<div class="ev-table-row ' + rnkCls + '">' +
+      '<div class="ev-rank ' + iCls + '">' + rnk + '</div>' +
+      '<div class="ev-name-col"><div class="ev-name-text">' + esc(r.name) + '</div></div>' +
+      '<div class="ev-events">' + groups + '</div>' +
+      '<div class="ev-total-col">' +
+        '<div class="ev-total-pts">' + fmtPts(r.total_points) + '</div>' +
+        '<div class="ev-total-lbl">pts</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 
-    var empty = rows ? '' : '<div class="empty">No results entered yet.</div>';
+  tableEl.className = 'results-table table-ready';
+  tableEl.innerHTML = header + (rows || '<div class="empty">No results entered yet.</div>');
+}
 
-    /* Single DOM write — row-in animations replay automatically */
-    tableEl.className  = 'results-table';
-    tableEl.innerHTML  = header + (rows || empty);
-  }
+/* ─────────────────────────────────────────────────────────────────────────
+   renderOverall(data)
+   Builds the overall ranked list. Version-gated.
+───────────────────────────────────────────────────────────────────────── */
+function renderOverall(data) {
+  if (lastVersion !== null && data.version <= lastVersion) return;
+  lastVersion = data.version;
 
-  /* ── Debounce: coalesce rapid SSE ticks → one fetch per 250ms window ── */
-  var _fetchTimer = null;
-  function scheduleFetch() {
-    if (!CAT) return;  /* overall view: no JS fetch needed */
-    if (_fetchTimer) clearTimeout(_fetchTimer);
-    _fetchTimer = setTimeout(function () {
-      _fetchTimer = null;
-      fetch('/comp/api/leaderboard?category=' + encodeURIComponent(CAT) + '&detailed=1')
-        .then(function (r) { return r.json(); })
-        .then(renderTable)
-        .catch(function () {});
-    }, 250);
-  }
+  var tableEl = document.getElementById('results-table');
+  if (!tableEl) return;
 
-  /* ── SSE connection ── */
-  var _es = null;
-  function connect() {
-    _es = new EventSource('/stream');
-    _es.onmessage = function (evt) {
-      try {
-        var msg = JSON.parse(evt.data);
+  var rows = (data.rows || []).map(function (a, i) {
+    var pos = i + 1;
+    var rc  = pos <= 3 ? 'r' + pos : '';
+    return '<div class="overall-row ' + rc + '" data-rank="' + pos + '">' +
+      '<div class="ov-rank">' + pos + '</div>' +
+      '<div class="ov-info">' +
+        '<div class="ov-name">' + esc(a.name) + '</div>' +
+        '<div class="ov-cat">' + esc(a.category || '') + '</div>' +
+      '</div>' +
+      '<div class="ov-score">' +
+        '<span class="ov-score-val">' + esc(a.score || '—') + '</span>' +
+        '<span class="ov-score-unit">pts</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 
-        /* Server restart: if token changed, reload immediately */
-        if (msg.restart_token !== undefined) {
-          if (_lastRestartToken !== null && msg.restart_token !== _lastRestartToken) {
-            location.reload(); return;
-          }
-          _lastRestartToken = msg.restart_token;
+  tableEl.className = 'overall-table table-ready';
+  tableEl.innerHTML = rows || '<div class="empty">No results entered yet.</div>';
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   fetchCategory(cat)
+   Fetches data for cat (null = overall) and renders.
+   Shows loading opacity while in flight.
+───────────────────────────────────────────────────────────────────────── */
+function fetchCategory(cat) {
+  var tableEl = document.getElementById('results-table');
+  if (tableEl) tableEl.classList.add('table-loading');
+
+  var url = cat
+    ? '/comp/api/leaderboard?category=' + encodeURIComponent(cat) + '&detailed=1'
+    : '/comp/api/leaderboard';
+
+  fetch(url)
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (tableEl) tableEl.classList.remove('table-loading');
+      if (cat) { renderTable(data);   }
+      else      { renderOverall(data); }
+    })
+    .catch(function () {
+      if (tableEl) tableEl.classList.remove('table-loading');
+    });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   JS-driven category switching
+   Intercepts tab button clicks — no page reload.
+   Updates URL via pushState so refresh and back/forward work correctly.
+   Keeps the single SSE connection alive across all category switches.
+───────────────────────────────────────────────────────────────────────── */
+(function initTabs() {
+  document.getElementById('filter-row').addEventListener('click', function (e) {
+    var btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    e.preventDefault();
+
+    var newCat = btn.dataset.cat || null;
+    if (newCat === CAT) return;
+
+    /* Optimistic tab highlight */
+    document.querySelectorAll('.filter-btn').forEach(function (b) {
+      b.classList.toggle('active', b === btn);
+    });
+
+    CAT         = newCat;
+    lastVersion = null;  /* reset version gate for new category */
+
+    /* Update URL without page reload */
+    var newUrl = newCat
+      ? '/comp/leaderboard?category=' + encodeURIComponent(newCat)
+      : '/comp/leaderboard';
+    history.pushState({ cat: newCat }, '', newUrl);
+
+    fetchCategory(newCat);
+  });
+
+  /* Browser back/forward */
+  window.addEventListener('popstate', function (e) {
+    var state  = (e.state || {});
+    var newCat = state.cat || null;
+    CAT        = newCat;
+    lastVersion = null;
+    document.querySelectorAll('.filter-btn').forEach(function (b) {
+      b.classList.toggle('active', (b.dataset.cat || null) === newCat);
+    });
+    fetchCategory(newCat);
+  });
+}());
+
+/* ─────────────────────────────────────────────────────────────────────────
+   scheduleFetch — debounced, works for both overall and detailed.
+   250ms coalescing window prevents DB hammering on burst SSE ticks.
+───────────────────────────────────────────────────────────────────────── */
+function scheduleFetch() {
+  if (_fetchTimer) clearTimeout(_fetchTimer);
+  _fetchTimer = setTimeout(function () {
+    _fetchTimer = null;
+    fetchCategory(CAT);  /* uses current CAT — works after JS category switches */
+  }, 250);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SSE — single connection, lives for the page lifetime.
+   Seed on first tick (avoids redundant fetch at load).
+   Reload only on restart_token change (server restart detected).
+───────────────────────────────────────────────────────────────────────── */
+function connect() {
+  _es = new EventSource('/stream');
+  _es.onmessage = function (evt) {
+    try {
+      var msg = JSON.parse(evt.data);
+
+      if (msg.restart_token !== undefined) {
+        if (_lastRestart !== null && msg.restart_token !== _lastRestart) {
+          location.reload(); return;
         }
+        _lastRestart = msg.restart_token;
+      }
 
-        /* Version gate: seed on first tick; skip if not newer */
-        if (msg.results_version !== undefined) {
-          if (lastVersion === null) {
-            lastVersion = msg.results_version; return; /* seed: skip initial fetch */
-          }
-          if (msg.results_version <= lastVersion) return;
+      if (msg.results_version !== undefined) {
+        if (lastVersion === null) {
+          /* Seed: first tick — don't fetch, initial HTML already correct */
+          lastVersion = msg.results_version; return;
         }
-      } catch (e) {}
-      scheduleFetch();
-    };
-    _es.onerror = function () { _es.close(); setTimeout(connect, 5000); };
-  }
+        if (msg.results_version <= lastVersion) return;
+      }
+    } catch (e) {}
+    scheduleFetch();
+  };
+  _es.onerror = function () { _es.close(); setTimeout(connect, 5000); };
+}
 
-  connect();
-  window.addEventListener('pagehide', function () { if (_es) { _es.close(); _es = null; } });
+connect();
+window.addEventListener('pagehide', function () { if (_es) { _es.close(); _es = null; } });
 
 }());
 </script>
